@@ -19,6 +19,8 @@ compare_aln.py subfam1.fa_aln.cma subfam2.fa_aln.cma subfam3.fa_aln.cma
 # HTML alignment, where contrast (p-value, #stars) is shown by color, e.g.
 # redness
 
+from __future__ import absolute_import
+
 import logging
 import math
 import subprocess
@@ -37,6 +39,7 @@ from Bio.File import as_handle
 from esbglib.sugar import log_config
 log_config()
 
+from cladecompare import pairlogo, ballinurn, gtest #, ancestrallrt
 
 # --- Input magic ---
 
@@ -252,21 +255,17 @@ def process_pair(fg_aln, bg_aln, strategy, tree=None):
         for each column position.
     """
     fg_aln, bg_aln = clean_alignments(fg_aln, bg_aln)
-
     if strategy == 'ballinurn':
         # CHAIN-style comparison
-        from cladecompare import ballinurn
         hits = ballinurn.compare_aln(fg_aln, bg_aln)
     elif strategy == 'gtest':
         # Likelihood-based character frequency comparison
-        from cladecompare import gtest
         hits = gtest.compare_aln(fg_aln, bg_aln)
     elif strategy == 'ancestrallrt':
         # LRT of ancestral character state likelihoods
-        from cladecompare import ancestrallrt
-        hits = ancestrallrt.compare_aln(fg_aln, bg_aln, tree)
-
-    return hits
+        # hits = ancestrallrt.compare_aln(fg_aln, bg_aln, tree)
+        pass
+    return fg_aln, bg_aln, hits
 
 
 def process_output(hits, alpha, output, pattern):

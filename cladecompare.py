@@ -95,7 +95,7 @@ def clean_alignments(fg_aln, bg_aln):
     killme = []
     for fg_seq in fg_aln:
         for idx, bg_seq in enumerate(bg_aln):
-            if fg_seq.id == bg_seq.id:
+            if fg_seq.id == bg_seq.id != 'consensus':
                 if str(fg_seq.seq) != str(bg_seq.seq):
                     logging.warn("Different sequences for %s in fg, bg",
                             fg_seq.id)

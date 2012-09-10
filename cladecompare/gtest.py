@@ -34,7 +34,7 @@ def compare_aln(fg_aln, bg_aln):
     fg_size = sum(fg_weights)
     bg_weights = alnutils.sequence_weights(bg_aln, 'none')
     bg_size = sum(bg_weights)
-    pseudo_size = math.sqrt(bg_size)
+    pseudo_size = 1.0 # math.sqrt(bg_size)
     # Overall aa freqs for pseudocounts
     aa_freqs = alnutils.aa_frequencies(fg_aln._records + bg_aln._records,
                                        gap_chars='-.X',
@@ -45,8 +45,8 @@ def compare_aln(fg_aln, bg_aln):
     bg_cols = zip(*bg_aln)
     hits = []
     for faa, baa, fg_col, bg_col in zip(fg_cons, bg_cons, fg_cols, bg_cols):
-        if faa == '-':
-            # Skip columns with no useful information
+        if faa == '-' or baa == '-':
+            # Ignore indel columns -- there are better ways to look at these
             pvalue = 1.
         else:
             # Calculate the "expected" aa frequencies

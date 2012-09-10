@@ -77,8 +77,8 @@ def compare_aln(fg_aln, bg_aln):
     bg_cols = zip(*bg_aln)
     hits = []
     for faa, baa, fg_col, bg_col in zip(fg_cons, bg_cons, fg_cols, bg_cols):
-        if faa == '-':
-            # Skip columns with no useful information
+        if faa == '-' or baa == '-':
+            # Ignore indel columns -- there are better ways to look at these
             pvalue = 1.
         else:
             # Cumulative binomial test

@@ -168,6 +168,29 @@ def clean_alignments(fg_aln, bg_aln):
     return fg_aln, bg_aln
 
 
+def top_hits(hits, alpha, N=20):
+    """Take the top (up to N) hits with corrected p-value <= alpha.
+
+    Return a list of triplets, sorted by significance:
+        (position, fg_aa, bg_aa)
+    """
+    hit_quads = [(i+1, faa_baa_pval[0], faa_baa_pval[1], faa_baa_pval[2])
+                 for i, faa_baa_pval in enumerate(hits)]
+    get_pval = lambda ifbp: ifbp[3]
+    # Benjamini-Hochberg multiple-testing FDR correction (BH step-up)
+    hit_quads.sort(key=get_pval)
+    m = len(hit_quads)  # Num. hypotheses tested
+    if m < N:
+        N = m
+    tophits = [(posn, faa, baa) for posn, faa, baa, pval in hit_quads]
+    for k, ifbp in zip(range(m, 0, -1), reversed(hit_quads))[-N:]:
+        # logging.info("BH: a=%s, m=%s, k=%s, p=%s, compare=%s",
+        #              alpha, m, k, get_pval(ifbp), alpha * k / m)
+        if get_pval(ifbp) <= alpha * k / m:
+            return tophits[:k]
+    return []
+
+
 # --- Output ---
 
 def write_noise(hits, outfile, alpha):
@@ -180,18 +203,11 @@ def write_noise(hits, outfile, alpha):
                           if pvalue < alpha else '')))
 
 
-def write_mcbpps(hits, ptnfile, alpha):
+def write_mcbpps(tophits, ptnfile):
     """Write a .pttrn file in the style of mcBPPS."""
-    hit_triples = [(i+1, faa_baa_pval[0], faa_baa_pval[2])
-                   for i, faa_baa_pval in enumerate(hits)]
-    hit_triples.sort(key=lambda icp: icp[2])
-    ptnfile.write("1:" +
-                    ','.join([("%s%d" % (aa, posn))
-                            for posn, aa, pval in hit_triples
-                            # Bonferroni correction (crude)
-                            if pval <= alpha #/ len(hits)
-                            # Take no more than the top 20 hits
-                            ][:20]))
+    ptnfile.write("1:" + ','.join([("%s%d" % (faa, posn))
+                                   for posn, faa, baa in tophits]))
+
 
 # ---- FLOW --------------------------------------------------------------
 
@@ -226,8 +242,10 @@ def process_args(args):
 
     if len(all_alns) == 2:
         fg_aln, bg_aln = all_alns
-        hits = process_pair(fg_aln, bg_aln, args.strategy, args.tree)
-        process_output(hits, args.alpha, args.output, args.pattern)
+        fg_clean, bg_clean, hits = process_pair(fg_aln, bg_aln,
+                                                args.strategy, args.tree)
+        process_output(fg_clean, bg_clean, hits, args.alpha,
+                       args.output, args.pattern)
     else:
         # Output fnames are based on fg filenames; ignore what's given
         outfnames_ptnfnames = [(basename(alnfname) + '.noise',
@@ -240,10 +258,11 @@ def process_args(args):
             bg_aln = deepcopy(_other_alns[0])
             for otra in _other_alns[1:]:
                 bg_aln.extend(deepcopy(otra))
-            hits = process_pair(deepcopy(fg_aln), bg_aln,
-                                args.strategy, args.tree)
+            fg_clean, bg_clean, hits = process_pair(deepcopy(fg_aln), bg_aln,
+                                                    args.strategy, args.tree)
             outfname, ptnfname = outfnames_ptnfnames[idx]
-            process_output(hits, args.alpha, outfname, ptnfname)
+            process_output(fg_clean, bg_clean, hits, args.alpha,
+                           outfname, ptnfname)
             logging.info("Wrote %s and %s", outfname, ptnfname)
 
 
@@ -268,15 +287,15 @@ def process_pair(fg_aln, bg_aln, strategy, tree=None):
     return fg_aln, bg_aln, hits
 
 
-def process_output(hits, alpha, output, pattern):
-    # ENH: Benjamini-Hochberg multiple-testing correction to adjust
-    # alpha/p-values for alignment size (#cols), to identify truly significant
-    # sites
+def process_output(fg_aln, bg_aln, hits, alpha, output, pattern):
     with as_handle(output, 'w+') as outfile:
         write_noise(hits, outfile, alpha)
     if pattern:
+        tophits = top_hits(hits, alpha)
         with open(pattern, 'w+') as ptnfile:
-            write_mcbpps(hits, ptnfile, alpha)
+            write_mcbpps(tophits, ptnfile)
+        pairlogo.make_pairlogos(fg_aln, bg_aln, tophits,
+                                pattern.rsplit('.', 1)[0])
 
 
 

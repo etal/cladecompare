@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""Tests for contrasting conservation between gene clades."""
+"""Test for sites of contrasting conservation between gene clades."""
 
 from os.path import dirname
 
@@ -13,6 +13,7 @@ try:
         install_requires=[
             'Biopython >= 1.59',
             'scipy >= 0.6', 
+            'reportlab >= 2.5', 
         ])
 except:
     from distutils.core import setup

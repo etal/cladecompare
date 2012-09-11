@@ -1,23 +1,33 @@
 """Compare two alignments via G-test of column amino acid frequencies.
 
-Column composition:
-    - do the whole vector = characters in the column?
-        - null = main set, alt = foreground, 
+The contingency table looks like::
 
                 Ala Cys Asp ...
     observed    OA  OC  OD  ...
     expected    EA  EC  ED  ...
 
-    G-test for independence/fit:
-        * need pseudocounts in BG to avoid errors
-        * loses info abt. set size
-        * gets that back from df & individual observations?
+where O<resname> is the "observed" residue count in the foreground (using
+weighted sequences, so usually not an integer) and E<resname> is the "expected"
+residue count, calculated from the background column residue frequencies and
+scaled to match the size of the foreground. A pseudocount size of 1 is used in
+the background frequencies to avoid divide-by-zero issues and, I suppose,
+account for possible sampling and alignment errors/issues.
 
-        G = 2 * sum_ij( O_ij * ln(Oij/Eij) )
-        sum is taken over all non-empty cells
-        -> chisq value
+This is a goodness-of-fit test where the null hypothesis is that the foreground
+column residues were drawn from the the distribution represented by the
+background set. The test assumes the foreground is a sub-clade within the
+background clade.
 
-        df = (N-k)
+Formula::
+
+        G = 2 * sum_i( O_i * ln(Oi/Ei) )
+
+The test statistic G follows the chi-squared distribution with (N-k) degrees of
+freedom, where N is the total sample size and k is the foreground sample size.
+The value (N-k) would be equal to the background set size, but since the
+background is scaled to be equal to the size of the foreground when calculating
+G, we can take df = foreground size.
+
 """
 
 import math
@@ -26,7 +36,7 @@ from scipy.stats import chisqprob
 
 from biofrills import consensus, alnutils
 
-from shared import count_col, standard_aa
+from shared import count_col
 
 
 def compare_aln(fg_aln, bg_aln):
@@ -52,7 +62,7 @@ def compare_aln(fg_aln, bg_aln):
             # Calculate the "expected" aa frequencies
             bg_counts = count_col(bg_col, bg_weights)
             expected = {}
-            for aa in standard_aa:
+            for aa in 'ACDEFGHIKLMNPQRSTVWY':
                 expected[aa] = ((bg_counts[aa] + pseudo_size*aa_freqs[aa])
                                 / (bg_size + pseudo_size)
                             ) * fg_size  # Scale to same size as foreground
@@ -62,7 +72,7 @@ def compare_aln(fg_aln, bg_aln):
             G = 2 * sum(obsv * math.log(obsv/expected[aa])
                         for aa, obsv in observed.iteritems())
             # 4. Calculate the Chi-squared p-value of G
-            pvalue = chisqprob(G, bg_size)  # df = N - k
+            pvalue = chisqprob(G, fg_size)
         hits.append((faa, baa, pvalue))
 
     return hits

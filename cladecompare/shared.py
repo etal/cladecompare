@@ -1,6 +1,5 @@
+# TODO - move to biofrills?
 import collections
-
-standard_aa = 'ACDEFGHIKLMNPQRSTVWY'
 
 def count_col(col, weights):
     counts = collections.defaultdict(float)

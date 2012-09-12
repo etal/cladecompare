@@ -199,7 +199,7 @@ def write_noise(hits, outfile, alpha):
         fg_char, bg_char, pvalue = data
         outfile.write("%s (%s) %d : prob=%1.3g\t%s\n"
                       % (fg_char, bg_char, idx + 1, pvalue,
-                         ('*'*int(-math.log(pvalue, 10))
+                         ('*'*int(-math.log10(pvalue))
                           if pvalue < alpha else '')))
 
 

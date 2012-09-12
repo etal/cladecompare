@@ -18,6 +18,10 @@ try:
 except:
     from distutils.core import setup
 
+
+DIR = (dirname(__file__) or '.') + '/'
+
+
 setup_args.update(
     name='CladeCompare',
     version='dev',
@@ -26,7 +30,7 @@ setup_args.update(
     author_email='etal@uga.edu',
     url='http://github.com/etal/cladecompare',
     packages=['cladecompare'],
-    scripts=[(dirname(__file__) or '.') + '/cladecompare.py'],
+    scripts=[DIR + 'cladecompare.py', DIR + 'noise2html.py'],
 )
 
 setup(**setup_args)

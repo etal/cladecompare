@@ -22,11 +22,8 @@ Formula::
 
         G = 2 * sum_i( O_i * ln(Oi/Ei) )
 
-The test statistic G follows the chi-squared distribution with (N-k) degrees of
-freedom, where N is the total sample size and k is the foreground sample size.
-The value (N-k) would be equal to the background set size, but since the
-background is scaled to be equal to the size of the foreground when calculating
-G, we can take df = foreground size.
+The test statistic G follows the chi-squared distribution with 19 degrees of
+freedom (20 amino acids, 2 compared sets -> (20-1)x(2-1) = 19).
 
 """
 
@@ -72,7 +69,7 @@ def compare_aln(fg_aln, bg_aln):
             G = 2 * sum(obsv * math.log(obsv/expected[aa])
                         for aa, obsv in observed.iteritems())
             # 4. Calculate the Chi-squared p-value of G
-            pvalue = chisqprob(G, fg_size)
+            pvalue = chisqprob(G, 19)
         hits.append((faa, baa, pvalue))
 
     return hits

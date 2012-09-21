@@ -84,6 +84,9 @@ def parse_pattern(fname):
         # NB: only reading the first pattern, ignoring any others
         line = infile.readline()
         idx, site_ln = map(str.strip, line.split(':'))
+        if not site_ln:
+            logging.warn("Empty pattern file: %s", fname)
+            return []
         sites = site_ln.split(',')
         # Convert to number...
         posns = sorted(int(''.join(filter(str.isdigit, site)))

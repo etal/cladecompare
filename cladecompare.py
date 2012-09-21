@@ -295,7 +295,8 @@ def process_output(fg_aln, bg_aln, hits, alpha, output, pattern):
         with open(pattern, 'w+') as ptnfile:
             write_mcbpps(tophits, ptnfile)
         pairlogo.make_pairlogos(fg_aln, bg_aln, tophits,
-                                pattern.rsplit('.', 1)[0])
+                                pattern.rsplit('.', 1)[0],
+                                10)
 
 
 

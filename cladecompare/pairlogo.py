@@ -56,7 +56,7 @@ aacolors = dict(
 )
 
 
-def make_pairlogos(fg_aln, bg_aln, tophits, name, N=9):
+def make_pairlogos(fg_aln, bg_aln, tophits, name, N):
     """
     """
     # Group together nearby "pattern sites"

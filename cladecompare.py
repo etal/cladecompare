@@ -64,12 +64,12 @@ def cma_blocks(cma_fname):
         lines = iter(infile)
         for line in lines:
             if line.startswith('>'):
-                acc = line[1:].split(None, 1)[0]
+                acc = line.split(None, 1)[0][1:]
                 seq = next(lines).strip()
                 seq = ''.join((c for c in seq[3:-4] if not c.islower()))
                 records.append(
                         SeqRecord(Seq(seq, generic_protein),
-                            id=acc, description=''))
+                                  id=acc, description=''))
     return MultipleSeqAlignment(records, generic_protein)
 
 

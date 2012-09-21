@@ -153,7 +153,7 @@ def tr_plain(label, cells):
 
 def tr_class(label, cells, classes):
     out = "<tr>\n"
-    out += "<td style='font-family: Verdana, sans'>%s</td>" % label
+    out += "<td class='label'>%s</td>" % label
     out += ''.join(['<td class="%s">%s</td>' % (cls, txt)
                     for cls, txt in zip(classes, cells)])
     out += "\n</tr>"

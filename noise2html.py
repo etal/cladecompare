@@ -40,9 +40,11 @@ html_page_tpl = """\
     td.label { font-family: Verdana, sans; padding: 1px 3px; }
     td.del { background-color: #bbb }
     td.ins { background-color: #fe8 }
-    td.b3 { background-color: #99f }
-    td.b2 { background-color: #bbf }
-    td.b1 { background-color: #ddf }
+    td.b5 { background-color: #99f; }
+    td.b4 { background-color: #bbf }
+    td.b3 { background-color: #ccf }
+    td.b2 { background-color: #ddf }
+    td.b1 { background-color: #eef }
     td.wt { background-color: white }
     td.r1 { background-color: #fee }
     td.r2 { background-color: #fcc }
@@ -109,12 +111,18 @@ def p2class(fg, bg, pval):
         return 'del'
     if bg == '-':
         return 'ins'
-    nlp = -log10(pval)
-    if nlp < 0.1:  return 'b3'
-    if nlp <= 0.3: return 'b2'
-    if nlp <= 1.0: return 'b1'
-    if nlp <= 2.0: return 'wt'
-    if nlp >= 10.0: return 'r9'
+    try:
+        nlp = -log10(pval)
+    except ValueError:
+        # pval is 0, but let log10 decide that
+        return 'r9'
+    if nlp < 0.00001:  return 'b5'
+    if nlp < 0.0005:  return 'b4'
+    if nlp <= 0.005: return 'b3'
+    if nlp <= 0.05: return 'b2'
+    if nlp <= 0.3: return 'b1'
+    if nlp <= 1.0: return 'wt'
+    if nlp >= 9.0: return 'r9'
     # r1, r2, ..., r8
     return 'r%d' % int(nlp-2)
 

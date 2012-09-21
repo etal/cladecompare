@@ -197,7 +197,7 @@ def write_noise(hits, outfile, alpha):
     """Write p-values & "contrast" stars for each site. (It's noisy.)"""
     for idx, data in enumerate(hits):
         fg_char, bg_char, pvalue = data
-        outfile.write("%s (%s) %d : prob=%1.3g\t%s\n"
+        outfile.write("%s (%s) %d : prob=%g\t%s\n"
                       % (fg_char, bg_char, idx + 1, pvalue,
                          ('*'*int(-math.log10(pvalue))
                           if pvalue < alpha else '')))

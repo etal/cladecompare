@@ -11,7 +11,8 @@ try:
     # Dependencies for easy_install:
     setup_args.update(
         install_requires=[
-            'Biopython >= 1.59',
+            'biofrills >= 0.1',
+            'biopython >= 1.58',
             'scipy >= 0.6', 
             'reportlab >= 2.5', 
         ])

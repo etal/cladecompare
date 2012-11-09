@@ -168,7 +168,7 @@ def clean_alignments(fg_aln, bg_aln):
     return fg_aln, bg_aln
 
 
-def top_hits(hits, alpha, N=20):
+def top_hits(hits, alpha, N=50):
     """Take the top (up to N) hits with corrected p-value <= alpha.
 
     Return a list of triplets, sorted by significance:

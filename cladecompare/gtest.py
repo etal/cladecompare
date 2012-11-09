@@ -46,8 +46,10 @@ def compare_aln(fg_aln, bg_aln):
     aa_freqs = alnutils.aa_frequencies(fg_aln._records + bg_aln._records,
                                        gap_chars='-.X',
                                        weights=fg_weights + bg_weights)
-    fg_cons = consensus.consensus(fg_aln, weights=fg_weights)
-    bg_cons = consensus.consensus(bg_aln, weights=bg_weights)
+    fg_cons = consensus.consensus(fg_aln, weights=fg_weights, trim_ends=False,
+                                  gap_threshold=0.8)
+    bg_cons = consensus.consensus(bg_aln, weights=bg_weights, trim_ends=False,
+                                  gap_threshold=0.8)
     fg_cols = zip(*fg_aln)
     bg_cols = zip(*bg_aln)
     hits = []

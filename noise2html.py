@@ -124,7 +124,7 @@ def p2class(fg, bg, pval):
     if nlp <= 1.0: return 'wt'
     if nlp >= 9.0: return 'r9'
     # r1, r2, ..., r8
-    return 'r%d' % int(nlp-2)
+    return 'r%d' % int((nlp+1)/2)
 
 
 # Formatting

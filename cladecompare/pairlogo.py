@@ -34,7 +34,7 @@ else:
 
 aacolors = dict(
     A='black',
-    C='black',
+    C='green',
     D='red',
     E='red',
     F='black',

@@ -113,13 +113,13 @@ Statistical tests ("-s" options) for column comparison:
     (default) G-test for goodness-of-fit of FG amino acid counts vs. those of
     the BG column. BG frequencies include pseudocounts calculated from the
     amino acid frequencies of the full sequence set.
-:ballinurn:
+:urn:
     Ball-in-urn model (binomial), a la CHAIN_, for counts of the "consensus"
     amino acid type in FG and BG.
 :ancestrallrt:
-    (in progress) Likelihood ratio test of ancestral states
+    (in progress) Likelihood ratio test of ancestral states.
 :entropy:
-    (in progress) Difference in column entropies, i.e. information gain/loss
+    (in progress) Difference in column entropies, i.e. information gain/loss.
 
 .. _CHAIN: http://chain.igs.umaryland.edu/
 

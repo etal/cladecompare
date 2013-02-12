@@ -6,7 +6,7 @@ Examples:
 
 # CHAIN style
 # Align sequences on the fly by giving the MAPGAPS profile
-compare_aln.py fg.fasta bg.fasta -s ballinurn --mapgaps /share/data/PK \
+compare_aln.py fg.fasta bg.fasta -s urn --mapgaps /share/data/PK \
         -p fg.pttrn -o fg.out
 
 # mcBPPS style
@@ -36,7 +36,7 @@ from Bio.File import as_handle
 from esbglib.sugar import log_config
 log_config()
 
-from cladecompare import pairlogo, ballinurn, gtest #, ancestrallrt
+from cladecompare import pairlogo, urn, gtest, jsd #, ancestrallrt
 
 # --- Input magic ---
 
@@ -228,7 +228,7 @@ def process_args(args):
             aln = read_aln(alnfname, args.format)
         all_alns.append(aln)
 
-    if args.strategy == 'ballinurn':
+    if args.strategy == 'urn':
         logging.info("Using ball-in-urn statistical model")
     elif args.strategy == 'gtest':
         logging.info("Using G-test of amino acid frequencies")
@@ -271,14 +271,11 @@ def process_pair(fg_aln, bg_aln, strategy, tree=None):
         for each column position.
     """
     fg_aln, bg_aln = clean_alignments(fg_aln, bg_aln)
-    if strategy == 'ballinurn':
-        # CHAIN-style comparison
-        hits = ballinurn.compare_aln(fg_aln, bg_aln)
+    if strategy == 'urn':
+        hits = urn.compare_aln(fg_aln, bg_aln)
     elif strategy == 'gtest':
-        # Likelihood-based character frequency comparison
         hits = gtest.compare_aln(fg_aln, bg_aln)
     elif strategy == 'ancestrallrt':
-        # LRT of ancestral character state likelihoods
         # hits = ancestrallrt.compare_aln(fg_aln, bg_aln, tree)
         pass
     return fg_aln, bg_aln, hits
@@ -321,10 +318,10 @@ if __name__ == '__main__':
             default=0.05, type=float,
             help="Significance threshold for pattern columns.")
     AP.add_argument('-s', '--strategy',
-            # TODO enforce one of: 'gtest', 'ballinurn', 'ancestrallrt'
+            # TODO enforce one of: 'gtest', 'urn', 'jsd'
             default='gtest',
             help="""Strategy used to compare alignments:
-            'ballinurn' = ball-in-urn comparison method (like CHAIN);
+            'urn' = ball-in-urn comparison method (like CHAIN);
             'gtest' = G-test of all character frequencies;
             'ancestrallrt' = likelihood ratio test of ancestral state
                     likelihoods between the foreground clade and the full tree.

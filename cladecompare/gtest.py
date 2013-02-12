@@ -29,9 +29,8 @@ freedom (20 amino acids, 2 compared sets -> (20-1)x(2-1) = 19).
 
 import math
 
-from scipy.stats import chisqprob
-
 from biofrills import consensus, alnutils
+from biofrills.stats.chisq import chisqprob
 
 from shared import count_col
 

@@ -68,14 +68,14 @@ If you are using MAPGAPS, it looks like this::
     # Use pre-aligned sequence sets (MAPGAPS "CMA" format)
     cladecompare.py fg_raw.fasta_aln.cma bg_raw.fasta_aln.cma
 
-The script noise2html.py converts the "\*.noise" files to an HTML file showing
+The script cladereport.py converts the "\*.noise" files to an HTML file showing
 the alignment of the FG and BG consensus sequences, with the FG sequence
 colorized to show per-site contrasts (red=significant difference,
 blue=non-significant/columns are similar), inserts (yellow) and deletions (gray
 gaps)::
 
     # Visualize the per-site contrasts as a colorized alignment
-    noise2html.py fg-v-bg.noise > fg-v-bg.html
+    cladereport.py fg-v-bg.noise > fg-v-bg.html
 
 When more than 2 sequence sets are given, each set is individually treated as a
 foreground and the rest treated as the background for evaluation::
@@ -87,7 +87,7 @@ This multi-mode generates and names the "\*.noise" files according to the
 corresponding sequence file names. You can visualize these all together::
 
     # Visualize each subfamily's contrasts together
-    noise2html.py subfam2.noise subfam2.noise subfam3.noise ... > somefamily.html
+    cladereport.py subfam2.noise subfam2.noise subfam3.noise ... > somefamily.html
 
 Finally, given the '-p' option, cladecompare.py will write a "pattern" file
 listing the alignment column numbers with significant contrasts, in decreasing

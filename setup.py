@@ -31,7 +31,7 @@ setup_args.update(
     author_email='etal@uga.edu',
     url='http://github.com/etal/cladecompare',
     packages=['cladecompare'],
-    scripts=[DIR + 'cladecompare.py', DIR + 'noise2html.py'],
+    scripts=[DIR + 'cladecompare.py', DIR + 'cladereport.py'],
 )
 
 setup(**setup_args)

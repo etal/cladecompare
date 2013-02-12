@@ -7,17 +7,14 @@ Examples:
 # CHAIN style
 # Align sequences on the fly by giving the MAPGAPS profile
 compare_aln.py fg.fasta bg.fasta -s ballinurn --mapgaps /share/data/PK \
-        -p fg.pttrn -o fg.noise
+        -p fg.pttrn -o fg.out
 
 # mcBPPS style
 # (Run MAPGAPS on each subfamily beforehand)
 compare_aln.py subfam1.fa_aln.cma subfam2.fa_aln.cma subfam3.fa_aln.cma
-# Writes files named: subfam{1,2,3}.fa_aln.cma.{pttrn,noise}
+# Writes files named: subfam{1,2,3}.fa_aln.cma.{pttrn,out}
 
 """
-# Big ENH: process noise (as a script, or build it in here) to show a wrapped
-# HTML alignment, where contrast (p-value, #stars) is shown by color, e.g.
-# redness
 
 from __future__ import absolute_import
 
@@ -193,7 +190,7 @@ def top_hits(hits, alpha, N=50):
 
 # --- Output ---
 
-def write_noise(hits, outfile, alpha):
+def write_report(hits, outfile, alpha):
     """Write p-values & "contrast" stars for each site. (It's noisy.)"""
     for idx, data in enumerate(hits):
         fg_char, bg_char, pvalue = data
@@ -248,7 +245,7 @@ def process_args(args):
                        args.output, args.pattern)
     else:
         # Output fnames are based on fg filenames; ignore what's given
-        outfnames_ptnfnames = [(basename(alnfname) + '.noise',
+        outfnames_ptnfnames = [(basename(alnfname) + '.out',
                                 basename(alnfname) + '.pttrn')
                                for alnfname in ([args.foreground] +
                                                 args.background)]
@@ -289,7 +286,7 @@ def process_pair(fg_aln, bg_aln, strategy, tree=None):
 
 def process_output(fg_aln, bg_aln, hits, alpha, output, pattern):
     with as_handle(output, 'w+') as outfile:
-        write_noise(hits, outfile, alpha)
+        write_report(hits, outfile, alpha)
     if pattern:
         tophits = top_hits(hits, alpha)
         with open(pattern, 'w+') as ptnfile:
@@ -338,8 +335,9 @@ if __name__ == '__main__':
             (Single-foreground comparison only.""")
     AP.add_argument('-o', '--output',
             default=sys.stdout,
-            help="""Write per-column probabilities ('noise') to this filename.
-            (Single-foreground comparison only.""")
+            help="""Write per-column probabilities (standard output) to this
+            filename, for use with cladereport.py. (Single-foreground
+            comparison only.""")
 
     process_args(AP.parse_args())
 

@@ -259,6 +259,8 @@ def process_args(args):
         logging.info("Using ball-in-urn statistical model")
     elif args.strategy == 'gtest':
         logging.info("Using G-test of amino acid frequencies")
+    elif args.strategy == 'jsd':
+        logging.info("Using Jensen-Shannon divergence")
     elif args.strategy == 'ancestrallrt':
         logging.info("Using maximum-likelihood ancestral character states")
     else:
@@ -302,6 +304,8 @@ def process_pair(fg_aln, bg_aln, strategy, tree=None):
         hits = urn.compare_aln(fg_aln, bg_aln)
     elif strategy == 'gtest':
         hits = gtest.compare_aln(fg_aln, bg_aln)
+    elif strategy == 'jsd':
+        hits = jsd.compare_aln(fg_aln, bg_aln)
     elif strategy == 'ancestrallrt':
         # hits = ancestrallrt.compare_aln(fg_aln, bg_aln, tree)
         pass
@@ -345,7 +349,6 @@ if __name__ == '__main__':
             default=0.05, type=float,
             help="Significance threshold for pattern columns.")
     AP.add_argument('-s', '--strategy',
-            # TODO enforce one of: 'gtest', 'urn', 'jsd'
             default='gtest',
             help="""Strategy used to compare alignments:
             'urn' = ball-in-urn comparison method (like CHAIN);

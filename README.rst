@@ -24,6 +24,13 @@ SciPy_ and ReportLab_ will be fetched and installed automatically.
 .. _SciPy: http://scipy.org/
 .. _ReportLab: http://pypi.python.org/pypi/reportlab
 
+Optionally, CladeCompare can align your sequences for you if you have MUSCLE_,
+HMMer3_ or MAPGAPS_ installed.
+
+.. _MUSCLE: http://www.drive5.com/muscle/
+.. _HMMer3: http://hmmer.janelia.org/
+.. _MAPGAPS: http://mapgaps.igs.umaryland.edu/
+
 
 Usage
 -----
@@ -57,7 +64,7 @@ If you're not using MAPGAPS_, it would make sense to either:
   profile, then use a script (your own) to delete any insert columns.
 
 In case you botch all that, CladeCompare will check then number of columns in
-the FG and BG alignments, and if they don't match, will automatically run MAFFT
+the FG and BG alignments, and if they don't match, will automatically run MUSCLE
 to align the alignments to each other.
 
 If you are using MAPGAPS, it looks like this::
@@ -116,6 +123,8 @@ Statistical tests ("-s" options) for column comparison:
 :urn:
     Ball-in-urn model (binomial), a la CHAIN_, for counts of the "consensus"
     amino acid type in FG and BG.
+:jsd:
+    Jensen-Shannon divergence of column compositions.
 :ancestrallrt:
     (in progress) Likelihood ratio test of ancestral states.
 :entropy:

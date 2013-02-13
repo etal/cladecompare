@@ -20,8 +20,10 @@ from __future__ import absolute_import
 
 import logging
 import math
+import os
 import subprocess
 import sys
+import tempfile
 from cStringIO import StringIO
 from copy import deepcopy
 from os.path import basename
@@ -32,6 +34,9 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.Alphabet import generic_protein
 from Bio.File import as_handle
+
+from Bio import Align
+from biofrills import alnutils
 
 from esbglib.sugar import log_config
 log_config()
@@ -84,11 +89,46 @@ def read_aln(fname, format):
         return aln
 
 
+def combine_alignments(fg_aln, bg_aln):
+    """Align FG and BG to each other so column numbers match.
+
+    Uses MUSCLE for profile-profile alignment.
+    """
+    # This would be simpler with NamedTemporaryFile, but Windows doesn't allow
+    # multiple open file handles on the same file, so here we are.
+    afd, aseqfname = tempfile.mkstemp(text=True)
+    os.close(afd)
+    bfd, bseqfname = tempfile.mkstemp(text=True)
+    os.close(bfd)
+    try:
+        AlignIO.write(fg_aln, aseqfname, 'fasta')
+        AlignIO.write(bg_aln, bseqfname, 'fasta')
+        output = subprocess.check_output([
+            'muscle', '-profile',
+            '-in1', aseqfname,
+            '-in2', bseqfname,
+        ])
+    finally:
+        if os.path.exists(aseqfname):
+            os.remove(aseqfname)
+        if os.path.exists(bseqfname):
+            os.remove(bseqfname)
+
+    full_aln = AlignIO.read(StringIO(output), 'fasta')
+    full_aln = Align.MultipleSeqAlignment(
+        alnutils.remove_empty_cols(full_aln))
+    # Save a copy
+    # ENH: choose a reasonable name
+    AlignIO.write(full_aln, '_cc_combined.seq', 'fasta')
+    logging.info("Wrote _cc_combined.seq")
+    return full_aln
+
+
 def clean_alignments(fg_aln, bg_aln):
     """Fix simple issues in the alignments:
 
     - Remove duplicated sequences and IDs from the background
-    - Ensure alignments are the same width (if not, realign w/ MAFFT)
+    - Ensure alignments are the same width (if not, align to each other)
     - Remove all-gap columns from the full alignment
     """
     # Remove FG seqs from BG -- by equal sequence IDs, here
@@ -100,10 +140,11 @@ def clean_alignments(fg_aln, bg_aln):
                     logging.warn("Different sequences for %s in fg, bg",
                             fg_seq.id)
                 killme.append(idx)
-    logging.info("Removing %d duplicated sequence IDs from the background",
-            len(killme))
-    for idx in sorted(killme, reverse=True):
-        del bg_aln._records[idx]
+    if killme:
+        logging.info("Removing %d duplicated sequence IDs from the background",
+                    len(killme))
+        for idx in sorted(killme, reverse=True):
+            del bg_aln._records[idx]
 
     # Remove identical sequences from the FG and BG
     def purge_duplicates(aln, seen=set()):
@@ -123,22 +164,8 @@ def clean_alignments(fg_aln, bg_aln):
 
     # Ensure alignments are the same width
     if len(fg_aln[0]) != len(bg_aln[0]):
-        logging.warn("Alignments are not of equal width; fixing with MAFFT.")
-        # Attempt meta-alignment w/ mafft
-        AlignIO.write(fg_aln, '_tmp_fg.seq', 'fasta')
-        AlignIO.write(bg_aln, '_tmp_bg.seq', 'fasta')
-        # Empty/dummy file for MAFFT -- we're really only aligning seeds
-        subprocess.check_call('echo > _tmp_mt.seq', shell=True)
-        output = subprocess.check_output(['mafft',
-            '--globalgenafpair',
-            '--maxiterate', '1000',
-            '--seed', '_tmp_fg.seq',
-            '--seed', '_tmp_bg.seq',
-            '_tmp_mt.seq'])
-        full_aln = AlignIO.read(StringIO(output), 'fasta')
-        # Remove "_seed_" prefixes
-        for rec in full_aln:
-            rec.id = rec.id[len('_seed_'):]
+        logging.warn("Alignments are not of equal width; fixing with MUSCLE.")
+        full_aln = combine_alignments(fg_aln, bg_aln)
     else:
         full_aln = deepcopy(fg_aln)
         full_aln.extend(bg_aln)
@@ -194,10 +221,12 @@ def write_report(hits, outfile, alpha):
     """Write p-values & "contrast" stars for each site. (It's noisy.)"""
     for idx, data in enumerate(hits):
         fg_char, bg_char, pvalue = data
+        if not (0 <= pvalue <= 1):
+            logging.warn("Out-of-domain p-value at site %s: %s",
+                         idx, pvalue)
+        stars = ('*'*int(-math.log10(pvalue)) if 0 < pvalue < alpha else '')
         outfile.write("%s (%s) %d : prob=%g\t%s\n"
-                      % (fg_char, bg_char, idx + 1, pvalue,
-                         ('*'*int(-math.log10(pvalue))
-                          if pvalue < alpha else '')))
+                      % (fg_char, bg_char, idx + 1, pvalue, stars))
 
 
 def write_mcbpps(tophits, ptnfile):

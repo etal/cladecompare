@@ -4,15 +4,21 @@
 
 Examples:
 
+# Basic
+cladecompare.py fg.seq bg.seq > fg-v-bg.out
+
+# Save per-site p-values and "pattern" file of significant sites
+cladecompare.py fg.seq bg.seq -p fg-v-bg.pttrn -o fg-v-bg.out
+
 # CHAIN style
 # Align sequences on the fly by giving the MAPGAPS profile
-compare_aln.py fg.fasta bg.fasta -s urn --mapgaps /share/data/PK \
+cladecompare.py fg.fasta bg.fasta -s urn --mapgaps /share/data/PK \\
         -p fg.pttrn -o fg.out
 
 # mcBPPS style
 # (Run MAPGAPS on each subfamily beforehand)
-compare_aln.py subfam1.fa_aln.cma subfam2.fa_aln.cma subfam3.fa_aln.cma
 # Writes files named: subfam{1,2,3}.fa_aln.cma.{pttrn,out}
+cladecompare.py subfam1.fa_aln.cma subfam2.fa_aln.cma subfam3.fa_aln.cma
 
 """
 
@@ -28,14 +34,13 @@ from cStringIO import StringIO
 from copy import deepcopy
 from os.path import basename
 
-from Bio import AlignIO
+from Bio import AlignIO, SeqIO
 from Bio.Align import MultipleSeqAlignment
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.Alphabet import generic_protein
 from Bio.File import as_handle
 
-from Bio import Align
 from biofrills import alnutils
 
 from cladecompare import pairlogo, urn, gtest, jsd
@@ -43,10 +48,21 @@ from cladecompare import pairlogo, urn, gtest, jsd
 
 # --- Input magic ---
 
-def mapgaps_align_and_read(mapgaps_profile, fasta_fname):
-    """Align a FASTA file with MAPGAPS and read the CMA alignment.
+def hmm_align_and_read(hmm_profile, fasta_fname):
+    """Align a FASTA file with HMMer 3 and read the alignment."""
+    out = subprocess.check_output(['hmmalign', '--allcol', '--trim', '--amino',
+                                   '--outformat', 'a2m',
+                                   hmm_profile, fasta_fname])
+    # ENH: write to file, then parse incrementally
+    records = list(SeqIO.parse(StringIO(out), 'fasta'))
+    # Remove inserts, i.e. lowercase characters
+    for rec in records:
+        rec.seq._data = ''.join([c for c in str(rec.seq) if not c.islower()])
+    return MultipleSeqAlignment(records, generic_protein)
 
-    """
+
+def mapgaps_align_and_read(mapgaps_profile, fasta_fname):
+    """Align a FASTA file with MAPGAPS and read the CMA alignment."""
     subprocess.check_call(['run_gaps', mapgaps_profile, fasta_fname])
     aln = cma_blocks(fasta_fname + '_aln.cma')
     return aln
@@ -113,8 +129,8 @@ def combine_alignments(fg_aln, bg_aln):
             os.remove(bseqfname)
 
     full_aln = AlignIO.read(StringIO(output), 'fasta')
-    full_aln = Align.MultipleSeqAlignment(
-        alnutils.remove_empty_cols(full_aln))
+    full_aln = MultipleSeqAlignment(alnutils.remove_empty_cols(full_aln),
+                                    generic_protein)
     # Save a copy
     # ENH: choose a reasonable name
     AlignIO.write(full_aln, '_cc_combined.seq', 'fasta')
@@ -249,7 +265,13 @@ def process_args(args):
 
     all_alns = []
     for alnfname in [args.foreground] + args.background:
-        if args.mapgaps:
+        if args.hmm:
+            logging.info("Aligning %s with HMM profile %s",
+                         alnfname, args.hmm)
+            aln = hmm_align_and_read(args.hmm, alnfname)
+        elif args.mapgaps:
+            logging.info("Aligning %s with MAPGAPS profile %s",
+                         alnfname, args.mapgaps)
             aln = mapgaps_align_and_read(args.mapgaps, alnfname)
         else:
             aln = read_aln(alnfname, args.format)
@@ -338,7 +360,10 @@ if __name__ == '__main__':
     AP.add_argument('-f', '--format',
             default='fasta',
             help="Input alignment format (default fasta).")
-    AP.add_argument('-m', '--mapgaps',
+    AP.add_argument('--hmm',
+            help="""Align the foreground and background sequences with this
+            HMMer 3.0 profile.""")
+    AP.add_argument('--mapgaps',
             help="""Align the foreground and background sequences with this
             MAPGAPS profile.""")
     AP.add_argument('-t', '--tree',
@@ -351,11 +376,12 @@ if __name__ == '__main__':
     AP.add_argument('-s', '--strategy',
             default='gtest',
             help="""Strategy used to compare alignments:
-            'urn' = ball-in-urn comparison method (like CHAIN);
             'gtest' = G-test of all character frequencies;
-            'ancestrallrt' = likelihood ratio test of ancestral state
-                    likelihoods between the foreground clade and the full tree.
+            'urn' = ball-in-urn model of consensus residue conservation;
+            'jsd' = Jensen-Shannon divergence.
             """)
+            # 'ancestrallrt' = likelihood ratio test of ancestral state
+            #         likelihoods between the foreground clade and the full tree.
     # Output
     AP.add_argument('-o', '--output',
             default=sys.stdout,
@@ -368,8 +394,6 @@ if __name__ == '__main__':
     AP.add_argument('-q', '--quiet',
             action='store_true',
             help="Don't print status messages, only warnings and errors.")
-
-    (AP.parse_args())
 
     args = AP.parse_args()
     if args.quiet:

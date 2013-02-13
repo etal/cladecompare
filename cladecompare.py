@@ -38,10 +38,8 @@ from Bio.File import as_handle
 from Bio import Align
 from biofrills import alnutils
 
-from esbglib.sugar import log_config
-log_config()
+from cladecompare import pairlogo, urn, gtest, jsd
 
-from cladecompare import pairlogo, urn, gtest, jsd #, ancestrallrt
 
 # --- Input magic ---
 
@@ -356,14 +354,26 @@ if __name__ == '__main__':
                     likelihoods between the foreground clade and the full tree.
             """)
     # Output
-    AP.add_argument('-p', '--pattern',
-            help="""Write an mcBPPS-style pattern file to this filename.
-            (Single-foreground comparison only.""")
     AP.add_argument('-o', '--output',
             default=sys.stdout,
             help="""Write per-column probabilities (standard output) to this
             filename, for use with cladereport.py. (Single-foreground
             comparison only.""")
+    AP.add_argument('-p', '--pattern',
+            help="""Write an mcBPPS-style pattern file to this filename.
+            (Single-foreground comparison only.""")
+    AP.add_argument('-q', '--quiet',
+            action='store_true',
+            help="Don't print status messages, only warnings and errors.")
 
-    process_args(AP.parse_args())
+    (AP.parse_args())
+
+    args = AP.parse_args()
+    if args.quiet:
+        logging.basicConfig(level=logging.WARNING,
+                format="%(module)s: %(message)s")
+    else:
+        logging.basicConfig(level=logging.INFO,
+                format="%(module)s [@%(lineno)s]: %(message)s")
+    process_args(args)
 

@@ -125,10 +125,6 @@ Statistical tests ("-s" options) for column comparison:
     amino acid type in FG and BG.
 :jsd:
     Jensen-Shannon divergence of column compositions, a la INTREPID_.
-:ancestrallrt:
-    (in progress) Likelihood ratio test of ancestral states.
-:entropy:
-    (in progress) Difference in column entropies, i.e. information gain/loss.
 
 .. _CHAIN: http://chain.igs.umaryland.edu/
 .. _INTREPID: http://bioinformatics.oxfordjournals.org/content/24/21/2445.full

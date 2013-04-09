@@ -15,8 +15,9 @@ try:
             'biopython >= 1.58',
             'scipy >= 0.6', 
             'reportlab >= 2.5', 
+            'weblogo >= 3.0', 
         ])
-except:
+except ImportError:
     from distutils.core import setup
 
 

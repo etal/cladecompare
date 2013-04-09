@@ -31,6 +31,12 @@ HMMer3_ or MAPGAPS_ installed.
 .. _HMMer3: http://hmmer.janelia.org/
 .. _MAPGAPS: http://mapgaps.igs.umaryland.edu/
 
+Finally, if you are on a Unix-like system (i.e. Linux, Mac or Cygwin), you can
+verify your installation by running the test suite::
+
+    cd test
+    make
+
 
 Usage
 -----

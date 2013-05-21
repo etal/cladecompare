@@ -1,29 +1,10 @@
 #!/usr/bin/env python
 
-"""Compare alignments to identify distinguishing/diagnostic residues.
-
-Examples:
-
-# Basic
-cladecompare.py fg.seq bg.seq > fg-v-bg.out
-
-# Save per-site p-values and "pattern" file of significant sites
-cladecompare.py fg.seq bg.seq -p fg-v-bg.pttrn -o fg-v-bg.out
-
-# CHAIN style
-# Align sequences on the fly by giving the MAPGAPS profile
-cladecompare.py fg.fasta bg.fasta -s urn --mapgaps /share/data/PK \\
-        -p fg.pttrn -o fg.out
-
-# mcBPPS style
-# (Run MAPGAPS on each subfamily beforehand)
-# Writes files named: subfam{1,2,3}.fa_aln.cma.{pttrn,out}
-cladecompare.py subfam1.fa_aln.cma subfam2.fa_aln.cma subfam3.fa_aln.cma
-
-"""
+"""Compare protein sequence alignments to identify contrasting sites."""
 
 from __future__ import absolute_import
 
+import contextlib
 import logging
 import math
 import os
@@ -43,7 +24,134 @@ from Bio.File import as_handle
 
 from biofrills import alnutils
 
-from cladecompare import pairlogo, urn, gtest, jsd
+from cladecompare import pairlogo, pmlscript, urn, gtest, jsd, phospho
+
+
+# --- PDB alignment magic ---
+
+# ENH: handle multiple PDBs
+@contextlib.contextmanager
+def read_pdb_seq(pdb_fname):
+    """Return the name of a temporary file containing the PDB atom sequence(s),
+    a list of the sequences themselves (as SeqRecords), and a same-length list
+    of tuples of (chain ID, chain start resnum, chain end resnum).
+
+    Context manager, so temporary file is automatically removed.
+    """
+    pdbseqs = list(SeqIO.parse(pdb_fname, 'pdb-atom'))
+    try:
+        _fd, pdbseqfname = tempfile.mkstemp()
+        SeqIO.write(pdbseqs, pdbseqfname, 'fasta')
+        yield pdbseqfname, pdbseqs
+    finally:
+        os.close(_fd)
+        if os.path.exists(pdbseqfname):
+            os.remove(pdbseqfname)
+
+
+def choose_best_aligned(aligned):
+    """Choose the longest profile match as the "reference" chain.
+
+    Returns a tuple: (sequence ID, sequence string)
+    """
+    def aligned_len(seq):
+        return sum(c.isupper() for c in seq.replace('X', ''))
+
+    if not aligned:
+        raise RuntimeError("No PDB sequences were aligned by the profile!")
+    elif len(aligned) == 1:
+        ref_id, ref_aln = aligned.items()[0]
+    else:
+        ref_id = max(aligned.iteritems(), key=lambda kv: aligned_len(kv[1]))
+        ref_aln = aligned[ref_id]
+    return ref_id, ref_aln
+
+
+def get_aln_offset(full, aln):
+    aln_trim = aln.replace('-', '').replace('.', '').upper()
+    if 'X' in aln_trim:
+        aln_trim = aln_trim[:aln_trim.index('X')]
+    return full.index(aln_trim)
+
+
+def aln_resnums_inserts(record, aln, offset):
+    """Return two lists: residue numbers for model columns; inserts."""
+    aln_resnums = []
+    aln_inserts = []
+    in_insert = False
+    del_len = 0
+    curr_ins_start = None
+    for i, c in enumerate(aln):
+        if c.islower():
+            if not in_insert:
+                # Start of a new insert region
+                curr_ins_start = offset + i + 1 - del_len
+                in_insert = True
+            continue
+
+        if in_insert:
+            # End of the current insert region
+            aln_inserts.append((curr_ins_start, offset + i - del_len))
+            in_insert = False
+
+        if c.isupper():
+            # Match position
+            aln_resnums.append((c, offset + i - del_len + 1))
+        elif c == '-':
+            # Deletion position
+            aln_resnums.append(('-', None))
+            del_len += 1
+        else:
+            raise ValueError("Unexpected character '%s'" % c)
+    return aln_resnums, aln_inserts
+
+
+def pdb_hmm(hmm_profile, pdb_fname):
+    """Align a PDB structure to an HMM profile.
+
+    Returns a tuple: (SeqRecord,
+                    //chain ID,
+                      list of aligned residue numbers,
+                      list of insert ranges as tuple pairs)
+    """
+    with read_pdb_seq(pdb_fname) as (seqfname, seqs):
+        out = subprocess.check_output(['hmmalign', '--allcol', '--trim',
+                                       '--amino', '--outformat', 'a2m',
+                                       hmm_profile, seqfname])
+    ref_id, ref_aln = choose_best_aligned(
+        dict((rec.id, str(rec.seq))
+             for rec in SeqIO.parse(StringIO(out), 'fasta')))
+    ref_record = SeqIO.to_dict(seqs)[ref_id]
+    # Calculate aligned residue numbers & insert ranges
+    offset = (ref_record.annotations['start']
+              + get_aln_offset(str(ref_record.seq), ref_aln)
+              - 1)
+    resnums, inserts = aln_resnums_inserts(ref_record, ref_aln, offset)
+    return ref_record, resnums, inserts
+
+
+def pdb_mapgaps(mapgaps_profile, pdb_fname):
+    """Align a PDB structure to a MAPGAPS profile.
+
+    Returns a tuple: (SeqRecord, list of aligned residue numbers)
+    """
+    from biocma import cma
+
+    with read_pdb_seq(pdb_fname) as (seqfname, seqs):
+        subprocess.check_call(['run_gaps', mapgaps_profile, seqfname])
+    pdb_cma = cma.read(seqfname + '_aln.cma')
+    hits = {}
+    head_lengths = {}
+    for seq in pdb_cma['sequences']:
+        hits[seq['id']] = seq['seq']
+        head_lengths[seq['id']] = seq['head_len']
+    ref_id, ref_aln = choose_best_aligned(hits)
+    ref_record = SeqIO.to_dict(seqs)[ref_id]
+    offset = (ref_record.annotations['start']
+              + head_lengths[ref_id]
+              - 1)
+    resnums, inserts = aln_resnums_inserts(ref_record, ref_aln, offset)
+    return ref_record, resnums, inserts
 
 
 # --- Input magic ---
@@ -235,7 +343,7 @@ def write_report(hits, outfile, alpha):
     """Write p-values & "contrast" stars for each site. (It's noisy.)"""
     for idx, data in enumerate(hits):
         fg_char, bg_char, pvalue = data
-        if not (0 <= pvalue <= 1):
+        if not (0.0 <= pvalue <= 1.0):
             logging.warn("Out-of-domain p-value at site %s: %s",
                          idx, pvalue)
         stars = ('*'*int(-math.log10(pvalue)) if 0 < pvalue < alpha else '')
@@ -251,14 +359,9 @@ def write_mcbpps(tophits, ptnfile):
 
 # ---- FLOW --------------------------------------------------------------
 
-# ENH:
-#   single alignment
-#       compare_aln main.cma [--tree foo]
-#       --> longest-branch decomposition
-#       * stop at some threshold -- clade size 3, 5, 6?
 def process_args(args):
     """Main."""
-    if args.mapgaps:
+    if args.mapgaps or args.hmm:
         # run_gaps requires FASTA input
         assert args.format == 'fasta', \
                 "Input sequence format must be FASTA."
@@ -277,12 +380,34 @@ def process_args(args):
             aln = read_aln(alnfname, args.format)
         all_alns.append(aln)
 
+    pdb_data = []
+    if args.pdb:
+        if args.hmm:
+            for pdbfname in args.pdb:
+                logging.info("Aligning %s with HMM profile %s",
+                                pdbfname, args.hmm)
+                pdb_rec, pdb_resnums, pdb_inserts = pdb_hmm(args.hmm, pdbfname)
+                pdb_data.append((pdbfname, pdb_rec, pdb_resnums, pdb_inserts))
+        elif args.mapgaps:
+            for pdbfname in args.pdb:
+                logging.info("Aligning %s with MAPGAPS profile %s",
+                                pdbfname, args.mapgaps)
+                pdb_rec, pdb_resnums, pdb_inserts = pdb_mapgaps(args.mapgaps,
+                                                                pdbfname)
+                pdb_data.append((pdbfname, pdb_rec, pdb_resnums, pdb_inserts))
+        else:
+            logging.error("PDB alignment requires a MAPGAPS or HMM profile.")
+            # ENH - realign to fg, bg
+            # aln = read_aln(args.pdb, 'pdb-atom')
+
     if args.strategy == 'urn':
         logging.info("Using ball-in-urn statistical model")
     elif args.strategy == 'gtest':
         logging.info("Using G-test of amino acid frequencies")
     elif args.strategy == 'jsd':
         logging.info("Using Jensen-Shannon divergence")
+    elif args.strategy == 'phospho':
+        logging.info("Using urn model for phosphorylatable residues")
     elif args.strategy == 'ancestrallrt':
         logging.info("Using maximum-likelihood ancestral character states")
     else:
@@ -293,7 +418,9 @@ def process_args(args):
         fg_clean, bg_clean, hits = process_pair(fg_aln, bg_aln,
                                                 args.strategy, args.tree)
         process_output(fg_clean, bg_clean, hits, args.alpha,
-                       args.output, args.pattern)
+                       args.output, args.pattern,
+                       pdb_data)
+                       # args.pdb, pdb_rec, pdb_resnums, pdb_inserts)
     else:
         # Output fnames are based on fg filenames; ignore what's given
         outfnames_ptnfnames = [(basename(alnfname) + '.out',
@@ -310,7 +437,9 @@ def process_args(args):
                                                     args.strategy, args.tree)
             outfname, ptnfname = outfnames_ptnfnames[idx]
             process_output(fg_clean, bg_clean, hits, args.alpha,
-                           outfname, ptnfname)
+                           outfname, ptnfname, pdb_data)
+                           # args.pdb,
+                           # pdb_rec, pdb_resnums, pdb_inserts)
             logging.info("Wrote %s and %s", outfname, ptnfname)
 
 
@@ -321,6 +450,7 @@ def process_pair(fg_aln, bg_aln, strategy, tree=None):
         (foreground consensus aa, background consensus aa, p-value)
         for each column position.
     """
+    # ENH - put strategies in a dict, look up here
     fg_aln, bg_aln = clean_alignments(fg_aln, bg_aln)
     if strategy == 'urn':
         hits = urn.compare_aln(fg_aln, bg_aln)
@@ -328,28 +458,65 @@ def process_pair(fg_aln, bg_aln, strategy, tree=None):
         hits = gtest.compare_aln(fg_aln, bg_aln)
     elif strategy == 'jsd':
         hits = jsd.compare_aln(fg_aln, bg_aln)
-    elif strategy == 'ancestrallrt':
+    elif strategy == 'phospho':
+        hits = phospho.compare_aln(fg_aln, bg_aln)
+    # elif strategy == 'ancestrallrt':
         # hits = ancestrallrt.compare_aln(fg_aln, bg_aln, tree)
-        pass
+    else:
+        raise ValueError("Unknown strategy: %s" % strategy)
     return fg_aln, bg_aln, hits
 
 
-def process_output(fg_aln, bg_aln, hits, alpha, output, pattern):
+def process_output(fg_aln, bg_aln, hits, alpha, output, pattern, pdb_data):
+    """Generate the output files from the processed data."""
     with as_handle(output, 'w+') as outfile:
         write_report(hits, outfile, alpha)
+    tophits = top_hits(hits, alpha)
     if pattern:
-        tophits = top_hits(hits, alpha)
         with open(pattern, 'w+') as ptnfile:
             write_mcbpps(tophits, ptnfile)
         pairlogo.make_pairlogos(fg_aln, bg_aln, tophits,
                                 pattern.rsplit('.', 1)[0],
                                 10)
+    if pdb_data:
+        patterns = [t[0] for t in tophits]
+        if len(pdb_data) == 1:
+            pdb_fname, pdb_rec, pdb_resnums, pdb_inserts = pdb_data[0]
+            script = pmlscript.build_single(pdb_resnums, pdb_inserts,
+                                            patterns, pdb_fname,
+                                            pdb_rec.annotations['chain'])
+            pml_fname = pdb_fname + ".pml"
+        else:
+            pdb_fnames, pdb_recs, pdb_resnumses, pdb_insertses = zip(*pdb_data)
+            # TODO multi-PDB mode
+            pml_fname = pdb_fnames[0] + "-etc.pml"
+        with open(pml_fname, 'w+') as pmlfile:
+            pmlfile.write(script)
+        logging.info("Wrote %s", pml_fname)
 
 
 
 if __name__ == '__main__':
-    import argparse 
-    AP = argparse.ArgumentParser(__doc__)
+    import argparse
+    AP = argparse.ArgumentParser(description=__doc__,
+                                 epilog="""Examples:
+
+# Basic
+cladecompare.py fg.seq bg.seq > fg-v-bg.out
+
+# Save per-site p-values and "pattern" file of significant sites
+cladecompare.py fg.seq bg.seq -p fg-v-bg.pttrn -o fg-v-bg.out
+
+# CHAIN style
+# Align sequences on the fly by giving the MAPGAPS profile
+cladecompare.py fg.fasta bg.fasta -s urn --mapgaps /share/data/PK \\
+        -p fg.pttrn -o fg.out
+
+# HMMer/PDB style
+cladecompare.py fg.fasta bg.fasta --hmm Pkinase.hmm --pdb 1ATP.pdb
+
+See README or http://github.com/etal/cladecompare for full documentation.
+""", formatter_class=argparse.RawDescriptionHelpFormatter)
     # Input
     AP.add_argument('foreground',
             help="Foreground sequence (alignment) file.")
@@ -359,13 +526,16 @@ if __name__ == '__main__':
             foreground alignments for each-vs-all comparisons.""")
     AP.add_argument('-f', '--format',
             default='fasta',
-            help="Input alignment format (default fasta).")
+            help="Input alignment format (default: fasta).")
     AP.add_argument('--hmm',
             help="""Align the foreground and background sequences with this
             HMMer 3.0 profile.""")
     AP.add_argument('--mapgaps',
             help="""Align the foreground and background sequences with this
             MAPGAPS profile.""")
+    AP.add_argument('--pdb',
+            action='append',
+            help="""3D structure coordinates in Protein Data Bank format.""")
     AP.add_argument('-t', '--tree',
             help="Input tree.")
     # Options
@@ -378,10 +548,11 @@ if __name__ == '__main__':
             help="""Strategy used to compare alignments:
             'gtest' = G-test of all character frequencies;
             'urn' = ball-in-urn model of consensus residue conservation;
+            'phospho' = urn model for phosphorylatable residues (S/T/Y);
             'jsd' = Jensen-Shannon divergence.
             """)
             # 'ancestrallrt' = likelihood ratio test of ancestral state
-            #         likelihoods between the foreground clade and the full tree.
+            #   likelihoods between the foreground clade and the full tree.
     # Output
     AP.add_argument('-o', '--output',
             default=sys.stdout,

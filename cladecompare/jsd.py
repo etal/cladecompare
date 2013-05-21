@@ -13,7 +13,7 @@ See:
 
 from biofrills import consensus, alnutils
 
-from shared import count_col, entropy, MAX_ENTROPY
+from .shared import count_col, combined_frequencies, entropy, MAX_ENTROPY
 
 
 def compare_one(aln):
@@ -31,10 +31,11 @@ def compare_one(aln):
             # Ignore indel columns -- there are better ways to look at these
             jsd = 1.
         else:
+            counts = count_col(col, weights)
             mix = {}
             for aa in 'ACDEFGHIKLMNPQRSTVWY':
                 mix[aa] = 0.5*counts.get(aa, 0.) + 0.5*0.05
-            jsd = entropy(mix.values()) - 0.5*(entropy(fg_counts.values()) +
+            jsd = entropy(mix.values()) - 0.5*(entropy(counts.values()) +
                                                MAX_ENTROPY)
         hits.append((aa, jsd))
 
@@ -48,9 +49,7 @@ def compare_aln(fg_aln, bg_aln):
     """
     fg_weights = alnutils.sequence_weights(fg_aln, 'sum1')
     bg_weights = alnutils.sequence_weights(bg_aln, 'sum1')
-    aa_freqs = alnutils.aa_frequencies(fg_aln._records + bg_aln._records,
-                                       gap_chars='-.X',
-                                       weights=fg_weights + bg_weights)
+    aa_freqs = combined_frequencies(fg_aln, fg_weights, bg_aln, bg_weights)
     fg_cons = consensus.consensus(fg_aln, weights=fg_weights, trim_ends=False,
                                   gap_threshold=0.8)
     bg_cons = consensus.consensus(bg_aln, weights=bg_weights, trim_ends=False,
@@ -63,6 +62,7 @@ def compare_aln(fg_aln, bg_aln):
             # Ignore indel columns -- there are better ways to look at these
             jsd = 1.
         else:
+            # ENH use pseudocounts (aa_freqs)
             bg_counts = count_col(bg_col, bg_weights)
             fg_counts = count_col(fg_col, fg_weights)
             mix = {}

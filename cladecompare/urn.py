@@ -17,6 +17,10 @@ number of residues, respectively, in the j^th column of subalignment L, and
 p_j^{(B)} is the frequency of the conserved residues observed at that position
 for superalignment B, which serves as the background model.
 
+Neuwald: "Note that weights are not computed for the query family alignment,
+because these sequences are selected from distinct phyla or kingdoms and,
+therefore, are treated as statistically independent."
+
 The corresponding selective constraint acting on subalignment L is then defined
 as
 
@@ -41,27 +45,14 @@ The order-of-magnitude increase in t as a function of sigma, when he relative
 bar height increases by twofold, is given by
     log_10 (t_2h / t_h) = log_10 (2^{1/(1-sigma)})
 
-----
-ENH:
-
-Dirichlet mixture priors; Brown et al. 1993
-
-Main set sequences are down-weighted to adjust for correlations between them,
-us- ing the PSI-BLAST weighting scheme (Henikoff and Henikoff 1994; Altschul et
-al. 1997).
-Normalize weights s.t. the expected (mean) weight is 1/2, with occasional
-normalized weights greater than 1 being truncated to 1.
-Note that weights are not computed for the query family alignment, because
-these sequences are selected from distinct phyla or kingdoms and, therefore,
-are treated as statistically independent.
-
 """
+# ENH: Dirichlet mixture priors; Brown et al. 1993
 
 from scipy.stats import binom
-
 from biofrills import consensus, alnutils
 
-from shared import count_col
+from .shared import count_col, combined_frequencies
+
 
 def compare_aln(fg_aln, bg_aln):
     """Compare alignments using the ball-in-urn model, like CHAIN does.
@@ -71,10 +62,12 @@ def compare_aln(fg_aln, bg_aln):
     bg_size = sum(bg_weights)
     bg_cons = consensus.consensus(bg_aln, weights=bg_weights)
     # Height of the foreground alignment column
-    fg_size = float(len(fg_aln._records))
+    fg_size = len(fg_aln)
     fg_cons = consensus.consensus(fg_aln)
     fg_cols = zip(*fg_aln)
     bg_cols = zip(*bg_aln)
+    pseudocounts = combined_frequencies(fg_aln, [1]*fg_size,
+                                        bg_aln, bg_weights)
     hits = []
     for faa, baa, fg_col, bg_col in zip(fg_cons, bg_cons, fg_cols, bg_cols):
         if faa == '-' or baa == '-':
@@ -85,12 +78,13 @@ def compare_aln(fg_aln, bg_aln):
             # Number of consensus-type residues in the foreground column
             fg_cons_count = fg_col.count(faa)
             # Consensus residue frequency in the combined alignment column
-            p_j = (count_col(bg_col, bg_weights)[faa] + fg_cons_count
-                ) / (bg_size + fg_size)
+            p_j = (count_col(bg_col, bg_weights, pseudocounts)[faa]
+                   + fg_cons_count
+                ) / (bg_size + fg_size + 1.0)
             # Probability of fg col conservation vs. the combined/main set
             # (P_j_LB in the publication)
-            pvalue = binom.pmf(range(fg_cons_count, int(fg_size+1)),
-                            fg_size, p_j).sum()
+            pvalue = binom.pmf(range(fg_cons_count, fg_size+1),
+                               fg_size, p_j).sum()
         hits.append((faa, baa, pvalue))
     return hits
 

@@ -32,7 +32,7 @@ import math
 from biofrills import consensus, alnutils
 from biofrills.stats.chisq import chisqprob
 
-from shared import count_col
+from .shared import count_col, combined_frequencies
 
 
 def compare_aln(fg_aln, bg_aln):
@@ -42,9 +42,7 @@ def compare_aln(fg_aln, bg_aln):
     bg_size = sum(bg_weights)
     pseudo_size = 1.0 # math.sqrt(bg_size)
     # Overall aa freqs for pseudocounts
-    aa_freqs = alnutils.aa_frequencies(fg_aln._records + bg_aln._records,
-                                       gap_chars='-.X',
-                                       weights=fg_weights + bg_weights)
+    aa_freqs = combined_frequencies(fg_aln, fg_weights, bg_aln, bg_weights)
     fg_cons = consensus.consensus(fg_aln, weights=fg_weights, trim_ends=False,
                                   gap_threshold=0.8)
     bg_cons = consensus.consensus(bg_aln, weights=bg_weights, trim_ends=False,

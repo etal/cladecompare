@@ -15,5 +15,5 @@ scttlre-v-cdc2.html: ../cladereport.py scttlre-v-cdc2.out
 	python $^ -p scttlre-v-cdc2.pttrn > $@
 
 scttlre-v-cdc2.out scttlre-v-cdc2.pttrn: ../cladecompare.py scttlre-domain.fasta_aln.cma cdc2-domain.fasta_aln.cma
-	python $^ -p scttlre-v-cdc2.pttrn > scttlre-v-cdc2.out
+	python $^ -p scttlre-v-cdc2.pttrn -s gtest > scttlre-v-cdc2.out
 

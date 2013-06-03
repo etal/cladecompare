@@ -27,6 +27,9 @@ from biofrills import alnutils, consensus
 from cladecompare import pairlogo, pmlscript, urn, gtest, jsd, phospho
 from cladecompare.shared import combined_frequencies
 
+GAP_THRESH = 0.8
+PSEUDO_SIZE = 0.5
+
 
 # --- PDB alignment magic ---
 
@@ -417,9 +420,13 @@ def process_args(args):
     else:
         raise ValueError("Unknown strategy: %s" % args.strategy)
 
-    if len(all_alns) == 2:
-        fg_aln, bg_aln = all_alns
-        fg_clean, bg_clean, hits = process_pair(fg_aln, bg_aln, module)
+    if len(all_alns) == 1:
+        aln, hits = process_one(all_alns[0], module)
+        process_output(aln, None, hits, args.alpha, args.output, args.pattern,
+                       pdb_data)
+    elif len(all_alns) == 2:
+        fg_clean, bg_clean, hits = process_pair(all_alns[0], all_alns[1],
+                                                module)
         process_output(fg_clean, bg_clean, hits, args.alpha,
                        args.output, args.pattern,
                        pdb_data)
@@ -460,13 +467,12 @@ def process_pair(fg_aln, bg_aln, module):
     bg_weights = alnutils.sequence_weights(bg_aln, 'none')
                                            # if module != jsd else 'sum1')
     bg_size = sum(bg_weights)
-    pseudo_size = 1.0 # math.sqrt(bg_size)
     # Overall aa freqs for pseudocounts
     aa_freqs = combined_frequencies(fg_aln, fg_weights, bg_aln, bg_weights)
     fg_cons = consensus.consensus(fg_aln, weights=fg_weights, trim_ends=False,
-                                  gap_threshold=0.8)
+                                  gap_threshold=GAP_THRESH)
     bg_cons = consensus.consensus(bg_aln, weights=bg_weights, trim_ends=False,
-                                  gap_threshold=0.8)
+                                  gap_threshold=GAP_THRESH)
 
     hits = []
     for faa, baa, fg_col, bg_col in zip(fg_cons, bg_cons,
@@ -478,8 +484,7 @@ def process_pair(fg_aln, bg_aln, module):
             pvalue = module.compare_cols(
                 fg_col, faa, fg_size, fg_weights,
                 bg_col, baa, bg_size, bg_weights,
-                aa_freqs, pseudo_size, 
-            )
+                aa_freqs, PSEUDO_SIZE)
         hits.append((faa, baa, pvalue))
 
     return fg_aln, bg_aln, hits
@@ -492,7 +497,7 @@ def process_one(aln, module):
     aln_size = sum(weights) if module != urn else len(aln)
     aa_freqs = alnutils.aa_frequencies(aln, weights, gap_chars='-.X')
     cons = consensus.consensus(aln, weights=weights, trim_ends=False,
-                               gap_threshold=0.8)
+                               gap_threshold=GAP_THRESH)
     hits = []
     for cons_aa, col in zip(cons, zip(*aln)):
         if cons_aa == '-':
@@ -500,8 +505,8 @@ def process_one(aln, module):
             pvalue = 1.
         else:
             pvalue = module.compare_one(col, cons_aa, aln_size, weights,
-                                        aa_freqs)
-        hits.append((cons_aa, pvalue))
+                                        aa_freqs, PSEUDO_SIZE)
+        hits.append((cons_aa, '_', pvalue))
     return aln, hits
 
 
@@ -513,9 +518,11 @@ def process_output(fg_aln, bg_aln, hits, alpha, output, pattern, pdb_data):
     if pattern:
         with open(pattern, 'w+') as ptnfile:
             write_mcbpps(tophits, ptnfile)
-        pairlogo.make_pairlogos(fg_aln, bg_aln, tophits,
-                                pattern.rsplit('.', 1)[0],
-                                10)
+        # XXX hack: don't make pairlogo in single mode
+        if bg_aln:
+            pairlogo.make_pairlogos(fg_aln, bg_aln, tophits,
+                                    pattern.rsplit('.', 1)[0],
+                                    10)
     if pdb_data:
         patterns = [t[0] for t in tophits]
         if len(pdb_data) == 1:
@@ -559,7 +566,7 @@ See README or http://github.com/etal/cladecompare for full documentation.
     AP.add_argument('foreground',
             help="Foreground sequence (alignment) file.")
     AP.add_argument('background',
-            nargs='+',
+            nargs='*',
             help="""Background sequence (alignment) file, or additional
             foreground alignments for each-vs-all comparisons.""")
     AP.add_argument('-f', '--format',

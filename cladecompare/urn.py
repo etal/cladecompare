@@ -65,9 +65,9 @@ def compare_cols(fg_col, fg_cons, fg_size, fg_weights,
     # fg_size_i = len(fg_col)
     fg_cons_count = count_col(fg_col, fg_weights)[fg_cons]
     # Consensus residue frequency in the combined alignment column
-    p_j = (count_col(bg_col, bg_weights, aa_freqs)[fg_cons]
+    p_j = (count_col(bg_col, bg_weights, aa_freqs, pseudo_size)[fg_cons]
            + fg_cons_count
-          ) / (bg_size + fg_size + 1.0)
+          ) / (bg_size + fg_size + pseudo_size)
     # Round fg counts & size to nearest integer for binomial test
     fg_cons_count_i = max(1, int(ceil(fg_cons_count)))
     fg_size_i = int(ceil(fg_size))
@@ -78,7 +78,7 @@ def compare_cols(fg_col, fg_cons, fg_size, fg_weights,
     return pvalue
 
 
-def compare_one(col, cons_aa, aln_size, weights, aa_freqs):
+def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
     "Column probability using the ball-in-urn model."
     # cons_count = col.count(cons_aa)
     cons_count = count_col(col, weights)[cons_aa]

@@ -9,7 +9,7 @@ from biofrills import alnutils
 MAX_ENTROPY = log(20, 2)
 
 
-def count_col(col, weights, pseudo=None):
+def count_col(col, weights, pseudo=None, pseudo_size=1.0):
     """Get a weighted count of the characters in a column, skipping gaps.
 
     weights:
@@ -25,7 +25,7 @@ def count_col(col, weights, pseudo=None):
     if pseudo:
         # Apply pseudocounts
         for char, pcount in pseudo.iteritems():
-            counts[char] += pcount
+            counts[char] += pcount * pseudo_size
     return counts
 
 

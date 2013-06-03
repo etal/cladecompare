@@ -40,12 +40,11 @@ def compare_cols(fg_col, fg_cons, fg_size, fg_weights,
                  aa_freqs, pseudo_size):
     """Compare amino acid frequencies between aligned columns via G-test."""
     # Calculate the "expected" aa frequencies
-    bg_counts = count_col(bg_col, bg_weights)
+    bg_counts = count_col(bg_col, bg_weights, aa_freqs, pseudo_size)
     expected = {}
     for aa in 'ACDEFGHIKLMNPQRSTVWY':
-        expected[aa] = ((bg_counts[aa] + pseudo_size*aa_freqs[aa])
-                        / (bg_size + pseudo_size)
-                    ) * fg_size  # Scale to same size as foreground
+            # Scale to same size as foreground
+        expected[aa] = fg_size * (bg_counts[aa] / (bg_size + pseudo_size)) 
     # Calculate the G-value of observed vs. expected
     observed = count_col(fg_col, fg_weights)
     G = 2 * sum(obsv * math.log(obsv/expected[aa])
@@ -55,9 +54,9 @@ def compare_cols(fg_col, fg_cons, fg_size, fg_weights,
     return pvalue
 
 
-def compare_one(col, cons_aa, aln_size, weights, aa_freqs):
+def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
     """Compare column amino acid frequencies to overall via G-test."""
-    observed = count_col(col, weights, aa_freqs)
+    observed = count_col(col, weights, aa_freqs, pseudo_size)
     G = 2 * sum(obsv * math.log(obsv / aa_freqs.get(aa, 0.0))
                 for aa, obsv in observed.iteritems())
     pvalue = chisqprob(G, 19)

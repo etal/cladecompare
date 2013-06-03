@@ -19,10 +19,10 @@ def compare_cols(fg_col, fg_cons, fg_size, fg_weights,
                  aa_freqs, pseudo_size):
     "Compare alignments using the ball-in-urn model (cumulative binomial test)"
     # Number of consensus-type residues in the foreground column
-    fg_counts = count_col(fg_col, fg_weights, aa_freqs)
+    fg_counts = count_col(fg_col, fg_weights, aa_freqs, pseudo_size)
     fg_tot = fg_counts['S'] + fg_counts['T'] + fg_counts['Y']
     # Consensus residue frequency in the combined alignment column
-    bg_counts = count_col(bg_col, bg_weights, aa_freqs)
+    bg_counts = count_col(bg_col, bg_weights, aa_freqs, pseudo_size)
     p_j = (bg_counts['S'] + bg_counts['T'] + bg_counts['Y'] + fg_tot
           ) / (bg_size + fg_size + 2.0) # pseudocount size = 1.0
 
@@ -38,9 +38,9 @@ def compare_cols(fg_col, fg_cons, fg_size, fg_weights,
     return pvalue
 
 
-def compare_one(col, cons_aa, aln_size, weights, aa_freqs):
+def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
     "Column probability using the ball-in-urn model."
-    col_counts = count_col(col, weights, aa_freqs)
+    col_counts = count_col(col, weights, aa_freqs, pseudo_size)
     col_tot = col_counts['S'] + col_counts['T'] + col_counts['Y']
     p_j = (aa_freqs['S'] + aa_freqs['T'] + aa_freqs['Y'])
     # pvalue = binom.pmf(range(cons_count, aln_size + 1),

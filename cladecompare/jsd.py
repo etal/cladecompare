@@ -24,25 +24,25 @@ def compare_cols(fg_col, fg_cons, fg_size, fg_weights,
     JSD(P,Q) = H(0.5*P + 0.5*Q) - (0.5*H(P) + 0.5*H(Q))
     """
     # ENH: choose \pi weights according to size of each set (after weighting)?
-    # fg_counts = scale_counts(count_col(fg_col, fg_weights, aa_freqs))
-    fg_counts = scale_counts(count_col(fg_col, fg_weights, aa_freqs))
-    bg_counts = scale_counts(count_col(bg_col, bg_weights, aa_freqs))
+    fg_counts = scale_counts(count_col(fg_col, fg_weights))
+    bg_counts = scale_counts(count_col(bg_col, bg_weights, aa_freqs, pseudo_size))
+    # bg_counts = scale_counts(count_col(bg_col, bg_weights))
     mix = {}
     for aa in 'ACDEFGHIKLMNPQRSTVWY':
         mix[aa] = 0.5*fg_counts.get(aa, 0.) + 0.5*bg_counts.get(aa, 0)
     jsd = entropy(mix.values()) - 0.5*(entropy(fg_counts.values()) +
                                         entropy(bg_counts.values()))
-    return 1 - jsd
+    return (1 - jsd)**2
 
 
-def compare_one(col, cons_aa, aln_size, weights, aa_freqs):
+def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
     """1 - Jensen-Shannon divergence of column from equal aa frequencies."""
     # XXX use equal freqs or aa_freqs as background?
-    counts = scale_counts(count_col(col, weights, aa_freqs))
+    counts = scale_counts(count_col(col, weights))
     mix = {}
     for aa in 'ACDEFGHIKLMNPQRSTVWY':
         mix[aa] = 0.5*counts.get(aa, 0.) + 0.5*0.05
     jsd = entropy(mix.values()) - 0.5*(entropy(counts.values()) +
                                         MAX_ENTROPY)
-    return 1 - jsd
+    return (1 - jsd)**2
 

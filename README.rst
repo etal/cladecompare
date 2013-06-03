@@ -5,7 +5,15 @@ CladeCompare
 Compare protein sequence alignments. Identify diagnostic residues between the
 given "foreground" (FG) and  "background" (BG) clades.
 
-License: BSD
+If you use this software in a publication, please cite our paper that describes
+it:
+
+    Talevich, E. & Kannan, N. (2013) Structural and evolutionary adaptation of
+    rhoptry kinases and pseudokinases, a family of coccidian virulence factors.
+    *BMC Evolutionary Biology*
+
+
+Freely distributed under the permissive BSD 2-clause license (see LICENSE).
 
 Installation
 ------------

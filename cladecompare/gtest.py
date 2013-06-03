@@ -35,41 +35,31 @@ from biofrills.stats.chisq import chisqprob
 from .shared import count_col, combined_frequencies
 
 
-def compare_aln(fg_aln, bg_aln):
-    fg_weights = alnutils.sequence_weights(fg_aln, 'none')
-    fg_size = sum(fg_weights)
-    bg_weights = alnutils.sequence_weights(bg_aln, 'none')
-    bg_size = sum(bg_weights)
-    pseudo_size = 1.0 # math.sqrt(bg_size)
-    # Overall aa freqs for pseudocounts
-    aa_freqs = combined_frequencies(fg_aln, fg_weights, bg_aln, bg_weights)
-    fg_cons = consensus.consensus(fg_aln, weights=fg_weights, trim_ends=False,
-                                  gap_threshold=0.8)
-    bg_cons = consensus.consensus(bg_aln, weights=bg_weights, trim_ends=False,
-                                  gap_threshold=0.8)
-    fg_cols = zip(*fg_aln)
-    bg_cols = zip(*bg_aln)
-    hits = []
-    for faa, baa, fg_col, bg_col in zip(fg_cons, bg_cons, fg_cols, bg_cols):
-        if faa == '-' or baa == '-':
-            # Ignore indel columns -- there are better ways to look at these
-            pvalue = 1.
-        else:
-            # Calculate the "expected" aa frequencies
-            bg_counts = count_col(bg_col, bg_weights)
-            expected = {}
-            for aa in 'ACDEFGHIKLMNPQRSTVWY':
-                expected[aa] = ((bg_counts[aa] + pseudo_size*aa_freqs[aa])
-                                / (bg_size + pseudo_size)
-                            ) * fg_size  # Scale to same size as foreground
+def compare_cols(fg_col, fg_cons, fg_size, fg_weights,
+                 bg_col, bg_cons, bg_size, bg_weights,
+                 aa_freqs, pseudo_size):
+    """Compare amino acid frequencies between aligned columns via G-test."""
+    # Calculate the "expected" aa frequencies
+    bg_counts = count_col(bg_col, bg_weights)
+    expected = {}
+    for aa in 'ACDEFGHIKLMNPQRSTVWY':
+        expected[aa] = ((bg_counts[aa] + pseudo_size*aa_freqs[aa])
+                        / (bg_size + pseudo_size)
+                    ) * fg_size  # Scale to same size as foreground
+    # Calculate the G-value of observed vs. expected
+    observed = count_col(fg_col, fg_weights)
+    G = 2 * sum(obsv * math.log(obsv/expected[aa])
+                for aa, obsv in observed.iteritems())
+    # 4. Calculate the Chi-squared p-value of G
+    pvalue = chisqprob(G, 19)
+    return pvalue
 
-            # Calculate the G-value of observed vs. expected
-            observed = count_col(fg_col, fg_weights)
-            G = 2 * sum(obsv * math.log(obsv/expected[aa])
-                        for aa, obsv in observed.iteritems())
-            # 4. Calculate the Chi-squared p-value of G
-            pvalue = chisqprob(G, 19)
-        hits.append((faa, baa, pvalue))
 
-    return hits
+def compare_one(col, cons_aa, aln_size, weights, aa_freqs):
+    """Compare column amino acid frequencies to overall via G-test."""
+    observed = count_col(col, weights, aa_freqs)
+    G = 2 * sum(obsv * math.log(obsv / aa_freqs.get(aa, 0.0))
+                for aa, obsv in observed.iteritems())
+    pvalue = chisqprob(G, 19)
+    return pvalue
 

@@ -48,43 +48,44 @@ bar height increases by twofold, is given by
 """
 # ENH: Dirichlet mixture priors; Brown et al. 1993
 
+from math import ceil
+
 from scipy.stats import binom
 from biofrills import consensus, alnutils
 
 from .shared import count_col, combined_frequencies
 
 
-def compare_aln(fg_aln, bg_aln):
-    """Compare alignments using the ball-in-urn model, like CHAIN does.
-    """
-    # BG seqs are weighted, FG seqs are not
-    bg_weights = alnutils.sequence_weights(bg_aln, 'none')
-    bg_size = sum(bg_weights)
-    bg_cons = consensus.consensus(bg_aln, weights=bg_weights)
-    # Height of the foreground alignment column
-    fg_size = len(fg_aln)
-    fg_cons = consensus.consensus(fg_aln)
-    fg_cols = zip(*fg_aln)
-    bg_cols = zip(*bg_aln)
-    pseudocounts = combined_frequencies(fg_aln, [1]*fg_size,
-                                        bg_aln, bg_weights)
-    hits = []
-    for faa, baa, fg_col, bg_col in zip(fg_cons, bg_cons, fg_cols, bg_cols):
-        if faa == '-' or baa == '-':
-            # Ignore indel columns -- there are better ways to look at these
-            pvalue = 1.
-        else:
-            # Cumulative binomial test
-            # Number of consensus-type residues in the foreground column
-            fg_cons_count = fg_col.count(faa)
-            # Consensus residue frequency in the combined alignment column
-            p_j = (count_col(bg_col, bg_weights, pseudocounts)[faa]
-                   + fg_cons_count
-                ) / (bg_size + fg_size + 1.0)
-            # Probability of fg col conservation vs. the combined/main set
-            # (P_j_LB in the publication)
-            pvalue = binom.pmf(range(fg_cons_count, fg_size+1),
-                               fg_size, p_j).sum()
-        hits.append((faa, baa, pvalue))
-    return hits
+def compare_cols(fg_col, fg_cons, fg_size, fg_weights,
+                 bg_col, bg_cons, bg_size, bg_weights,
+                 aa_freqs, pseudo_size):
+    "Compare alignments using the ball-in-urn model (cumulative binomial test)"
+    # Number of consensus-type residues in the foreground column
+    # fg_cons_count = fg_col.count(fg_cons)
+    # fg_size_i = len(fg_col)
+    fg_cons_count = count_col(fg_col, fg_weights)[fg_cons]
+    # Consensus residue frequency in the combined alignment column
+    p_j = (count_col(bg_col, bg_weights, aa_freqs)[fg_cons]
+           + fg_cons_count
+          ) / (bg_size + fg_size + 1.0)
+    # Round fg counts & size to nearest integer for binomial test
+    fg_cons_count_i = max(1, int(ceil(fg_cons_count)))
+    fg_size_i = int(ceil(fg_size))
+    # Probability of fg col conservation vs. the combined/main set
+    # (P_j_LB in the CHAIN publication)
+    pvalue = binom.pmf(range(fg_cons_count_i, fg_size_i + 1),
+                        fg_size_i, p_j).sum()
+    return pvalue
+
+
+def compare_one(col, cons_aa, aln_size, weights, aa_freqs):
+    "Column probability using the ball-in-urn model."
+    # cons_count = col.count(cons_aa)
+    cons_count = count_col(col, weights)[cons_aa]
+    p_j = aa_freqs[cons_aa]
+    cons_count_i = int(ceil(cons_count))
+    size_i = int(ceil(aln_size))
+    pvalue = binom.pmf(range(cons_count_i, size_i + 1),
+                       size_i, p_j).sum()
+    return pvalue
 

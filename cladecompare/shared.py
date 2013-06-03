@@ -52,3 +52,9 @@ def combined_frequencies(fg_aln, fg_weights, bg_aln, bg_weights):
             "Freqs sum to %s:\n%s" % (sum(freqs.values()), freqs)
     return freqs
 
+
+def scale_counts(counts):
+    """Scale a dict of keys-to-integer counts so values sum to 1."""
+    scale = 1.0 / sum(counts.values())
+    return dict((key, cnt * scale) for key, cnt in counts.iteritems())
+

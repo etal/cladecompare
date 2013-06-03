@@ -22,9 +22,10 @@ from Bio.SeqRecord import SeqRecord
 from Bio.Alphabet import generic_protein
 from Bio.File import as_handle
 
-from biofrills import alnutils
+from biofrills import alnutils, consensus
 
 from cladecompare import pairlogo, pmlscript, urn, gtest, jsd, phospho
+from cladecompare.shared import combined_frequencies
 
 
 # --- PDB alignment magic ---
@@ -400,23 +401,25 @@ def process_args(args):
             # ENH - realign to fg, bg
             # aln = read_aln(args.pdb, 'pdb-atom')
 
-    if args.strategy == 'urn':
-        logging.info("Using ball-in-urn statistical model")
-    elif args.strategy == 'gtest':
+    # ENH - put strategies in a dict, look up here
+    if args.strategy == 'gtest':
         logging.info("Using G-test of amino acid frequencies")
+        module = gtest
+    elif args.strategy == 'urn':
+        logging.info("Using ball-in-urn statistical model")
+        module = urn
     elif args.strategy == 'jsd':
         logging.info("Using Jensen-Shannon divergence")
+        module = jsd
     elif args.strategy == 'phospho':
         logging.info("Using urn model for phosphorylatable residues")
-    elif args.strategy == 'ancestrallrt':
-        logging.info("Using maximum-likelihood ancestral character states")
+        module = phospho
     else:
         raise ValueError("Unknown strategy: %s" % args.strategy)
 
     if len(all_alns) == 2:
         fg_aln, bg_aln = all_alns
-        fg_clean, bg_clean, hits = process_pair(fg_aln, bg_aln,
-                                                args.strategy, args.tree)
+        fg_clean, bg_clean, hits = process_pair(fg_aln, bg_aln, module)
         process_output(fg_clean, bg_clean, hits, args.alpha,
                        args.output, args.pattern,
                        pdb_data)
@@ -434,7 +437,7 @@ def process_args(args):
             for otra in _other_alns[1:]:
                 bg_aln.extend(deepcopy(otra))
             fg_clean, bg_clean, hits = process_pair(deepcopy(fg_aln), bg_aln,
-                                                    args.strategy, args.tree)
+                                                    module)
             outfname, ptnfname = outfnames_ptnfnames[idx]
             process_output(fg_clean, bg_clean, hits, args.alpha,
                            outfname, ptnfname, pdb_data)
@@ -443,28 +446,63 @@ def process_args(args):
             logging.info("Wrote %s and %s", outfname, ptnfname)
 
 
-def process_pair(fg_aln, bg_aln, strategy, tree=None):
+def process_pair(fg_aln, bg_aln, module):
     """Calculate a mapping of alignment column positions to "contrast".
 
     Return a list of tuples:
         (foreground consensus aa, background consensus aa, p-value)
         for each column position.
     """
-    # ENH - put strategies in a dict, look up here
     fg_aln, bg_aln = clean_alignments(fg_aln, bg_aln)
-    if strategy == 'urn':
-        hits = urn.compare_aln(fg_aln, bg_aln)
-    elif strategy == 'gtest':
-        hits = gtest.compare_aln(fg_aln, bg_aln)
-    elif strategy == 'jsd':
-        hits = jsd.compare_aln(fg_aln, bg_aln)
-    elif strategy == 'phospho':
-        hits = phospho.compare_aln(fg_aln, bg_aln)
-    # elif strategy == 'ancestrallrt':
-        # hits = ancestrallrt.compare_aln(fg_aln, bg_aln, tree)
-    else:
-        raise ValueError("Unknown strategy: %s" % strategy)
+    fg_weights = alnutils.sequence_weights(fg_aln, 'none')
+                                           # if module != jsd else 'sum1')
+    fg_size = sum(fg_weights) if module != urn else len(fg_aln)
+    bg_weights = alnutils.sequence_weights(bg_aln, 'none')
+                                           # if module != jsd else 'sum1')
+    bg_size = sum(bg_weights)
+    pseudo_size = 1.0 # math.sqrt(bg_size)
+    # Overall aa freqs for pseudocounts
+    aa_freqs = combined_frequencies(fg_aln, fg_weights, bg_aln, bg_weights)
+    fg_cons = consensus.consensus(fg_aln, weights=fg_weights, trim_ends=False,
+                                  gap_threshold=0.8)
+    bg_cons = consensus.consensus(bg_aln, weights=bg_weights, trim_ends=False,
+                                  gap_threshold=0.8)
+
+    hits = []
+    for faa, baa, fg_col, bg_col in zip(fg_cons, bg_cons,
+                                        zip(*fg_aln), zip(*bg_aln)):
+        if faa == '-' or baa == '-':
+            # Ignore indel columns -- there are better ways to look at these
+            pvalue = 1.
+        else:
+            pvalue = module.compare_cols(
+                fg_col, faa, fg_size, fg_weights,
+                bg_col, baa, bg_size, bg_weights,
+                aa_freqs, pseudo_size, 
+            )
+        hits.append((faa, baa, pvalue))
+
     return fg_aln, bg_aln, hits
+
+
+def process_one(aln, module):
+    """Calculate a mapping of alignment column positions to "contrast"."""
+    weights = alnutils.sequence_weights(aln, 'none')
+                                        # if module != jsd else 'sum1')
+    aln_size = sum(weights) if module != urn else len(aln)
+    aa_freqs = alnutils.aa_frequencies(aln, weights, gap_chars='-.X')
+    cons = consensus.consensus(aln, weights=weights, trim_ends=False,
+                               gap_threshold=0.8)
+    hits = []
+    for cons_aa, col in zip(cons, zip(*aln)):
+        if cons_aa == '-':
+            # Ignore indel columns -- there are better ways to look at these
+            pvalue = 1.
+        else:
+            pvalue = module.compare_one(col, cons_aa, aln_size, weights,
+                                        aa_freqs)
+        hits.append((cons_aa, pvalue))
+    return aln, hits
 
 
 def process_output(fg_aln, bg_aln, hits, alpha, output, pattern, pdb_data):
@@ -536,8 +574,6 @@ See README or http://github.com/etal/cladecompare for full documentation.
     AP.add_argument('--pdb',
             action='append',
             help="""3D structure coordinates in Protein Data Bank format.""")
-    AP.add_argument('-t', '--tree',
-            help="Input tree.")
     # Options
     # add_argument_group?
     AP.add_argument('-a', '--alpha',
@@ -551,8 +587,6 @@ See README or http://github.com/etal/cladecompare for full documentation.
             'phospho' = urn model for phosphorylatable residues (S/T/Y);
             'jsd' = Jensen-Shannon divergence.
             """)
-            # 'ancestrallrt' = likelihood ratio test of ancestral state
-            #   likelihoods between the foreground clade and the full tree.
     # Output
     AP.add_argument('-o', '--output',
             default=sys.stdout,

@@ -29,11 +29,11 @@ def build_single(mapping, inserts, patterns, pdbfname, chain):
     outs = [mk_intro_one(pdbfname, pml_name, chain),
             HR,
             mk_struct(pml_name, 'MainStruct_'+pml_name, chain=chain,
-                      color='silver', transparency=0.3),
+                      color='smudge', transparency=0.3),
             HR]
     if inserts:
         outs.extend(make_inserts(inserts, 'MainStruct_'+pml_name,
-                                 chain, 'gray70'))
+                                 chain, 'gray50'))
     if patterns:
         outs.extend(make_residues(mapping, patterns, pml_name, chain))
     outs.append(mk_outro())

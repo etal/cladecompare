@@ -5,7 +5,7 @@
 import logging
 import sys
 
-from cladecompare.core import process_args
+from cladecomparelib.core import process_args
 
 
 if __name__ == '__main__':

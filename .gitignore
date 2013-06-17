@@ -22,3 +22,8 @@ dist
 *.orig
 *.rej
 
+# Test output
+test/*.pdf
+test/*.pttrn
+test/*.pml
+test/*.out

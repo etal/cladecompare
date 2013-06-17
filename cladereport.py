@@ -17,7 +17,7 @@ If given multiple files:
 import argparse 
 import logging
 
-from cladecompare.report import do_single, do_multi, html_page_tpl
+from cladecomparelib.report import do_single, do_multi, html_page_tpl
 
 
 logging.basicConfig(level=logging.INFO,

@@ -179,7 +179,7 @@ def process_one(aln, module):
 def process_output(fg_aln, bg_aln, hits, alpha, output, pattern, pdb_data):
     """Generate the output files from the processed data."""
     with as_handle(output, 'w+') as outfile:
-        write_report(hits, outfile, alpha)
+        write_pvalues(hits, outfile, alpha)
     tophits = top_hits(hits, alpha)
     if pattern:
         with open(pattern, 'w+') as ptnfile:
@@ -209,7 +209,7 @@ def process_output(fg_aln, bg_aln, hits, alpha, output, pattern, pdb_data):
 
 # --- Output ---
 
-def write_report(hits, outfile, alpha):
+def write_pvalues(hits, outfile, alpha):
     """Write p-values & "contrast" stars for each site. (It's noisy.)"""
     for idx, data in enumerate(hits):
         fg_char, bg_char, pvalue = data

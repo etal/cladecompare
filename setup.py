@@ -16,6 +16,7 @@ try:
             'scipy >= 0.6',
             'reportlab >= 2.5',
             'weblogo >= 3.0',
+            'bottle >= 0.10',
         ])
 except ImportError:
     from distutils.core import setup

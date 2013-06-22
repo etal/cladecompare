@@ -125,7 +125,7 @@ def form():
 @bottle.post('/cladecompare')
 def form_submit():
     # ENH: pick a unique, informative name -- e.g. date or hostname
-    name = bottle.request.forms.name or 'cladecomparison'
+    name = bottle.request.forms.name
 
     seqfile1 = bottle.request.files.seqfile1
     if not hasattr(seqfile1, 'file'):
@@ -141,9 +141,16 @@ def form_submit():
                                 suffix=('.cma' if
                                         seqfile2.filename.endswith('.cma') else
                                         '.seq'))
+        if not name:
+            name = "%s-vs-%s" % (seqfile1.filename.rsplit('.', 1)[0],
+                                 seqfile2.filename.rsplit('.', 1)[0])
     else:
         seq2fname = ''
+        if not name:
+            name = seqfile1.filename
 
+    # Optional HMM profile for alignment
+    profile = bottle.request.files.profile
     # Optional HMM profile for alignment
     profile = bottle.request.files.profile
     if hasattr(profile, 'file'):
@@ -212,7 +219,7 @@ def form_submit():
                             pdb_data)
 
     # Get the HTML report data
-    title, contents = report.do_single(tmp_output, tmp_pattern)
+    contents = report.do_single(tmp_output, tmp_pattern)[1]
 
     cleanup(seq1fname)
     cleanup(seq2fname)
@@ -220,7 +227,7 @@ def form_submit():
     cleanup(tmp_output)
     cleanup(tmp_pattern)
 
-    return report.html_page_tpl % dict(title=title, contents=contents)
+    return report.html_page_tpl % dict(title=name, contents=contents)
 
 
 # --- Helpers ---

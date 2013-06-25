@@ -32,8 +32,11 @@ setup_args.update(
     author_email='etal@uga.edu',
     url='http://github.com/etal/cladecompare',
     packages=['cladecomparelib'],
-    scripts=[DIR + 'cladecompare.py', DIR + 'cladereport.py'],
-)
+    scripts=[
+        DIR + 'cladecompare.py',
+        DIR + 'cladereport.py',
+        DIR + 'cladeweb.py'
+    ])
 
 setup(**setup_args)
 

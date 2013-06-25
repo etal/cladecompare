@@ -110,26 +110,26 @@ def p2class(fg, bg, pval):
 
 # Formatting
 
-def table_single(classes, pattern, foreground, background, positions):
+def table_single(pvalues, classes, pattern, foreground, background, positions):
     assert len(foreground) == len(background) == len(positions)
     out = "<table>"
     if any(pattern):
         out += tr_plain("", pattern)
-    out += tr_class("foreground", foreground, classes)
+    out += tr_class("foreground", foreground, pvalues, classes)
     out += tr_plain("background", background)
     out += tr_pos(positions)
     out += "</table>"
     return out
 
 
-def table_multi(labels, rowcells, rowclasses, pattern, positions):
+def table_multi(labels, rowcells, rowclasses, rowpvalues, pattern, positions):
     assert len(labels) == len(rowclasses) == len(rowcells)
     assert len(positions) == len(rowclasses[0]) == len(rowcells[0])
     out = "<table>"
     if any(pattern):
         out += tr_plain("", pattern)
-    for label, cells, classes in zip(labels, rowcells, rowclasses):
-        out += tr_class(label, cells, classes)
+    for label, cells, pvals in zip(labels, rowcells, rowclasses, rowpvalues):
+        out += tr_class(label, cells, pvals, classes)
     out += tr_pos(positions)
     out += "</table>"
     return out
@@ -137,17 +137,17 @@ def table_multi(labels, rowcells, rowclasses, pattern, positions):
 
 def tr_plain(label, cells):
     out = "<tr>\n"
-    out += "<td class='label'>%s</td>" % label
+    out += '<td class="label">%s</td>' % label
     out += ''.join(['<td>%s</td>' % c for c in cells])
     out += "\n</tr>"
     return out
 
 
-def tr_class(label, cells, classes):
+def tr_class(label, cells, pvalues, classes):
     out = "<tr>\n"
-    out += "<td class='label'>%s</td>" % label
-    out += ''.join(['<td class="%s">%s</td>' % (cls, txt)
-                    for cls, txt in zip(classes, cells)])
+    out += '<td class="label">%s</td>' % label
+    out += ''.join(['<td class="%s" title="p=%s">%s</td>' % (cls, pval, txt)
+                    for cls, pval, txt in zip(classes, pvalues, cells)])
     out += "\n</tr>"
     return out
 
@@ -184,7 +184,8 @@ def do_single(fname, patternfname):
             pattern[posn-1] = '*'
     # wrap it up
     contents = ''
-    chunked_data = map(wrap_data, [classes, pattern, fg_seq, bg_seq, posns])
+    chunked_data = map(wrap_data,
+                       [probs, classes, pattern, fg_seq, bg_seq, posns])
     for layer in zip(*chunked_data):
         contents += table_single(*layer)
         contents += "<p />"

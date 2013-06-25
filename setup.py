@@ -16,6 +16,7 @@ try:
             'scipy >= 0.6',
             'reportlab >= 2.5',
             'weblogo >= 3.0',
+            'bottle >= 0.10',
         ])
 except ImportError:
     from distutils.core import setup
@@ -26,7 +27,7 @@ DIR = (dirname(__file__) or '.') + '/'
 
 setup_args.update(
     name='CladeCompare',
-    version='0.1.0',
+    version='0.2-dev',
     description=__doc__,
     author='Eric Talevich',
     author_email='etal@uga.edu',

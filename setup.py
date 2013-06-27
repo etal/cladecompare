@@ -27,7 +27,7 @@ DIR = (dirname(__file__) or '.') + '/'
 
 setup_args.update(
     name='CladeCompare',
-    version='0.2-dev',
+    version='0.2',
     description=__doc__,
     author='Eric Talevich',
     author_email='etal@uga.edu',

@@ -327,6 +327,11 @@ def clean_alignments(fg_aln, bg_aln):
     - Ensure alignments are the same width (if not, align to each other)
     - Remove all-gap columns from the full alignment
     """
+    if not len(fg_aln):
+        raise ValueError("Foreground set is empty")
+    if not len(bg_aln):
+        raise ValueError("Background set is empty")
+
     # Remove FG seqs from BG -- by equal sequence IDs, here
     killme = []
     for fg_seq in fg_aln:
@@ -341,6 +346,11 @@ def clean_alignments(fg_aln, bg_aln):
                     len(killme))
         for idx in sorted(killme, reverse=True):
             del bg_aln._records[idx]
+
+    if not len(bg_aln):
+        raise ValueError("Background set is a subset of the foreground. "
+                         "To fix this, use a background containing sequences "
+                         "not in the foreground.")
 
     # Remove identical sequences from the FG and BG
     def purge_duplicates(aln, seen=set()):

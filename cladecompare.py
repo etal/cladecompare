@@ -15,11 +15,11 @@ if __name__ == '__main__':
 
 # Basic
 cladecompare.py fg.seq bg.seq > fg-v-bg.out
+cladecompare.py fg.cma bg.cma > fg-v-bg.out
 
 # Save per-site p-values and "pattern" file of significant sites
 cladecompare.py fg.seq bg.seq -p fg-v-bg.pttrn -o fg-v-bg.out
 
-# CHAIN style
 # Align sequences on the fly by giving the MAPGAPS profile
 cladecompare.py fg.fasta bg.fasta -s urn --mapgaps /share/data/PK \\
         -p fg.pttrn -o fg.out

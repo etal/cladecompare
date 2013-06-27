@@ -1,21 +1,16 @@
 #!/usr/bin/env python
 
-"""Webapp. Demo for CladeCompare.
+"""Web browser interface for CladeCompare.
 
-Routes:
-    index
-        GET: Form for submitting FG, [BG, HMM/MG, PDB]
-            - radio button = strategy
-            - radio format for alignments, or require FASTA?
-            - dropdown alpha (or textinput w/ JS validation)
-            - brief documentation, link to GitHub
-        POST:
-            CladeReport (heat map) of submission
-            - asterisks up top link to PDF pairlogos
-            - title
-            - below title, link to PyMOL script of PDB(s)
+Input (GET):
+    Form for submitting FG, [BG, HMM].
+Output (POST):
+    CladeReport (heat map) of submission.
 
 """
+# ENH (report):
+#   - asterisks up top link to PDF pairlogos
+#   - below title, link to PyMOL script of PDB(s)
 
 import logging
 import os
@@ -29,6 +24,7 @@ from cladecomparelib import (core, pairlogo, pmlscript, urn, gtest, jsd,
 
 
 # ENH: include textarea as alternative to each file upload input
+# ENH: dropdown alpha (or textinput w/ JS validation)
 FORM_HTML = """\
 <html>
 <body>
@@ -92,6 +88,7 @@ FORM_HTML = """\
     <input type="file" name="profile" size=50 />
   </p>
 
+  <!--
   <h2>Structure</h2>
   <p>
     PDB ID:
@@ -102,11 +99,28 @@ FORM_HTML = """\
     <br />
     <input type="file" name="pdbfile" size=50 />
   </p>
+  -->
 
   <p />
 
   <p><input type="submit" /></p>
 </form>
+
+<hr />
+
+<p>Project page: <a
+href="http://github.com/etal/cladecompare">http://github.com/etal/cladecompare</a></p>
+
+<p>If you use this software in a publication, please cite our paper that
+describes it:</p>
+
+<blockquote>Talevich, E. & Kannan, N. (2013) 
+<a href="http://www.biomedcentral.com/1471-2148/13/117">Structural and
+evolutionary adaptation of rhoptry kinases and pseudokinases, a family of
+coccidian virulence factors</a>.
+<i>BMC Evolutionary Biology</i> 13:117 doi:10.1186/1471-2148-13-117
+</blockquote>
+
 </body>
 </html>
 """
@@ -207,7 +221,8 @@ def form_submit():
 
     if seq2fname:
         # Pair mode
-        fg_clean, bg_clean, hits = core.process_pair(fg_aln, bg_aln, stat_module)
+        fg_clean, bg_clean, hits = core.process_pair(fg_aln, bg_aln,
+                                                     stat_module)
         core.process_output(fg_clean, bg_clean, hits, alpha,
                             tmp_output, tmp_pattern,
                             pdb_data)

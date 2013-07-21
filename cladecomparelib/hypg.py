@@ -1,49 +1,14 @@
-"""Write up for hypergeometric.
+"""Hypergeometric Distribution
 
-CHAIN formula:
+    Gendankenexperiment:
+    
+	Foreground and background sequence sets are pre-defined.
 
-The selective constraint acting at position j in a subalignment is expressed in
-terms of the number of random trials needed to draw from among the residues in
-a superalignment (with replacement) at least as many conserved residues as are
-observed in the subalignment at that position.
-
-    P_j^{(L,B} = \sum_{i=c_j^{(L)}^{N_j^{(L)}
-                    \binom{N_j}{i}
-                    (p_j^{(B)})^i 
-                    (1-p_j^{(B)})^{N_j^{(L)}-i}
-
-where c_j^{(L)} and N_j^{(L)} are the number of conserved residues and total
-number of residues, respectively, in the j^th column of subalignment L, and
-p_j^{(B)} is the frequency of the conserved residues observed at that position
-for superalignment B, which serves as the background model.
-
-Neuwald: "Note that weights are not computed for the query family alignment,
-because these sequences are selected from distinct phyla or kingdoms and,
-therefore, are treated as statistically independent."
-
-The corresponding selective constraint acting on subalignment L is then defined
-as
-
-    K_j^{(L,B)} = 1 / P_j^{(L,B)}
-
-the expected number of random trials needed to observed this event.
-(e.g. P = 0.01 => 100 trials)
-
-Histogram bar height ~ number of random trials implied by K (i.e., K).
-
-A hack of logarithmic scaling:
-
-    h = (t^{1-sigma}) / (1 - sigma)
-
-where
-    t = number of random trials
-    sigma \in [0,1) is a scaling parameter for adjusting the relative bar
-    heights so as to converge to linear scaling at sigma=0 and logarithmic
-    scaling as sigma->1. (Automatically determined by the display program)
-
-The order-of-magnitude increase in t as a function of sigma, when he relative
-bar height increases by twofold, is given by
-    log_10 (t_2h / t_h) = log_10 (2^{1/(1-sigma)})
+	Given N foreground sequences and M-N background sequences,
+    we randomly select N sequences from M.  We consider the consensus
+    residue in the foreground as being type I and ask what is the probability
+    of observing at least as many type I sequences in our selection as we see
+    in the foreground. 
 
 """
 from math import ceil
@@ -77,8 +42,10 @@ def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
     # cons_count = col.count(cons_aa)
     cons_count = count_col(col, weights)[cons_aa]
     cons_count_i = int(ceil(cons_count))
+    p_j = int(ceil(aa_freqs[cons_aa]*aln_size))
     size_i = int(ceil(aln_size))
-    pvalue = 1-hypergeom.cdf(cons_count_i-1,size_i,
-                        cons_count_i, size_i)
+    pvalue = float(cons_count_i)/len(col)
+    #pvalue = hypergeom.cdf(cons_count_i-1,size_i,
+                        #max(cons_count_i,p_j), len(col))
     return pvalue
 

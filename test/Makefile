@@ -7,7 +7,8 @@
 # https://www.biomedcentral.com/1471-2148/11/321
 
 all: scttlre-v-cdc2-gtest.html scttlre-v-cdc2-urn.html scttlre-v-cdc2-jsd.html \
-	scttlre-v-cdc2-hypg.html cdc2-gtest.html cdc2-jsd.html cdc2-urn.html 
+	scttlre-v-cdc2-hypg.html cdc2-gtest.html cdc2-jsd.html cdc2-urn.html \
+	cdc2-hypg.html 
 
 clean:
 	rm -vf scttlre-v-cdc2-*.html scttlre-v-cdc2-*.out scttlre-v-cdc2-*.pttrn \
@@ -64,6 +65,12 @@ cdc2-jsd.html: ../cladereport.py cdc2-jsd.out
 
 cdc2-jsd.out cdc2-jsd.pttrn: ../cladecompare.py cdc2-domain.fasta_aln.cma
 	python $^ -p cdc2-jsd.pttrn -s jsd -a .2 > cdc2-jsd.out
+
+cdc2-hypg.html: ../cladereport.py cdc2-hypg.out
+	python $^ -p cdc2-hypg.pttrn > $@
+
+cdc2-hypg.out cdc2-hypg.pttrn: ../cladecompare.py cdc2-domain.fasta_aln.cma
+	python $^ -p cdc2-hypg.pttrn -s hypg -nw > cdc2-hypg.out
 
 
 

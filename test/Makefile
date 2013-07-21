@@ -7,7 +7,7 @@
 # https://www.biomedcentral.com/1471-2148/11/321
 
 all: scttlre-v-cdc2-gtest.html scttlre-v-cdc2-urn.html scttlre-v-cdc2-jsd.html \
-	cdc2-gtest.html cdc2-jsd.html cdc2-urn.html
+	scttlre-v-cdc2-hypg.html cdc2-gtest.html cdc2-jsd.html cdc2-urn.html 
 
 clean:
 	rm -vf scttlre-v-cdc2-*.html scttlre-v-cdc2-*.out scttlre-v-cdc2-*.pttrn \
@@ -27,7 +27,7 @@ scttlre-v-cdc2-urn.html: ../cladereport.py scttlre-v-cdc2-urn.out
 	python $^ -p scttlre-v-cdc2-urn.pttrn > $@
 
 scttlre-v-cdc2-urn.out scttlre-v-cdc2-urn.pttrn: ../cladecompare.py scttlre-domain.fasta_aln.cma cdc2-domain.fasta_aln.cma
-	python $^ -p scttlre-v-cdc2-urn.pttrn -s urn -a .2 > scttlre-v-cdc2-urn.out
+	python $^ -p scttlre-v-cdc2-urn.pttrn -s urn -nw > scttlre-v-cdc2-urn.out
 
 
 scttlre-v-cdc2-jsd.html: ../cladereport.py scttlre-v-cdc2-jsd.out
@@ -35,6 +35,13 @@ scttlre-v-cdc2-jsd.html: ../cladereport.py scttlre-v-cdc2-jsd.out
 
 scttlre-v-cdc2-jsd.out scttlre-v-cdc2-jsd.pttrn: ../cladecompare.py scttlre-domain.fasta_aln.cma cdc2-domain.fasta_aln.cma
 	python $^ -p scttlre-v-cdc2-jsd.pttrn -s jsd -a .2 > scttlre-v-cdc2-jsd.out
+
+scttlre-v-cdc2-hypg.html: ../cladereport.py scttlre-v-cdc2-hypg.out
+	python $^ -p scttlre-v-cdc2-hypg.pttrn > $@
+
+scttlre-v-cdc2-hypg.out scttlre-v-cdc2-hypg.pttrn: ../cladecompare.py scttlre-domain.fasta_aln.cma cdc2-domain.fasta_aln.cma
+	python $^ -p scttlre-v-cdc2-hypg.pttrn -s hypg -nw > scttlre-v-cdc2-hypg.out
+
 
 # Single mode
 
@@ -57,4 +64,6 @@ cdc2-jsd.html: ../cladereport.py cdc2-jsd.out
 
 cdc2-jsd.out cdc2-jsd.pttrn: ../cladecompare.py cdc2-domain.fasta_aln.cma
 	python $^ -p cdc2-jsd.pttrn -s jsd -a .2 > cdc2-jsd.out
+
+
 

@@ -19,7 +19,7 @@ from Bio.File import as_handle
 
 from biofrills import alnutils, consensus
 
-from . import pairlogo, pmlscript, urn, gtest, jsd, phospho
+from . import pairlogo, pmlscript, urn, gtest, jsd, phospho, hypg
 from .shared import combined_frequencies
 
 
@@ -83,16 +83,20 @@ def process_args(args):
     elif args.strategy == 'phospho':
         logging.info("Using urn model for phosphorylatable residues")
         module = phospho
+    elif args.strategy == 'hypg':
+	logging.info("Using hypergeometric model")
+	module = hypg
     else:
         raise ValueError("Unknown strategy: %s" % args.strategy)
 
+
     if len(all_alns) == 1:
-        aln, hits = process_one(all_alns[0], module)
+        aln, hits = process_one(all_alns[0], module, args.noweights)
         process_output(aln, None, hits, args.alpha, args.output, args.pattern,
                        pdb_data)
     elif len(all_alns) == 2:
         fg_clean, bg_clean, hits = process_pair(all_alns[0], all_alns[1],
-                                                module)
+                                                module, args.noweights)
         process_output(fg_clean, bg_clean, hits, args.alpha,
                        args.output, args.pattern,
                        pdb_data)
@@ -110,7 +114,7 @@ def process_args(args):
             for otra in _other_alns[1:]:
                 bg_aln.extend(deepcopy(otra))
             fg_clean, bg_clean, hits = process_pair(deepcopy(fg_aln), bg_aln,
-                                                    module)
+                                                    module, args.noweights)
             outfname, ptnfname = outfnames_ptnfnames[idx]
             process_output(fg_clean, bg_clean, hits, args.alpha,
                            outfname, ptnfname, pdb_data)
@@ -119,7 +123,7 @@ def process_args(args):
             logging.info("Wrote %s and %s", outfname, ptnfname)
 
 
-def process_pair(fg_aln, bg_aln, module):
+def process_pair(fg_aln, bg_aln, module, nw):
     """Calculate a mapping of alignment column positions to "contrast".
 
     Return a list of tuples:
@@ -127,10 +131,16 @@ def process_pair(fg_aln, bg_aln, module):
         for each column position.
     """
     fg_aln, bg_aln = clean_alignments(fg_aln, bg_aln)
-    fg_weights = alnutils.sequence_weights(fg_aln, 'none')
+    if nw:
+	fg_weights = list(1 for i in range(len(fg_aln)))
+    else:
+	fg_weights = alnutils.sequence_weights(fg_aln, 'none')
                                            # if module != jsd else 'sum1')
     fg_size = sum(fg_weights) if module != urn else len(fg_aln)
-    bg_weights = alnutils.sequence_weights(bg_aln, 'none')
+    if nw:
+	bg_weights = list(1 for i in range(len(bg_aln)))
+    else:
+	bg_weights = alnutils.sequence_weights(bg_aln, 'none')
                                            # if module != jsd else 'sum1')
     bg_size = sum(bg_weights)
     # Overall aa freqs for pseudocounts
@@ -156,9 +166,12 @@ def process_pair(fg_aln, bg_aln, module):
     return fg_aln, bg_aln, hits
 
 
-def process_one(aln, module):
+def process_one(aln, module, nw):
     """Calculate a mapping of alignment column positions to "contrast"."""
-    weights = alnutils.sequence_weights(aln, 'none')
+    if nw:
+	weights = list(1 for i in range(len(aln)))
+    else:
+	weights = alnutils.sequence_weights(aln, 'none')
                                         # if module != jsd else 'sum1')
     aln_size = sum(weights) if module != urn else len(aln)
     aa_freqs = alnutils.aa_frequencies(aln, weights, gap_chars='-.X')

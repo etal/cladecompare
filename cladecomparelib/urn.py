@@ -85,7 +85,8 @@ def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
     p_j = aa_freqs[cons_aa]
     cons_count_i = int(ceil(cons_count))
     size_i = int(ceil(aln_size))
+    #pvalue = float(cons_count_i)/len(col)
     pvalue = binom.pmf(range(cons_count_i, size_i + 1),
-                       size_i, p_j).sum()
+                        size_i, p_j).sum()
     return pvalue
 

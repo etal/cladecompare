@@ -133,6 +133,7 @@ def process_pair(fg_aln, bg_aln, module, nw):
     fg_aln, bg_aln = clean_alignments(fg_aln, bg_aln)
     if nw:
 	fg_weights = list(1 for i in range(len(fg_aln)))
+<<<<<<< HEAD
     else:
 	fg_weights = alnutils.sequence_weights(fg_aln, 'none')
                                            # if module != jsd else 'sum1')
@@ -141,6 +142,14 @@ def process_pair(fg_aln, bg_aln, module, nw):
 	bg_weights = list(1 for i in range(len(bg_aln)))
     else:
 	bg_weights = alnutils.sequence_weights(bg_aln, 'none')
+=======
+	bg_weights = list(1 for i in range(len(bg_aln)))
+    else:
+	fg_weights = alnutils.sequence_weights(fg_aln, 'none')
+	bg_weights = alnutils.sequence_weights(bg_aln, 'none')
+
+    fg_size = sum(fg_weights) if module != urn else len(fg_aln)
+>>>>>>> e65a410e8dab56913da123e01de79b18c44a21d4
                                            # if module != jsd else 'sum1')
     bg_size = sum(bg_weights)
     # Overall aa freqs for pseudocounts

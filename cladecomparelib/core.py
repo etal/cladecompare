@@ -84,8 +84,8 @@ def process_args(args):
         logging.info("Using urn model for phosphorylatable residues")
         module = phospho
     elif args.strategy == 'hypg':
-	logging.info("Using hypergeometric model")
-	module = hypg
+        logging.info("Using hypergeometric model")
+        module = hypg
     else:
         raise ValueError("Unknown strategy: %s" % args.strategy)
 
@@ -132,25 +132,12 @@ def process_pair(fg_aln, bg_aln, module, nw):
     """
     fg_aln, bg_aln = clean_alignments(fg_aln, bg_aln)
     if nw:
-	fg_weights = list(1 for i in range(len(fg_aln)))
-<<<<<<< HEAD
+        fg_weights = list(1 for i in range(len(fg_aln)))
+        bg_weights = list(1 for i in range(len(bg_aln)))
     else:
-	fg_weights = alnutils.sequence_weights(fg_aln, 'none')
-                                           # if module != jsd else 'sum1')
+        fg_weights = alnutils.sequence_weights(fg_aln, 'none')
+        bg_weights = alnutils.sequence_weights(bg_aln, 'none')
     fg_size = sum(fg_weights) if module != urn else len(fg_aln)
-    if nw:
-	bg_weights = list(1 for i in range(len(bg_aln)))
-    else:
-	bg_weights = alnutils.sequence_weights(bg_aln, 'none')
-=======
-	bg_weights = list(1 for i in range(len(bg_aln)))
-    else:
-	fg_weights = alnutils.sequence_weights(fg_aln, 'none')
-	bg_weights = alnutils.sequence_weights(bg_aln, 'none')
-
-    fg_size = sum(fg_weights) if module != urn else len(fg_aln)
->>>>>>> e65a410e8dab56913da123e01de79b18c44a21d4
-                                           # if module != jsd else 'sum1')
     bg_size = sum(bg_weights)
     # Overall aa freqs for pseudocounts
     aa_freqs = combined_frequencies(fg_aln, fg_weights, bg_aln, bg_weights)
@@ -178,9 +165,9 @@ def process_pair(fg_aln, bg_aln, module, nw):
 def process_one(aln, module, nw):
     """Calculate a mapping of alignment column positions to "contrast"."""
     if nw:
-	weights = list(1 for i in range(len(aln)))
+        weights = list(1 for i in range(len(aln)))
     else:
-	weights = alnutils.sequence_weights(aln, 'none')
+        weights = alnutils.sequence_weights(aln, 'none')
                                         # if module != jsd else 'sum1')
     aln_size = sum(weights) if module != urn else len(aln)
     aa_freqs = alnutils.aa_frequencies(aln, weights, gap_chars='-.X')

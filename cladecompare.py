@@ -60,7 +60,7 @@ See README or http://github.com/etal/cladecompare for full documentation.
             'urn' = ball-in-urn model of consensus residue conservation;
             'phospho' = urn model for phosphorylatable residues (S/T/Y);
             'jsd' = Jensen-Shannon divergence.
-	    'hypg' = hypergeometric distribution
+            'hypg' = hypergeometric distribution
             """)
     # Output
     AP.add_argument('-o', '--output',
@@ -72,7 +72,7 @@ See README or http://github.com/etal/cladecompare for full documentation.
             help="""Write an mcBPPS-style pattern file to this filename.
             (Single-foreground comparison only.""")
     AP.add_argument('-nw', '--noweights',
-	    action='store_true',
+            action='store_true',
             help="""Disable sequence weights on statistical tests.""")
     AP.add_argument('-q', '--quiet',
             action='store_true',

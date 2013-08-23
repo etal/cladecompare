@@ -2,9 +2,9 @@
 
     Gendankenexperiment:
     
-	Foreground and background sequence sets are pre-defined.
+        Foreground and background sequence sets are pre-defined.
 
-	Given N foreground sequences and M-N background sequences,
+        Given N foreground sequences and M-N background sequences,
     we randomly select N sequences from M.  We consider the consensus
     residue in the foreground as being type I and ask what is the probability
     of observing at least as many type I sequences in our selection as we see

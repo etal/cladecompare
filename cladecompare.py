@@ -55,6 +55,7 @@ See README or http://github.com/etal/cladecompare for full documentation.
             help="Significance threshold for pattern columns.")
     AP.add_argument('-s', '--strategy',
             default='gtest',
+            choices=('gtest', 'urn', 'phospho', 'jsd', 'hypg'),
             help="""Strategy used to compare alignments:
             'gtest' = G-test of all character frequencies;
             'urn' = ball-in-urn model of consensus residue conservation;

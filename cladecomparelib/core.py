@@ -273,10 +273,16 @@ def cma_blocks(cma_fname):
             if line.startswith('>'):
                 acc = line.split(None, 1)[0][1:]
                 seq = next(lines).strip()
-                seq = ''.join((c for c in seq[3:-4] if not c.islower()))
-                records.append(
-                        SeqRecord(Seq(seq, generic_protein),
-                                  id=acc, description=''))
+                # A typical overhanging cma record looks like
+                # >something
+                # Asad{()GTASASDQQA-sTASD-sdTTAS()}ASATT*
+                if seq.startswith('{()') and seq.endswith('()}*'):
+                    seq = ''.join((c for c in seq[3:-4] if not c.islower()))
+                else:
+                    seq = ''.join((c for c in seq.split('()')[1] \
+                                                        if not c.islower()))
+                records.append(SeqRecord(Seq(seq, generic_protein),
+                               id=acc, description=''))
     return MultipleSeqAlignment(records, generic_protein)
 
 

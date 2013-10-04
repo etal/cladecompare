@@ -273,6 +273,9 @@ def cma_blocks(cma_fname):
             if line.startswith('>'):
                 acc = line.split(None, 1)[0][1:]
                 seq = next(lines).strip()
+                # A typical overhanging cma record looks like
+                # >something
+                # Asad{()GTASASDQQA-sTASD-sdTTAS()}ASATT*
                 if seq.startswith('{()') and seq.endswith('()}*'):
                     seq = ''.join((c for c in seq[3:-4] if not c.islower()))
                 else:

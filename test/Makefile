@@ -21,7 +21,7 @@ scttlre-v-cdc2-gtest.html: ../cladereport.py scttlre-v-cdc2-gtest.out
 	python $^ -p scttlre-v-cdc2-gtest.pttrn > $@
 
 scttlre-v-cdc2-gtest.out scttlre-v-cdc2-gtest.pttrn: ../cladecompare.py scttlre-domain.fasta_aln.cma cdc2-domain.fasta_aln.cma
-	python $^ -p scttlre-v-cdc2-gtest.pttrn -s gtest > scttlre-v-cdc2-gtest.out
+	python $^ -p scttlre-v-cdc2-gtest.pttrn -s gtest -w > scttlre-v-cdc2-gtest.out
 
 
 scttlre-v-cdc2-urn.html: ../cladereport.py scttlre-v-cdc2-urn.out
@@ -41,7 +41,7 @@ scttlre-v-cdc2-hypg.html: ../cladereport.py scttlre-v-cdc2-hypg.out
 	python $^ -p scttlre-v-cdc2-hypg.pttrn > $@
 
 scttlre-v-cdc2-hypg.out scttlre-v-cdc2-hypg.pttrn: ../cladecompare.py scttlre-domain.fasta_aln.cma cdc2-domain.fasta_aln.cma
-	python $^ -p scttlre-v-cdc2-hypg.pttrn -s hypg -nw > scttlre-v-cdc2-hypg.out
+	python $^ -p scttlre-v-cdc2-hypg.pttrn -s hypg > scttlre-v-cdc2-hypg.out
 
 
 # Single mode
@@ -50,7 +50,7 @@ cdc2-gtest.html: ../cladereport.py cdc2-gtest.out
 	python $^ -p cdc2-gtest.pttrn > $@
 
 cdc2-gtest.out cdc2-gtest.pttrn: ../cladecompare.py cdc2-domain.fasta_aln.cma
-	python $^ -p cdc2-gtest.pttrn -s gtest -a .001 > cdc2-gtest.out
+	python $^ -p cdc2-gtest.pttrn -s gtest -w -a .001 > cdc2-gtest.out
 
 
 cdc2-urn.html: ../cladereport.py cdc2-urn.out
@@ -70,7 +70,5 @@ cdc2-hypg.html: ../cladereport.py cdc2-hypg.out
 	python $^ -p cdc2-hypg.pttrn > $@
 
 cdc2-hypg.out cdc2-hypg.pttrn: ../cladecompare.py cdc2-domain.fasta_aln.cma
-	python $^ -p cdc2-hypg.pttrn -s hypg -nw > cdc2-hypg.out
-
-
+	python $^ -p cdc2-hypg.pttrn -s hypg -a .2 > cdc2-hypg.out
 

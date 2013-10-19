@@ -1,7 +1,7 @@
 """Numerical functions shared by multiple CladeCompare modules."""
 
 import collections
-from math import log
+from math import log, fsum
 
 from biofrills import alnutils
 
@@ -31,10 +31,10 @@ def count_col(col, weights, pseudo=None, pseudo_size=1.0):
 
 def entropy(counts):
     """Entropy of a set of observations, in the information-theoretic sense."""
-    scale = 1.0 / sum(counts)
+    scale = 1.0 / fsum(counts)
     probs = [c * scale for c in counts if c]
     # try:
-    return -sum(p * log(p, 2) for p in probs)
+    return -fsum(p * log(p, 2) for p in probs)
     # except ValueError:
     #     print locals()
     #     return 0.
@@ -48,13 +48,13 @@ def combined_frequencies(fg_aln, fg_weights, bg_aln, bg_weights):
     freqs = alnutils.aa_frequencies(list(fg_aln) + list(bg_aln),
                                     fg_weights + bg_weights,
                                     gap_chars='-.X')
-    assert abs(sum(freqs.values()) - 1.0) < 1e-6, \
-            "Freqs sum to %s:\n%s" % (sum(freqs.values()), freqs)
+    assert abs(fsum(freqs.values()) - 1.0) < 1e-6, \
+            "Freqs sum to %s:\n%s" % (fsum(freqs.values()), freqs)
     return freqs
 
 
 def scale_counts(counts):
     """Scale a dict of keys-to-integer counts so values sum to 1."""
-    scale = 1.0 / sum(counts.values())
+    scale = 1.0 / fsum(counts.values())
     return dict((key, cnt * scale) for key, cnt in counts.iteritems())
 

@@ -2,12 +2,12 @@
 
 import contextlib
 import logging
-import math
 import os
 import subprocess
 import tempfile
 from cStringIO import StringIO
 from copy import deepcopy
+from math import fsum, log10
 from os.path import basename
 
 from Bio import AlignIO, SeqIO
@@ -91,12 +91,12 @@ def process_args(args):
 
 
     if len(all_alns) == 1:
-        aln, hits = process_one(all_alns[0], module, args.noweights)
+        aln, hits = process_one(all_alns[0], module, args.weight)
         process_output(aln, None, hits, args.alpha, args.output, args.pattern,
                        pdb_data)
     elif len(all_alns) == 2:
         fg_clean, bg_clean, hits = process_pair(all_alns[0], all_alns[1],
-                                                module, args.noweights)
+                                                module, args.weight)
         process_output(fg_clean, bg_clean, hits, args.alpha,
                        args.output, args.pattern,
                        pdb_data)
@@ -114,7 +114,7 @@ def process_args(args):
             for otra in _other_alns[1:]:
                 bg_aln.extend(deepcopy(otra))
             fg_clean, bg_clean, hits = process_pair(deepcopy(fg_aln), bg_aln,
-                                                    module, args.noweights)
+                                                    module, args.weight)
             outfname, ptnfname = outfnames_ptnfnames[idx]
             process_output(fg_clean, bg_clean, hits, args.alpha,
                            outfname, ptnfname, pdb_data)
@@ -123,7 +123,7 @@ def process_args(args):
             logging.info("Wrote %s and %s", outfname, ptnfname)
 
 
-def process_pair(fg_aln, bg_aln, module, nw):
+def process_pair(fg_aln, bg_aln, module, do_weight):
     """Calculate a mapping of alignment column positions to "contrast".
 
     Return a list of tuples:
@@ -131,14 +131,14 @@ def process_pair(fg_aln, bg_aln, module, nw):
         for each column position.
     """
     fg_aln, bg_aln = clean_alignments(fg_aln, bg_aln)
-    if nw:
-        fg_weights = list(1 for i in range(len(fg_aln)))
-        bg_weights = list(1 for i in range(len(bg_aln)))
-    else:
+    if do_weight:
         fg_weights = alnutils.sequence_weights(fg_aln, 'none')
         bg_weights = alnutils.sequence_weights(bg_aln, 'none')
-    fg_size = sum(fg_weights) if module != urn else len(fg_aln)
-    bg_size = sum(bg_weights)
+    else:
+        fg_weights = [1 for i in range(len(fg_aln))]
+        bg_weights = [1 for i in range(len(bg_aln))]
+    fg_size = fsum(fg_weights) if module != urn else len(fg_aln)
+    bg_size = fsum(bg_weights)
     # Overall aa freqs for pseudocounts
     aa_freqs = combined_frequencies(fg_aln, fg_weights, bg_aln, bg_weights)
     fg_cons = consensus.consensus(fg_aln, weights=fg_weights, trim_ends=False,
@@ -162,14 +162,14 @@ def process_pair(fg_aln, bg_aln, module, nw):
     return fg_aln, bg_aln, hits
 
 
-def process_one(aln, module, nw):
+def process_one(aln, module, do_weight):
     """Calculate a mapping of alignment column positions to "contrast"."""
-    if nw:
-        weights = list(1 for i in range(len(aln)))
-    else:
+    if do_weight:
         weights = alnutils.sequence_weights(aln, 'none')
                                         # if module != jsd else 'sum1')
-    aln_size = sum(weights) if module != urn else len(aln)
+    else:
+        weights = [1 for i in range(len(aln))]
+    aln_size = fsum(weights) if module != urn else len(aln)
     aa_freqs = alnutils.aa_frequencies(aln, weights, gap_chars='-.X')
     cons = consensus.consensus(aln, weights=weights, trim_ends=False,
                                gap_threshold=GAP_THRESH)
@@ -225,7 +225,7 @@ def write_pvalues(hits, outfile, alpha):
         if not (0.0 <= pvalue <= 1.0):
             logging.warn("Out-of-domain p-value at site %s: %s",
                          idx, pvalue)
-        stars = ('*'*int(-math.log10(pvalue)) if 0 < pvalue < alpha else '')
+        stars = ('*'*int(-log10(pvalue)) if 0 < pvalue < alpha else '')
         outfile.write("%s (%s) %d : prob=%g\t%s\n"
                       % (fg_char, bg_char, idx + 1, pvalue, stars))
 

@@ -72,9 +72,9 @@ See README or http://github.com/etal/cladecompare for full documentation.
     AP.add_argument('-p', '--pattern',
             help="""Write an mcBPPS-style pattern file to this filename.
             (Single-foreground comparison only.""")
-    AP.add_argument('-nw', '--noweights',
+    AP.add_argument('-w', '--weight',
             action='store_true',
-            help="""Disable sequence weights on statistical tests.""")
+            help="""Enable sequence weighting for statistical tests.""")
     AP.add_argument('-q', '--quiet',
             action='store_true',
             help="Don't print status messages, only warnings and errors.")

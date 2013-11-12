@@ -51,7 +51,7 @@ See README or http://github.com/etal/cladecompare for full documentation.
     # Options
     # add_argument_group?
     AP.add_argument('-a', '--alpha',
-            default=0.05, type=float,
+            default=0.005, type=float,
             help="Significance threshold for pattern columns.")
     AP.add_argument('-s', '--strategy',
             default='gtest',

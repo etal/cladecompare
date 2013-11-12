@@ -165,7 +165,7 @@ def pdbid_from_fname(fname, upper=False, default_chain=None):
         chnid = fn[3:-4].upper()
     else:
         assert fn.endswith('.pdb')
-        if fn.startswith('01_') or fn.startswith('00_'):
+        if fn.startswith(('01_', '00_')):
             fn = fn[3:]
         pdbid = fn[:4]
         if len(fn) == 8:

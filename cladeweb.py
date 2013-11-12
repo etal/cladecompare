@@ -77,7 +77,7 @@ FORM_HTML = """\
 
   <p>
     Significance cutoff (alpha):
-    <input type="text" name="alpha" value="0.05" />
+    <input type="text" name="alpha" value="0.005" />
   </p>
 
 

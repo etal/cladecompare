@@ -8,9 +8,12 @@ Output (POST):
     CladeReport (heat map) of submission.
 
 """
-# ENH (report):
+# TODO:
+#   - take boolean do_weight as a form option (checkbox?)
+# ENH (in the report):
 #   - asterisks up top link to PDF pairlogos
 #   - below title, link to PyMOL script of PDB(s)
+from __future__ import print_function
 
 import logging
 import os
@@ -222,13 +225,13 @@ def form_submit():
     if seq2fname:
         # Pair mode
         fg_clean, bg_clean, hits = core.process_pair(fg_aln, bg_aln,
-                                                     stat_module)
+                                                     stat_module, False)
         core.process_output(fg_clean, bg_clean, hits, alpha,
                             tmp_output, tmp_pattern,
                             pdb_data)
     else:
         # Single mode
-        aln, hits = core.process_one(fg_aln, stat_module)
+        aln, hits = core.process_one(fg_aln, stat_module, False)
         core.process_output(aln, None, hits, alpha,
                             tmp_output, tmp_pattern,
                             pdb_data)
@@ -260,9 +263,9 @@ def cleanup(fname):
     if os.path.isfile(fname):
         try:
             os.remove(fname)
-            print "Cleaned up", fname
+            print("Cleaned up", fname)
         except OSError:
-            print "Failed to clean up", fname
+            print("Failed to clean up", fname)
 
 
 # --- Run ---

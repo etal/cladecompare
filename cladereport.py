@@ -13,6 +13,7 @@ If given multiple files:
     Color of foreground cells corresponds to p-value (#stars).
 
 """
+from __future__ import print_function
 
 import argparse 
 import logging
@@ -34,5 +35,5 @@ if len(args.outfiles) == 1:
     title, contents = do_single(args.outfiles[0], args.pattern)
 else:
     title, contents = do_multi(args.outfiles, args.pattern)
-print html_page_tpl % dict(title=title, contents=contents)
+print(html_page_tpl % dict(title=title, contents=contents))
 

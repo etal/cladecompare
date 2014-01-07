@@ -1,12 +1,14 @@
 """Generate a pair of logos with contrasting sites highlighted."""
+from __future__ import division
 
 import logging
 import math
 import os.path
-from cStringIO import StringIO
+# from cStringIO import StringIO
 
 from reportlab.pdfgen import canvas
-from reportlab.lib import pagesizes, units
+from reportlab.lib import units
+# from reportlab.lib import pagesizes
 
 from biofrills import logoutils
 
@@ -124,7 +126,7 @@ def draw_logo(logodata, can, x, y):
             scale = 1.6 * frac * math.sqrt(weight) * entropy
             can.scale(1.0, scale)
             can.setFillColor(aacolors[aa])
-            can.drawString(x + x_offset, (y + y_offset)/scale, aa)
+            can.drawString(x + x_offset, (y + y_offset) / scale, aa)
             can.restoreState()
             y_offset += scale * UNIT * LINE_HT
         x_offset += WUNIT

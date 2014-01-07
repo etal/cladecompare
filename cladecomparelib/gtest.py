@@ -26,6 +26,7 @@ The test statistic G follows the chi-squared distribution with 19 degrees of
 freedom (20 amino acids, 2 compared sets -> (20-1)x(2-1) = 19).
 
 """
+from __future__ import division
 
 import math
 
@@ -47,7 +48,7 @@ def compare_cols(fg_col, fg_cons, fg_size, fg_weights,
         expected[aa] = fg_size * (bg_counts[aa] / (bg_size + pseudo_size)) 
     # Calculate the G-value of observed vs. expected
     observed = count_col(fg_col, fg_weights)
-    G = 2 * sum(obsv * math.log(obsv/expected[aa])
+    G = 2 * sum(obsv * math.log(obsv / expected[aa])
                 for aa, obsv in observed.iteritems())
     # 4. Calculate the Chi-squared p-value of G
     pvalue = chisqprob(G, 19)

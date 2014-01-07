@@ -1,4 +1,5 @@
 """Core API shared by cladecompare and cladeweb for running the algorithms."""
+from __future__ import division
 
 import contextlib
 import logging

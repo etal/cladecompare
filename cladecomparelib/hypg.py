@@ -11,6 +11,8 @@
     in the foreground. 
 
 """
+from __future__ import division
+
 from math import ceil
 
 from scipy.stats import hypergeom
@@ -32,8 +34,8 @@ def compare_cols(fg_col, fg_cons, fg_size, fg_weights,
     fg_size_i = int(ceil(fg_size))
     bg_size_i = int(ceil(bg_size))
     # Probability of fg col conservation vs. the combined/main set
-    pvalue = 1-hypergeom.cdf(fg_cons_count_i-1,fg_size_i+bg_size_i,
-                        p_j, fg_size_i)
+    pvalue = 1.0 - hypergeom.cdf(fg_cons_count_i - 1, fg_size_i + bg_size_i,
+                                 p_j, fg_size_i)
     return pvalue
 
 
@@ -44,7 +46,7 @@ def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
     cons_count_i = int(ceil(cons_count))
     p_j = int(ceil(aa_freqs[cons_aa]*aln_size))
     size_i = int(ceil(aln_size))
-    pvalue = float(cons_count_i)/len(col)
+    pvalue = float(cons_count_i) / len(col)
     #pvalue = hypergeom.cdf(cons_count_i-1,size_i,
                         #max(cons_count_i,p_j), len(col))
     return pvalue

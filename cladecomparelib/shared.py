@@ -1,4 +1,5 @@
 """Numerical functions shared by multiple CladeCompare modules."""
+from __future__ import division
 
 import collections
 from math import log, fsum

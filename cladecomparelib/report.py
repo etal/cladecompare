@@ -1,4 +1,5 @@
 """Generate an HTML report summarizing CladeCompare output."""
+from __future__ import division
 
 import logging
 from math import log10
@@ -129,7 +130,7 @@ def table_multi(labels, rowcells, rowclasses, rowpvalues, pattern, positions):
     if any(pattern):
         out += tr_plain("", pattern)
     for label, cells, pvals in zip(labels, rowcells, rowclasses, rowpvalues):
-        out += tr_class(label, cells, pvals, classes)
+        out += tr_class(label, cells, pvals, rowclasses)
     out += tr_pos(positions)
     out += "</table>"
     return out
@@ -196,12 +197,14 @@ def do_multi(fnames, patternfname):
     """Build an HTML document combining multiple '.out' files."""
     rowcells = []   # dim = #fnames x #cols
     rowclasses = []
+    rowpvalues = []
     for fname in fnames:
         sites = list(parse_out(fname))
         fg_seq, bg_seq, posns, probs, _nstarses = zip(*sites)
         rowcells.append(fg_seq)
         rowclasses.append([p2class(fg, bg, p)
                            for fg, bg, p in zip(fg_seq, bg_seq, probs)])
+        rowpvalues.append(probs)
     posns = [str(p) if not p % 10 else '' for p in posns]
     pattern = [''] * len(posns)
     if patternfname:
@@ -215,10 +218,12 @@ def do_multi(fnames, patternfname):
     chunked_pattern = wrap_data(pattern)
     wrapped_row_cells = zip(*map(wrap_data, rowcells))
     wrapped_row_classes = zip(*map(wrap_data, rowclasses))
-    for w_rowcells, w_rowclasses, ptnrow, positions in zip(
-        wrapped_row_cells, wrapped_row_classes, chunked_pattern, chunked_posns):
-        contents += table_multi(labels, w_rowcells, w_rowclasses, ptnrow,
-                                positions)
+    wrapped_row_pvalues = zip(*map(wrap_data, rowpvalues))
+    for w_rowcells, w_rowclasses, w_rowpvalues, ptnrow, positions in zip(
+        wrapped_row_cells, wrapped_row_classes, wrapped_row_pvalues,
+        chunked_pattern, chunked_posns):
+        contents += table_multi(labels, w_rowcells, w_rowclasses, w_rowpvalues,
+                                ptnrow, positions)
         contents += "<p />"
     return ', '.join(fnames), contents
 

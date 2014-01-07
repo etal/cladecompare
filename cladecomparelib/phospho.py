@@ -4,6 +4,7 @@ Based on the "urn" model, but testing for conservation of Ser/Thr/Tyr instead of
 the foreground consensus residue type.
 
 """
+from __future__ import division
 
 import logging
 import math

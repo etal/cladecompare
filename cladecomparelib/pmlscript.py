@@ -231,7 +231,7 @@ hide all
     'align':    ('\n'.join("align (%s and chain %s), (%s and chain %s)"
                            % (oname, ochain, names[0], chains[0])
                            for oname, ochain in zip(names[1:], chains[1:]))
-                 if chains and len(chains) == len(filter(bool, chains))
+                 if chains and len(chains) == len([c for c in chains if c])
                  else '\n'.join("cealign %s, %s" % (names[0], other)
                                 for other in names[1:]))
 } 

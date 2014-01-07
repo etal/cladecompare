@@ -47,6 +47,7 @@ bar height increases by twofold, is given by
 
 """
 # ENH: Dirichlet mixture priors; Brown et al. 1993
+from __future__ import division
 
 from math import ceil
 

@@ -6,7 +6,7 @@ import logging
 import os
 import subprocess
 import tempfile
-from cStringIO import StringIO
+# from cStringIO import StringIO
 from copy import deepcopy
 from math import fsum, log10
 from os.path import basename
@@ -17,6 +17,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.Alphabet import generic_protein
 from Bio.File import as_handle
+from Bio._py3k import StringIO
 
 from biofrills import alnutils, consensus
 

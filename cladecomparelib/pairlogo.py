@@ -4,11 +4,9 @@ from __future__ import division
 import logging
 import math
 import os.path
-# from cStringIO import StringIO
 
 from reportlab.pdfgen import canvas
 from reportlab.lib import units
-# from reportlab.lib import pagesizes
 
 from biofrills import logoutils
 

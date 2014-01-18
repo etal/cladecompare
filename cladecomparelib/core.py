@@ -217,7 +217,6 @@ def process_output(fg_aln, bg_aln, hits, alpha, output, pattern, pdb_data):
         logging.info("Wrote %s", pml_fname)
 
 
-
 # --- Output ---
 
 def write_pvalues(hits, outfile, alpha):
@@ -238,14 +237,29 @@ def write_mcbpps(tophits, ptnfile):
                                    for posn, faa, baa in tophits]))
 
 
-
 # --- Input magic ---
+
+def call_quiet(*args):
+    """Safely run a command and get stdout; print stderr if there's an error.
+
+    Like subprocess.check_output, but silent in the normal case where the
+    command logs unimportant stuff to stderr. If there is an error, then the
+    full error message(s) is shown in the exception message.
+    """
+    # args = map(str, args)
+    proc = subprocess.Popen(args, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    out, err = proc.communicate()
+    if proc.returncode != 0:
+        raise RuntimeError("Subprocess command failed:\n$ %s\n\n%s"
+                           % (' '.join(args), out + err))
+    return out
+
 
 def hmm_align_and_read(hmm_profile, fasta_fname):
     """Align a FASTA file with HMMer 3 and read the alignment."""
-    out = subprocess.check_output(['hmmalign', '--allcol', '--trim', '--amino',
-                                   '--outformat', 'a2m',
-                                   hmm_profile, fasta_fname])
+    out = call_quiet('hmmalign', '--allcol', '--trim', '--amino',
+                     '--outformat', 'a2m', hmm_profile, fasta_fname)
     # ENH: write to file, then parse incrementally
     records = list(SeqIO.parse(StringIO(out), 'fasta'))
     # Remove inserts, i.e. lowercase characters
@@ -256,7 +270,7 @@ def hmm_align_and_read(hmm_profile, fasta_fname):
 
 def mapgaps_align_and_read(mapgaps_profile, fasta_fname):
     """Align a FASTA file with MAPGAPS and read the CMA alignment."""
-    subprocess.check_call(['run_gaps', mapgaps_profile, fasta_fname])
+    call_quiet('run_gaps', mapgaps_profile, fasta_fname)
     aln = cma_blocks(fasta_fname + '_aln.cma')
     return aln
 
@@ -310,11 +324,8 @@ def combine_alignments(fg_aln, bg_aln):
     try:
         AlignIO.write(fg_aln, aseqfname, 'fasta')
         AlignIO.write(bg_aln, bseqfname, 'fasta')
-        output = subprocess.check_output([
-            'muscle', '-profile',
-            '-in1', aseqfname,
-            '-in2', bseqfname,
-        ])
+        output = call_quiet('muscle', '-profile',
+                            '-in1', aseqfname, '-in2', bseqfname)
     finally:
         if os.path.exists(aseqfname):
             os.remove(aseqfname)
@@ -521,9 +532,8 @@ def pdb_hmm(hmm_profile, pdb_fname):
                       list of insert ranges as tuple pairs)
     """
     with read_pdb_seq(pdb_fname) as (seqfname, seqs):
-        out = subprocess.check_output(['hmmalign', '--allcol', '--trim',
-                                       '--amino', '--outformat', 'a2m',
-                                       hmm_profile, seqfname])
+        out = call_quiet('hmmalign', '--allcol', '--trim', '--amino',
+                         '--outformat', 'a2m', hmm_profile, seqfname)
     ref_id, ref_aln = choose_best_aligned(
         dict((rec.id, str(rec.seq))
              for rec in SeqIO.parse(StringIO(out), 'fasta')))
@@ -544,7 +554,7 @@ def pdb_mapgaps(mapgaps_profile, pdb_fname):
     from biocma import cma
 
     with read_pdb_seq(pdb_fname) as (seqfname, seqs):
-        subprocess.check_call(['run_gaps', mapgaps_profile, seqfname])
+        call_quiet('run_gaps', mapgaps_profile, seqfname)
     pdb_cma = cma.read(seqfname + '_aln.cma')
     hits = {}
     head_lengths = {}

@@ -16,11 +16,11 @@ WUNIT = 0.6 * UNIT  # NB: Seems to be the text width-to-height ratio
 
 # Try to find & register a nice monospace font
 MONOSPACE = 'DejaVuSansMono-Bold'
-font_loc = '/usr/share/fonts/truetype/ttf-dejavu/DejaVuSansMono-Bold.ttf'
+font_loc = '/usr/share/fonts/truetype/ttf-dejavu/%s.ttf' % MONOSPACE
 if not os.path.isfile(font_loc):
     # If the font isn't already installed, try to use the bundled copy
     font_loc = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
-                            MONOSPACE) + '.ttf'
+                            '..', 'data', MONOSPACE) + '.ttf'
 if os.path.isfile(font_loc):
     from reportlab.pdfbase import pdfmetrics, ttfonts
     font = ttfonts.TTFont(MONOSPACE, font_loc)

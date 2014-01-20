@@ -33,6 +33,7 @@ setup_args.update(
     author_email='etal@uga.edu',
     url='http://github.com/etal/cladecompare',
     packages=['cladecomparelib'],
+    package_data={'cladecomparelib': ['data/*.ttf']},
     scripts=[
         DIR + 'cladecompare.py',
         DIR + 'cladereport.py',

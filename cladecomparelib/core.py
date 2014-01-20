@@ -95,13 +95,13 @@ def process_args(args):
     if len(all_alns) == 1:
         aln, hits = process_one(all_alns[0], module, args.weight)
         process_output(aln, None, hits, args.alpha, args.output, args.pattern,
-                       pdb_data)
+                       pdb_data, args.pmlout)
     elif len(all_alns) == 2:
         fg_clean, bg_clean, hits = process_pair(all_alns[0], all_alns[1],
                                                 module, args.weight)
         process_output(fg_clean, bg_clean, hits, args.alpha,
                        args.output, args.pattern,
-                       pdb_data)
+                       pdb_data, args.pmlout)
                        # args.pdb, pdb_rec, pdb_resnums, pdb_inserts)
     else:
         # Output fnames are based on fg filenames; ignore what's given
@@ -119,7 +119,7 @@ def process_args(args):
                                                     module, args.weight)
             outfname, ptnfname = outfnames_ptnfnames[idx]
             process_output(fg_clean, bg_clean, hits, args.alpha,
-                           outfname, ptnfname, pdb_data)
+                           outfname, ptnfname, pdb_data, args.pmlout)
                            # args.pdb,
                            # pdb_rec, pdb_resnums, pdb_inserts)
             logging.info("Wrote %s and %s", outfname, ptnfname)
@@ -187,7 +187,8 @@ def process_one(aln, module, do_weight):
     return aln, hits
 
 
-def process_output(fg_aln, bg_aln, hits, alpha, output, pattern, pdb_data):
+def process_output(fg_aln, bg_aln, hits, alpha, output, pattern, pdb_data,
+                   pml_output=None):
     """Generate the output files from the processed data."""
     with as_handle(output, 'w+') as outfile:
         write_pvalues(hits, outfile, alpha)
@@ -203,18 +204,25 @@ def process_output(fg_aln, bg_aln, hits, alpha, output, pattern, pdb_data):
     if pdb_data:
         patterns = [t[0] for t in tophits]
         if len(pdb_data) == 1:
+            # Single-PBD mode
             pdb_fname, pdb_rec, pdb_resnums, pdb_inserts = pdb_data[0]
             script = pmlscript.build_single(pdb_resnums, pdb_inserts,
                                             patterns, pdb_fname,
                                             pdb_rec.annotations['chain'])
-            pml_fname = pdb_fname + ".pml"
+            if not pml_output:
+                pml_output = pdb_fname + ".pml"
         else:
+            # Multi-PBD mode
             pdb_fnames, pdb_recs, pdb_resnumses, pdb_insertses = zip(*pdb_data)
-            # TODO multi-PDB mode
-            pml_fname = pdb_fnames[0] + "-etc.pml"
-        with open(pml_fname, 'w+') as pmlfile:
+            script = pmlscript.build_multi(pdb_resnumses, pdb_insertses,
+                                           patterns, pdb_fnames,
+                                           [r.annotations['chain']
+                                            for r in pdb_recs])
+            if not pml_output:
+                pml_output = pdb_fnames[0] + "-etc.pml"
+        with open(pml_output, 'w+') as pmlfile:
             pmlfile.write(script)
-        logging.info("Wrote %s", pml_fname)
+        logging.info("Wrote %s", pml_output)
 
 
 # --- Output ---

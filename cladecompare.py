@@ -63,6 +63,9 @@ See README or http://github.com/etal/cladecompare for full documentation.
             'jsd' = Jensen-Shannon divergence.
             'hypg' = hypergeometric distribution
             """)
+    AP.add_argument('-w', '--weight',
+            action='store_true',
+            help="""Enable sequence weighting for statistical tests.""")
     # Output
     AP.add_argument('-o', '--output',
             default=sys.stdout,
@@ -72,9 +75,8 @@ See README or http://github.com/etal/cladecompare for full documentation.
     AP.add_argument('-p', '--pattern',
             help="""Write an mcBPPS-style pattern file to this filename.
             (Single-foreground comparison only.""")
-    AP.add_argument('-w', '--weight',
-            action='store_true',
-            help="""Enable sequence weighting for statistical tests.""")
+    AP.add_argument('--pmlout',
+            help="Write a PyMOL script to this filename (if --pdb given).")
     AP.add_argument('-q', '--quiet',
             action='store_true',
             help="Don't print status messages, only warnings and errors.")

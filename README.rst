@@ -101,11 +101,13 @@ The program prints the following information for each column in the alignment(s)
 
 - The consensus amino acid types of the foreground and background
 - p-value indicating the significance of the contrast in amino acid frequencies
-- a little ASCII bar chart indicating contrast, based on the p-value.
+- an ASCII bar chart indicating contrast, based on the p-value: one asterisk
+  per order of magnitude, shown only where the p-value is below the
+  significance threshold alpha (the ``-a`` option, default 0.005).
 
-P-values are adjusted for number of columns in the alignment with the
-Benjamini-Hochberg "step-up" multiple-testing correction (false discovery rate,
-FDR).
+These per-column p-values are not adjusted for multiple testing, so with
+hundreds of columns some may fall below alpha by chance. The multiple-testing
+correction applies to the pattern file described below.
 
 Redirect the output to a file with the extension ".out"::
 
@@ -142,10 +144,15 @@ Pre-aligned sequences in CMA format (.cma) are also accepted::
         -o scttlre-v-cdc2.out
 
 Finally, given the '-p' option, cladecompare.py will write a "pattern" file
-listing the alignment column numbers with significant contrasts, in decreasing
-order (this can be useful input to other scripts of your own), as well as PDF
-files of paired sequence logos representing the foreground and background
-alignments around each significant site::
+listing the alignment column numbers with significant contrasts, most
+significant first (this can be useful input to other scripts of your own), as
+well as PDF files of paired sequence logos representing the foreground and
+background alignments around each significant site. Only these outputs, and the
+residues highlighted in the PyMOL script written with ``--pdb``, are corrected
+for multiple testing: a column is significant if it passes the
+Benjamini-Hochberg "step-up" procedure at a false discovery rate (FDR) of alpha
+(the ``-a`` option), taken over all columns of the alignment. At most the 50
+most significant columns are considered::
 
     # Specify where the outputs go
     cladecompare.py fg_aln.seq bg_aln.seq -o fg-v-bg.out -p fg-v-bg.pttrn
@@ -155,9 +162,10 @@ Outputs
 
 The script ``cladereport.py`` converts the "\*.out" files to an HTML file showing
 the alignment of the FG and BG consensus sequences, with the FG sequence
-colorized to show per-site contrasts (red=significant difference,
-blue=non-significant/columns are similar), inserts (yellow) and deletions (gray
-gaps)::
+colorized by the uncorrected p-value of each site (red for p below 0.1, darker
+as p decreases; white from 0.1 to 0.5; blue for larger p-values, i.e. similar
+columns), inserts (yellow) and deletions (gray gaps). The colors do not depend
+on alpha::
 
     # Visualize the per-site contrasts as a colorized alignment
     cladereport.py scttlre-v-cdc2.out > scttlre-v-cdc2.html

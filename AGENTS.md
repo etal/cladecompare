@@ -26,8 +26,7 @@ lines under `cladecomparelib/`:
 
 ## Five contrast statistics behind one flag
 
-`-s/--strategy` selects one module, and adding a sixth means adding a module
-rather than a branch (`cladecompare.py:56-58`):
+`-s/--strategy` selects one statistics module per run:
 
 - `gtest` — G-test of column amino-acid frequencies
 - `urn` — CHAIN's ball-in-urn statistic
@@ -35,12 +34,26 @@ rather than a branch (`cladecompare.py:56-58`):
 - `hypg` — hypergeometric
 - `phospho` — Ser/Thr/Tyr phosphorylation sites specifically
 
-**p-values are FDR-corrected across the whole alignment**, Benjamini–Hochberg
-step-up, in `cladecomparelib/core.py:440`. The consequence is easy to miss when
-changing something local: anything that alters how many columns reach the
-correction — a filter, a gap-handling rule, a change to which columns are scored
-— moves the reported p-value of *every* column, not only the ones it touched.
-Judge such a change on the whole output, never on the column you were looking at.
+A strategy is not registered in one place.
+Adding a sixth means writing the module under `cladecomparelib/` and then listing it in four more places: the import and the `if`/`elif` chain in `cladecomparelib/core.py` (lines 24 and 76-92), the `choices` tuple and help text of `-s` in `cladecompare.py` (lines 56-65), the strategy table in `cladeweb.py` (line 209, with its import at line 25), and a radio button in that file's form (lines 55-79).
+`hypg` shows the cost of missing one: it reached `core.py` and `cladecompare.py` but never the web application, whose form does not offer it and whose strategy table raises `KeyError` on a request that names it.
+
+## `.out` p-values are raw; Benjamini–Hochberg only selects the pattern
+
+The `.out` file holds each column's unadjusted p-value.
+`write_pvalues` (`cladecomparelib/core.py:230`) writes the value as the statistic returned it, and its asterisks compare that raw value with `-a/--alpha`, one asterisk per order of magnitude.
+`cladereport.py` and the cladeweb result page color each column from the same raw value (`p2class` in `cladecomparelib/report.py`), at fixed cut points that do not depend on alpha.
+
+The multiple-testing correction exists only in `top_hits` (`core.py:431`): a Benjamini–Hochberg step-up procedure at false discovery rate alpha, with m equal to the number of columns in `hits`, including the columns that `process_pair` and `process_one` skip as gaps and assign p = 1.
+In paired mode that count is taken after `clean_alignments` has dropped the columns that are gaps in every sequence of both sets; the column numbers in `.out` and `.pttrn` refer to that cleaned alignment.
+Its result is the set of significant sites, which becomes the `.pttrn` file when `-p` is given, names the pair logos, and lists the residues highlighted in the PyMOL script.
+The step-up search examines only the 50 most significant columns, so at most 50 sites are selected, and where the full procedure would accept more than 50, the result can be smaller than 50.
+
+The consequence for a local change: altering how many columns enter `hits`, for instance with a filter that drops columns before scoring, does not rescale any value in `.out`, but it changes m and therefore every threshold `alpha * k / m` (k being a column's rank by p-value).
+A gap-handling rule that only changes which columns receive p = 1 leaves m unchanged but changes the ranking.
+Either can move which columns reach the pattern, the logos and the PyMOL script.
+The raw values are not purely local either: pseudocounts come from amino-acid frequencies over the whole alignment (`combined_frequencies` in `cladecomparelib/shared.py` in paired mode, `alnutils.aa_frequencies` in single mode), so a change to which sequences or residues enter those frequencies moves the p-value of every column.
+Judge such a change on the whole output, pattern included, never on the column you were looking at.
 
 ## The library does not currently import
 
@@ -51,15 +64,13 @@ Judge such a change on the whole output, never on the column you were looking at
 20: from Bio._py3k import StringIO             # removed in 1.76
 ```
 
-`generic_protein` is then passed at four call sites (`core.py:276`, `:302`,
-`:304`, `:345`). Because the failure is at import time, *nothing* in the package
-runs on a current Biopython, and there is therefore no working baseline on this
-machine to compare a port against.
+`generic_protein` is then passed at four call sites (`core.py:276`, `:302`, `:304`, `:345`).
+Because the failure is at import time, *nothing* in the package runs on a current Biopython.
 
-That ordering matters more than the port, which is small. **Capture reference
-outputs from an environment where the code does run, before changing any
-behaviour.** Without them a port has no oracle, and the statistics are exactly
-the kind of output where a wrong answer looks entirely plausible.
+A port nevertheless has a reference to be checked against.
+`tests/data/py27/` holds the outputs of the unmodified code, captured under Python 2.7 and Biopython 1.76 from commit `e265b1f`, for the command line, `cladereport.py` and the web application.
+`tests/data/README.md` records the environment and how to regenerate it, the inputs, and the defects the reference preserves on purpose.
+A ported program should reproduce those outputs, or differ from them only by a documented, deliberate change; the statistics are exactly the kind of output where a wrong answer looks entirely plausible.
 
 ## biofrills is not the blocker it appears to be
 
@@ -78,7 +89,7 @@ pure-Python modules — `alnutils`, `consensus`, `logoutils`, and
 optional speedup, in a module nothing here reaches. The requirement is "import
 four pure-Python modules", not "port Cython".
 
-## `test/` is a smoke harness, not a regression suite
+## `test/` is a smoke harness; `tests/data/` holds the reference
 
 `cd test && make` runs the program in eight configurations — four statistics,
 paired and single-alignment — and writes `.out`, `.pttrn` and `.html` files for a
@@ -90,14 +101,17 @@ they are not comparable to each other.
 The fixtures are real alignments from Talevich, Mirza & Kannan (2011), *BMC
 Evolutionary Biology* 11:321.
 
+`tests/data/` is the committed counterpart: the reference outputs described above, covering the eight Makefile targets and further command-line and web cases.
+No test compares the program against it yet.
+
 ## Conventions
 
 - The code predates this project's current Python baseline; it is 2013-era
   Python 2/3-straddling style. Modernize deliberately and in separate commits
   from behaviour changes, so a numerical difference is never buried in a
   reformat.
-- Output files under `test/` are generated. They are gitignored and should stay
-  that way.
+- Output files under `test/` are generated, gitignored, and should stay so.
+  The files under `tests/data/py27/` are generated too but committed deliberately, as the reference; regenerate them with `tests/data/capture_py27.py` rather than editing them.
 - Maintainer planning for this repository lives in a local beads store that is
   excluded from git and is not present in a clone. If you have `bd`, run
   `bd prime`; if you do not, nothing here depends on it.

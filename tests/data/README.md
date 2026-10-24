@@ -133,8 +133,9 @@ The random part of a temporary file name is replaced by `tmpXXXXXX`.
 The reference records the original behavior, defects included.
 A port that fixes one of them differs from the reference by design, and the test should state the expected difference.
 
-- `-s phospho` fails with `TypeError` in every current case, paired and single, with and without `-w`, and in the web form: the alignment size reaches `range()` as a float.
-  It ran only without weights, before that size became a floating-point sum; the legacy cases record that behavior.
+- `-s phospho` fails with `TypeError` in every case captured from `e265b1f`, paired and single, with and without `-w`, and in the web form: the alignment size reaches `range()` as a float.
+  It ran only without weights, before the unweighted size also became a floating-point sum; the legacy cases record that behavior.
+  The code has since been fixed to round the size up to an integer, so it differs from these cases by design: the unweighted cases now match `legacy.pair.phospho.nw` and `legacy.single.phospho.nw`, and the weighted and web cases complete where the reference records the failure.
 - `pdb.1FIN-AB-CA.gtest` fails with `KeyError` in `choose_best_aligned`, which indexes the aligned chains with a (key, value) pair whenever more than one chain aligns to the profile, so every multi-chain structure fails.
 - `multi.gtest` writes its three `.out` and `.pttrn` pairs, but `cladereport.py` on more than one `.out` file fails with `ValueError` in `report.table_multi`.
 - `web.pair.hypg` returns status 500 with `KeyError`: the web application's strategy table lacks hypg.

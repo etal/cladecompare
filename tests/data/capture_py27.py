@@ -9,7 +9,7 @@ run the working tree.  It extracts the sources it runs from git:
 * cladecompare at CLADECOMPARE_COMMIT, the last commit to change code before
   the reference was first captured,
 * cladecompare at LEGACY_COMMIT, the last commit at which -s phospho ran
-  (unweighted only), for the legacy cases,
+  (unweighted only) before 393cd4e broke it, for the legacy cases,
 * biofrills at BIOFRILLS_COMMIT, its last Python 2 commit, from the biofrills
   repository beside this one (or from $BIOFRILLS_REPO).
 
@@ -196,9 +196,10 @@ def cli_cases():
     yield make_case('pdb.1FIN-AB-CA.gtest', unaligned,
                     ['--hmm', 'CDK.hmm', '--pdb', '1FIN-AB-CA.pdb'])
 
-    # phospho at the last commit where it ran: unweighted only (-nw), with
-    # the current default alpha given explicitly.  cladereport at that commit
-    # has no -o option; the report is not the point of these cases.
+    # phospho at the last commit where it ran before 393cd4e broke it:
+    # unweighted only (-nw), with the current default alpha given
+    # explicitly.  cladereport at that commit has no -o option; the report
+    # is not the point of these cases.
     for mode in ['pair', 'single']:
         inputs = [FG_CMA, BG_CMA] if mode == 'pair' else [BG_CMA]
         yield make_case('legacy.%s.phospho.nw' % mode, inputs,

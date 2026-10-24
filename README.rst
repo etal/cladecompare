@@ -203,6 +203,10 @@ Statistical tests ("-s" options) for column comparison:
 :urn:
     Ball-in-urn model (binomial), a la CHAIN_, for counts of the "consensus"
     amino acid type in FG and BG.
+:phospho:
+    Ball-in-urn model, as in "urn", for the combined count of the
+    phosphorylatable residues Ser, Thr and Tyr in the FG column, against
+    their combined frequency in the FG and BG columns together.
 :jsd:
     Jensen-Shannon divergence of column compositions, a la INTREPID_.
 

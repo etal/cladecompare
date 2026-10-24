@@ -35,16 +35,16 @@ lines under `cladecomparelib/`:
 - `phospho` — Ser/Thr/Tyr phosphorylation sites specifically
 
 A strategy is not registered in one place.
-Adding a sixth means writing the module under `cladecomparelib/` and then listing it in four more places: the import and the `if`/`elif` chain in `cladecomparelib/core.py` (lines 24 and 76-92), the `choices` tuple and help text of `-s` in `cladecompare.py` (lines 56-65), the strategy table in `cladeweb.py` (line 209, with its import at line 25), and a radio button in that file's form (lines 55-79).
+Adding a sixth means writing the module under `cladecomparelib/` and then listing it in four more places: the `if`/`elif` chain in `process_args` in `cladecomparelib/core.py` (with that file's module import), the `choices` tuple and help text of `-s` in `cladecompare.py`, the `stat_module` table in `form_submit` in `cladeweb.py` (with that file's module import), and a radio button in that file's `FORM_HTML`.
 `hypg` shows the cost of missing one: it reached `core.py` and `cladecompare.py` but never the web application, whose form does not offer it and whose strategy table raises `KeyError` on a request that names it.
 
 ## `.out` p-values are raw; Benjamini–Hochberg only selects the pattern
 
 The `.out` file holds each column's unadjusted p-value.
-`write_pvalues` (`cladecomparelib/core.py:230`) writes the value as the statistic returned it, and its asterisks compare that raw value with `-a/--alpha`, one asterisk per order of magnitude.
+`write_pvalues` in `cladecomparelib/core.py` writes the value as the statistic returned it, and its asterisks compare that raw value with `-a/--alpha`, one asterisk per order of magnitude.
 `cladereport.py` and the cladeweb result page color each column from the same raw value (`p2class` in `cladecomparelib/report.py`), at fixed cut points that do not depend on alpha.
 
-The multiple-testing correction exists only in `top_hits` (`core.py:431`): a Benjamini–Hochberg step-up procedure at false discovery rate alpha, with m equal to the number of columns in `hits`, including the columns that `process_pair` and `process_one` skip as gaps and assign p = 1.
+The multiple-testing correction exists only in `top_hits` in `core.py`: a Benjamini–Hochberg step-up procedure at false discovery rate alpha, with m equal to the number of columns in `hits`, including the columns that `process_pair` and `process_one` skip as gaps and assign p = 1.
 In paired mode that count is taken after `clean_alignments` has dropped the columns that are gaps in every sequence of both sets; the column numbers in `.out` and `.pttrn` refer to that cleaned alignment.
 Its result is the set of significant sites, which becomes the `.pttrn` file when `-p` is given, names the pair logos, and lists the residues highlighted in the PyMOL script.
 The step-up search examines only the 50 most significant columns, so at most 50 sites are selected, and where the full procedure would accept more than 50, the result can be smaller than 50.
@@ -59,12 +59,12 @@ Judge such a change on the whole output, pattern included, never on the column y
 
 `cladecomparelib/core.py` uses two Biopython APIs that no longer exist:
 
-```
-18: from Bio.Alphabet import generic_protein   # Bio.Alphabet removed in 1.78
-20: from Bio._py3k import StringIO             # removed in 1.76
+```python
+from Bio.Alphabet import generic_protein   # Bio.Alphabet removed in 1.78
+from Bio._py3k import StringIO             # removed in 1.76
 ```
 
-`generic_protein` is then passed at four call sites (`core.py:276`, `:302`, `:304`, `:345`).
+`generic_protein` is then passed at four call sites, in `hmm_align_and_read`, `cma_blocks` (twice) and `combine_alignments`.
 Because the failure is at import time, *nothing* in the package runs on a current Biopython.
 
 A port nevertheless has a reference to be checked against.

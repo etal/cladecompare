@@ -4,6 +4,7 @@ from __future__ import division
 import contextlib
 import logging
 import os
+import re
 import subprocess
 import tempfile
 # from cStringIO import StringIO
@@ -283,10 +284,23 @@ def mapgaps_align_and_read(mapgaps_profile, fasta_fname):
     return aln
 
 
+# A CMA sequence line: the aligned sequence between '{(...)' and '(...)}',
+# where flanking residues may appear outside the braces or inside the
+# parentheses, e.g.
+#   {()SEQ()}*   MENINNI{()SEQ()}*   {(HY)SEQ(AA)}*
+# The aligned part is taken verbatim, so that gap characters such as '.' pass
+# through as before; the flanks must be residues, so that other text around
+# the block is reported as an error.
+CMA_SEQ_LINE = re.compile(r'[A-Za-z-]*\{\([A-Za-z-]*\)(?P<aligned>[^()]*)'
+                          r'\([A-Za-z-]*\)\}[A-Za-z-]*\*\Z')
+
+
 def cma_blocks(cma_fname):
     """Select the conserved/consensus columns in the alignment.
 
-    This removes inserts relative to the consensus sequence.
+    This removes inserts relative to the consensus sequence, and the flanking
+    residues that some records carry around the aligned sequence. A sequence
+    line that does not have the expected shape raises ValueError.
 
     Return a Biopython MultipleSeqAlignment.
     """
@@ -296,8 +310,14 @@ def cma_blocks(cma_fname):
         for line in lines:
             if line.startswith('>'):
                 acc = line.split(None, 1)[0][1:]
-                seq = next(lines).strip()
-                seq = ''.join((c for c in seq[3:-4] if not c.islower()))
+                seq_line = next(lines, '').strip()
+                match = CMA_SEQ_LINE.match(seq_line)
+                if match is None:
+                    raise ValueError("Unparseable CMA sequence line for "
+                                     "record %s in %s: %s"
+                                     % (acc, cma_fname, seq_line))
+                seq = ''.join((c for c in match.group('aligned')
+                               if not c.islower()))
                 records.append(
                         SeqRecord(Seq(seq, generic_protein),
                                   id=acc, description=''))

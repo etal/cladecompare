@@ -12,9 +12,10 @@ Files written, all under tests/data/inputs/:
 * scttlre-domain.fasta_aln.cma, cdc2-domain.fasta_aln.cma, scttlre-domain.fasta,
   cdc2-domain.fasta, CDK.hmm -- copied unchanged from test/.
 * scttlre-domain.aln.fasta, cdc2-domain.aln.fasta -- the two CMA alignments
-  reduced to their consensus columns by the rule of
-  cladecomparelib.core.cma_blocks (strip the 3-character head and 4-character
-  tail of each sequence line, drop lowercase insert residues).  cladeweb
+  reduced to their consensus columns as cladecomparelib.core.cma_blocks does:
+  keep the aligned part of each sequence line and drop its lowercase insert
+  residues.  Every sequence line in these two files has the plain form
+  {()SEQ()}*, so the fixed slice below is equivalent.  cladeweb
   reads uploads as FASTA, and these are the same alignments in that form.
 * cdc2-a.aln.fasta, cdc2-b.aln.fasta -- cdc2-domain.aln.fasta split into its
   first CDC2_SPLIT records and the rest, for the three-alignment mode.
@@ -50,7 +51,10 @@ RCSB = "https://files.rcsb.org/download/{}.pdb"
 
 
 def cma_blocks(path):
-    """Read a CMA file as (id, sequence) pairs, as core.cma_blocks does."""
+    """Read a CMA file of plain {()SEQ()}* lines as (id, sequence) pairs.
+
+    On such lines this gives the same result as core.cma_blocks.
+    """
     records = []
     lines = iter(path.read_text().splitlines())
     for line in lines:

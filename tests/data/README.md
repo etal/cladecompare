@@ -21,7 +21,7 @@ At capture time it read:
 | Pillow | 6.2.1 |
 | HMMER | 3.0 (`hmmalign`) |
 | MUSCLE | 3.8.1551 |
-| cladecompare | commit `e265b1f`, the last commit that changed code, extracted from git |
+| cladecompare | commit `e265b1f`, the last commit to change code before this reference was captured, extracted from git |
 | cladecompare, legacy cases | commit `44c81cc`, the parent of the commit that broke `-s phospho` |
 | biofrills | commit `36684bb`, its last Python 2 commit |
 
@@ -75,7 +75,8 @@ Two consecutive captures produce identical files, and captures with `PYTHONHASHS
 
 `1HCK.pdb` is kept complete, with its ATP `HETATM`, `SEQRES` and `CONECT` records, because the structure reader that the port will use is a different Biopython release and should be checked on a full entry; reduced to its C-alpha atoms, it would give the same outputs here.
 
-The `.aln.fasta` files apply the rule of `cladecomparelib.core.cma_blocks`: strip the three-character head and four-character tail of each sequence line and drop lowercase insert residues.
+The `.aln.fasta` files apply the rule of `cladecomparelib.core.cma_blocks`: keep the aligned part of each CMA sequence line and drop its lowercase insert residues.
+In these files the aligned part always lies between a leading `{()` and a trailing `()}*`.
 They hold the same alignments that CladeCompare computes from the CMA files.
 
 ## Layout of `py27/`

@@ -6,7 +6,8 @@ bottle and WebLogo 3.6, with HMMER 3.0 and MUSCLE 3.8.1551 installed beside
 that interpreter; see README.md beside it for the environment.  It does not
 run the working tree.  It extracts the sources it runs from git:
 
-* cladecompare at CLADECOMPARE_COMMIT, the last commit that changed code,
+* cladecompare at CLADECOMPARE_COMMIT, the last commit to change code before
+  the reference was first captured,
 * cladecompare at LEGACY_COMMIT, the last commit at which -s phospho ran
   (unweighted only), for the legacy cases,
 * biofrills at BIOFRILLS_COMMIT, its last Python 2 commit, from the biofrills

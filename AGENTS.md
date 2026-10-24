@@ -112,6 +112,6 @@ No test compares the program against it yet.
   reformat.
 - Output files under `test/` are generated, gitignored, and should stay so.
   The files under `tests/data/py27/` are generated too but committed deliberately, as the reference; regenerate them with `tests/data/capture_py27.py` rather than editing them.
-- Maintainer planning for this repository lives in a local beads store that is
-  excluded from git and is not present in a clone. If you have `bd`, run
-  `bd prime`; if you do not, nothing here depends on it.
+- Maintainer planning for this repository lives in a local beads store that is excluded from git and is not present in a clone.
+  If you have `bd`, run `bd prime --mcp`, which renders each memory as a one-line summary because the full text printed by plain `bd prime` can exceed an agent's tool-output limits; `bd memories <keyword>` searches the full text, and `bd recall <key>` prints one memory in full.
+  If you do not have `bd`, nothing here depends on it.

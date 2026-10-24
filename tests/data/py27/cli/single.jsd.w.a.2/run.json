@@ -1,0 +1,44 @@
+{
+  "source": "cladecompare",
+  "makefile_target": null,
+  "commands": [
+    {
+      "argv": [
+        "cladecompare.py",
+        "cdc2-domain.fasta_aln.cma",
+        "-s",
+        "jsd",
+        "-w",
+        "-a",
+        ".2",
+        "-p",
+        "single.jsd.w.a.2.pttrn",
+        "-o",
+        "single.jsd.w.a.2.out"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "core [@83]: Using Jensen-Shannon divergence\n"
+    },
+    {
+      "argv": [
+        "cladereport.py",
+        "single.jsd.w.a.2.out",
+        "-p",
+        "single.jsd.w.a.2.pttrn",
+        "-o",
+        "single.jsd.w.a.2.html"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "report [@72]: Empty pattern file: single.jsd.w.a.2.pttrn\n"
+    }
+  ],
+  "written_files": [
+    "single.jsd.w.a.2.html",
+    "single.jsd.w.a.2.out",
+    "single.jsd.w.a.2.pttrn"
+  ],
+  "pdfs": [],
+  "leftover_temp_files": 0
+}

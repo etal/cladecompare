@@ -1,0 +1,57 @@
+{
+  "source": "cladecompare",
+  "makefile_target": null,
+  "commands": [
+    {
+      "argv": [
+        "cladecompare.py",
+        "scttlre-domain.fasta",
+        "cdc2-domain.fasta",
+        "--hmm",
+        "CDK.hmm",
+        "--pdb",
+        "1HCK.pdb",
+        "-p",
+        "pdb.1HCK.gtest.pttrn",
+        "-o",
+        "pdb.1HCK.gtest.out"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "core [@45]: Aligning scttlre-domain.fasta with HMM profile CDK.hmm\ncore [@45]: Aligning cdc2-domain.fasta with HMM profile CDK.hmm\ncore [@60]: Aligning 1HCK.pdb with HMM profile CDK.hmm\ncore [@77]: Using G-test of amino acid frequencies\ncore [@395]: Purging 2 identical sequences from the alignment\ncore [@395]: Purging 1 identical sequences from the alignment\npairlogo [@111]: Wrote pdb.1HCK.gtest-2,3,9.pdf\npairlogo [@111]: Wrote pdb.1HCK.gtest-20.pdf\npairlogo [@111]: Wrote pdb.1HCK.gtest-31,32,34,37.pdf\npairlogo [@111]: Wrote pdb.1HCK.gtest-56.pdf\npairlogo [@111]: Wrote pdb.1HCK.gtest-67,73,74,77,79.pdf\npairlogo [@111]: Wrote pdb.1HCK.gtest-93,94,98,105,107.pdf\npairlogo [@111]: Wrote pdb.1HCK.gtest-124,125.pdf\npairlogo [@111]: Wrote pdb.1HCK.gtest-147,154,156,158,159,163,165,167,168,172,179,184.pdf\npairlogo [@111]: Wrote pdb.1HCK.gtest-207,208,210,212,217,218.pdf\npairlogo [@111]: Wrote pdb.1HCK.gtest-234,235,236,238,239,246,247,254,255,256.pdf\npairlogo [@111]: Wrote pdb.1HCK.gtest-275.pdf\ncore [@225]: Wrote 1HCK.pdb.pml\n"
+    },
+    {
+      "argv": [
+        "cladereport.py",
+        "pdb.1HCK.gtest.out",
+        "-p",
+        "pdb.1HCK.gtest.pttrn",
+        "-o",
+        "pdb.1HCK.gtest.html"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "written_files": [
+    "1HCK.pdb.pml",
+    "pdb.1HCK.gtest.html",
+    "pdb.1HCK.gtest.out",
+    "pdb.1HCK.gtest.pttrn"
+  ],
+  "pdfs": [
+    "pdb.1HCK.gtest-124,125.pdf",
+    "pdb.1HCK.gtest-147,154,156,158,159,163,165,167,168,172,179,184.pdf",
+    "pdb.1HCK.gtest-2,3,9.pdf",
+    "pdb.1HCK.gtest-20.pdf",
+    "pdb.1HCK.gtest-207,208,210,212,217,218.pdf",
+    "pdb.1HCK.gtest-234,235,236,238,239,246,247,254,255,256.pdf",
+    "pdb.1HCK.gtest-275.pdf",
+    "pdb.1HCK.gtest-31,32,34,37.pdf",
+    "pdb.1HCK.gtest-56.pdf",
+    "pdb.1HCK.gtest-67,73,74,77,79.pdf",
+    "pdb.1HCK.gtest-93,94,98,105,107.pdf"
+  ],
+  "leftover_temp_files": 0
+}

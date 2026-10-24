@@ -1,0 +1,28 @@
+{
+  "python": "2.7.15",
+  "implementation": "CPython",
+  "platform": {
+    "system": "Darwin",
+    "release": "25.6.0",
+    "machine": "x86_64"
+  },
+  "packages": {
+    "biopython": "1.76",
+    "numpy": "1.16.5",
+    "scipy": "1.2.1",
+    "reportlab": "3.5.42",
+    "bottle": "0.12.18",
+    "weblogo": "3.6.0",
+    "Pillow": "6.2.1"
+  },
+  "tools": {
+    "hmmalign": "HMMER 3.0 (March 2010); http://hmmer.org/",
+    "muscle": "MUSCLE v3.8.1551 by Robert C. Edgar"
+  },
+  "commits": {
+    "cladecompare": "e265b1f5321c0bcdd6ed05b9cce5ebb26483ef54",
+    "cladecompare_legacy": "44c81cce57d13ef0cf4caaa8a0cb6fa371f3ced7",
+    "biofrills": "36684bb6c7632f96215e8b2b4ebc86640f331bcd"
+  },
+  "hash_seed": null
+}

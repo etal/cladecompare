@@ -1,0 +1,25 @@
+{
+  "source": "cladecompare",
+  "makefile_target": null,
+  "commands": [
+    {
+      "argv": [
+        "cladecompare.py",
+        "scttlre-domain.fasta_aln.cma",
+        "cdc2-domain.fasta_aln.cma",
+        "-s",
+        "phospho",
+        "-p",
+        "pair.phospho.pttrn",
+        "-o",
+        "pair.phospho.out"
+      ],
+      "returncode": 1,
+      "stdout": "",
+      "stderr": "core [@86]: Using urn model for phosphorylatable residues\ncore [@395]: Purging 3 identical sequences from the alignment\ncore [@395]: Purging 1 identical sequences from the alignment\nTraceback (most recent call last):\n  File \"<cladecompare>/cladecompare.py\", line 91, in <module>\n    process_args(args)\n  File \"<cladecompare>/cladecomparelib/core.py\", line 101, in process_args\n    module, args.weight)\n  File \"<cladecompare>/cladecomparelib/core.py\", line 161, in process_pair\n    aa_freqs, PSEUDO_SIZE)\n  File \"<cladecompare>/cladecomparelib/phospho.py\", line 33, in compare_cols\n    pvalue = binom.pmf(range(int(math.ceil(fg_tot)), fg_size + 2),\nTypeError: range() integer end argument expected, got float.\n"
+    }
+  ],
+  "written_files": [],
+  "pdfs": [],
+  "leftover_temp_files": 0
+}

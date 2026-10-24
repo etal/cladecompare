@@ -1,0 +1,40 @@
+{
+  "fields": [
+    [
+      "name",
+      "web-pdb"
+    ],
+    [
+      "strategy",
+      "gtest"
+    ],
+    [
+      "alpha",
+      "0.005"
+    ]
+  ],
+  "uploads": [
+    [
+      "seqfile1",
+      "scttlre-domain.fasta"
+    ],
+    [
+      "seqfile2",
+      "cdc2-domain.fasta"
+    ],
+    [
+      "profile",
+      "CDK.hmm"
+    ],
+    [
+      "pdbfile",
+      "1HCK.pdb"
+    ]
+  ],
+  "status": "500 Internal Server Error",
+  "error": "Traceback (most recent call last):\n  File \"<python-prefix>/lib/python2.7/site-packages/bottle.py\", line 868, in _handle\n    return route.call(**args)\n  File \"<python-prefix>/lib/python2.7/site-packages/bottle.py\", line 1748, in wrapper\n    rv = callback(*a, **ka)\n  File \"<cladecompare>/cladeweb.py\", line 231, in form_submit\n    pdb_data)\n  File \"<cladecompare>/cladecomparelib/core.py\", line 211, in process_output\n    pdb_rec.annotations['chain'])\n  File \"<cladecompare>/cladecomparelib/pmlscript.py\", line 28, in build_single\n    pml_name = get_pml_name(pdbfname, chain)\n  File \"<cladecompare>/cladecomparelib/pmlscript.py\", line 140, in get_pml_name\n    pdb_id, chn = pdbid_from_fname(pdb_fname)\n  File \"<cladecompare>/cladecomparelib/pmlscript.py\", line 167, in pdbid_from_fname\n    assert fn.endswith('.pdb')\nAssertionError",
+  "log": "cladeweb [@177]: Aligning <tmp>/tmpXXXXXX.seq with profile <tmp>/tmpXXXXXX.hmm\ncladeweb [@180]: Aligning <tmp>/tmpXXXXXX.seq with profile <tmp>/tmpXXXXXX.hmm\ncladeweb [@194]: Aligning 1HCK.pdb with profile <tmp>/tmpXXXXXX.hmm\ncore [@395]: Purging 2 identical sequences from the alignment\ncore [@395]: Purging 1 identical sequences from the alignment\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-2,3,9.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-20.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-31,32,34,37.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-56.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-67,73,74,77,79.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-93,94,98,105,107.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-124,125.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-147,154,156,158,159,163,165,167,168,172,179,184.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-207,208,210,212,217,218.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-234,235,236,238,239,246,247,254,255,256.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-275.pdf\n",
+  "stdout": "",
+  "written_files": [],
+  "leftover_temp_files": 17
+}

@@ -1,0 +1,37 @@
+{
+  "source": "cladecompare_legacy",
+  "makefile_target": null,
+  "commands": [
+    {
+      "argv": [
+        "cladecompare.py",
+        "scttlre-domain.fasta_aln.cma",
+        "cdc2-domain.fasta_aln.cma",
+        "-s",
+        "phospho",
+        "-nw",
+        "-a",
+        "0.005",
+        "-p",
+        "legacy.pair.phospho.nw.pttrn",
+        "-o",
+        "legacy.pair.phospho.nw.out"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "WARNING:root:Font 'DejaVuSansMono-Bold' unavailable; using lame Courier\nWARNING:root:Purging 3 identical sequences from the alignment\nWARNING:root:Purging 1 identical sequences from the alignment\n"
+    }
+  ],
+  "written_files": [
+    "legacy.pair.phospho.nw.out",
+    "legacy.pair.phospho.nw.pttrn"
+  ],
+  "pdfs": [
+    "legacy.pair.phospho.nw-149,154.pdf",
+    "legacy.pair.phospho.nw-208.pdf",
+    "legacy.pair.phospho.nw-238.pdf",
+    "legacy.pair.phospho.nw-40.pdf",
+    "legacy.pair.phospho.nw-75.pdf"
+  ],
+  "leftover_temp_files": 0
+}

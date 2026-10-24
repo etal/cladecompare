@@ -1,0 +1,43 @@
+{
+  "source": "cladecompare",
+  "makefile_target": null,
+  "commands": [
+    {
+      "argv": [
+        "cladecompare.py",
+        "scttlre-domain.fasta_aln.cma",
+        "cdc2-domain.fasta_aln.cma",
+        "-s",
+        "urn",
+        "-w",
+        "-p",
+        "pair.urn.w.pttrn",
+        "-o",
+        "pair.urn.w.out"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "core [@80]: Using ball-in-urn statistical model\ncore [@395]: Purging 3 identical sequences from the alignment\ncore [@395]: Purging 1 identical sequences from the alignment\n"
+    },
+    {
+      "argv": [
+        "cladereport.py",
+        "pair.urn.w.out",
+        "-p",
+        "pair.urn.w.pttrn",
+        "-o",
+        "pair.urn.w.html"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "report [@72]: Empty pattern file: pair.urn.w.pttrn\n"
+    }
+  ],
+  "written_files": [
+    "pair.urn.w.html",
+    "pair.urn.w.out",
+    "pair.urn.w.pttrn"
+  ],
+  "pdfs": [],
+  "leftover_temp_files": 0
+}

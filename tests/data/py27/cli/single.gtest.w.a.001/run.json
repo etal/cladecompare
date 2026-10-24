@@ -1,0 +1,44 @@
+{
+  "source": "cladecompare",
+  "makefile_target": "cdc2-gtest",
+  "commands": [
+    {
+      "argv": [
+        "cladecompare.py",
+        "cdc2-domain.fasta_aln.cma",
+        "-s",
+        "gtest",
+        "-w",
+        "-a",
+        ".001",
+        "-p",
+        "single.gtest.w.a.001.pttrn",
+        "-o",
+        "single.gtest.w.a.001.out"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "core [@77]: Using G-test of amino acid frequencies\n"
+    },
+    {
+      "argv": [
+        "cladereport.py",
+        "single.gtest.w.a.001.out",
+        "-p",
+        "single.gtest.w.a.001.pttrn",
+        "-o",
+        "single.gtest.w.a.001.html"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "written_files": [
+    "single.gtest.w.a.001.html",
+    "single.gtest.w.a.001.out",
+    "single.gtest.w.a.001.pttrn"
+  ],
+  "pdfs": [],
+  "leftover_temp_files": 0
+}

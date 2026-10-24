@@ -1,0 +1,28 @@
+{
+  "fields": [
+    [
+      "name",
+      "web-single-phospho"
+    ],
+    [
+      "strategy",
+      "phospho"
+    ],
+    [
+      "alpha",
+      "0.005"
+    ]
+  ],
+  "uploads": [
+    [
+      "seqfile1",
+      "cdc2-domain.aln.fasta"
+    ]
+  ],
+  "status": "500 Internal Server Error",
+  "error": "Traceback (most recent call last):\n  File \"<python-prefix>/lib/python2.7/site-packages/bottle.py\", line 868, in _handle\n    return route.call(**args)\n  File \"<python-prefix>/lib/python2.7/site-packages/bottle.py\", line 1748, in wrapper\n    rv = callback(*a, **ka)\n  File \"<cladecompare>/cladeweb.py\", line 234, in form_submit\n    aln, hits = core.process_one(fg_aln, stat_module, False)\n  File \"<cladecompare>/cladecomparelib/core.py\", line 185, in process_one\n    aa_freqs, PSEUDO_SIZE)\n  File \"<cladecompare>/cladecomparelib/phospho.py\", line 49, in compare_one\n    pvalue = binom.pmf(range(int(math.ceil(col_tot)), aln_size + 2),\nTypeError: range() integer end argument expected, got float.",
+  "log": "",
+  "stdout": "",
+  "written_files": [],
+  "leftover_temp_files": 3
+}

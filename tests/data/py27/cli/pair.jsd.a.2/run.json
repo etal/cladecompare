@@ -1,0 +1,51 @@
+{
+  "source": "cladecompare",
+  "makefile_target": "scttlre-v-cdc2-jsd",
+  "commands": [
+    {
+      "argv": [
+        "cladecompare.py",
+        "scttlre-domain.fasta_aln.cma",
+        "cdc2-domain.fasta_aln.cma",
+        "-s",
+        "jsd",
+        "-a",
+        ".2",
+        "-p",
+        "pair.jsd.a.2.pttrn",
+        "-o",
+        "pair.jsd.a.2.out"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "core [@83]: Using Jensen-Shannon divergence\ncore [@395]: Purging 3 identical sequences from the alignment\ncore [@395]: Purging 1 identical sequences from the alignment\npairlogo [@111]: Wrote pair.jsd.a.2-1,2,3,9,14,21,26,31,32,34,37,47.pdf\npairlogo [@111]: Wrote pair.jsd.a.2-67,73,74,75,80,87,92,95.pdf\npairlogo [@111]: Wrote pair.jsd.a.2-111,113,123.pdf\npairlogo [@111]: Wrote pair.jsd.a.2-135,142,144,149,151,154,158,164,169.pdf\npairlogo [@111]: Wrote pair.jsd.a.2-194,196,198,201,207,208,209.pdf\npairlogo [@111]: Wrote pair.jsd.a.2-228,238.pdf\n"
+    },
+    {
+      "argv": [
+        "cladereport.py",
+        "pair.jsd.a.2.out",
+        "-p",
+        "pair.jsd.a.2.pttrn",
+        "-o",
+        "pair.jsd.a.2.html"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "written_files": [
+    "pair.jsd.a.2.html",
+    "pair.jsd.a.2.out",
+    "pair.jsd.a.2.pttrn"
+  ],
+  "pdfs": [
+    "pair.jsd.a.2-1,2,3,9,14,21,26,31,32,34,37,47.pdf",
+    "pair.jsd.a.2-111,113,123.pdf",
+    "pair.jsd.a.2-135,142,144,149,151,154,158,164,169.pdf",
+    "pair.jsd.a.2-194,196,198,201,207,208,209.pdf",
+    "pair.jsd.a.2-228,238.pdf",
+    "pair.jsd.a.2-67,73,74,75,80,87,92,95.pdf"
+  ],
+  "leftover_temp_files": 0
+}

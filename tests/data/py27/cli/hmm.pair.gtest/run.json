@@ -1,0 +1,54 @@
+{
+  "source": "cladecompare",
+  "makefile_target": null,
+  "commands": [
+    {
+      "argv": [
+        "cladecompare.py",
+        "scttlre-domain.fasta",
+        "cdc2-domain.fasta",
+        "--hmm",
+        "CDK.hmm",
+        "-p",
+        "hmm.pair.gtest.pttrn",
+        "-o",
+        "hmm.pair.gtest.out"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "core [@45]: Aligning scttlre-domain.fasta with HMM profile CDK.hmm\ncore [@45]: Aligning cdc2-domain.fasta with HMM profile CDK.hmm\ncore [@77]: Using G-test of amino acid frequencies\ncore [@395]: Purging 2 identical sequences from the alignment\ncore [@395]: Purging 1 identical sequences from the alignment\npairlogo [@111]: Wrote hmm.pair.gtest-2,3,9.pdf\npairlogo [@111]: Wrote hmm.pair.gtest-20.pdf\npairlogo [@111]: Wrote hmm.pair.gtest-31,32,34,37.pdf\npairlogo [@111]: Wrote hmm.pair.gtest-56.pdf\npairlogo [@111]: Wrote hmm.pair.gtest-67,73,74,77,79.pdf\npairlogo [@111]: Wrote hmm.pair.gtest-93,94,98,105,107.pdf\npairlogo [@111]: Wrote hmm.pair.gtest-124,125.pdf\npairlogo [@111]: Wrote hmm.pair.gtest-147,154,156,158,159,163,165,167,168,172,179,184.pdf\npairlogo [@111]: Wrote hmm.pair.gtest-207,208,210,212,217,218.pdf\npairlogo [@111]: Wrote hmm.pair.gtest-234,235,236,238,239,246,247,254,255,256.pdf\npairlogo [@111]: Wrote hmm.pair.gtest-275.pdf\n"
+    },
+    {
+      "argv": [
+        "cladereport.py",
+        "hmm.pair.gtest.out",
+        "-p",
+        "hmm.pair.gtest.pttrn",
+        "-o",
+        "hmm.pair.gtest.html"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "written_files": [
+    "hmm.pair.gtest.html",
+    "hmm.pair.gtest.out",
+    "hmm.pair.gtest.pttrn"
+  ],
+  "pdfs": [
+    "hmm.pair.gtest-124,125.pdf",
+    "hmm.pair.gtest-147,154,156,158,159,163,165,167,168,172,179,184.pdf",
+    "hmm.pair.gtest-2,3,9.pdf",
+    "hmm.pair.gtest-20.pdf",
+    "hmm.pair.gtest-207,208,210,212,217,218.pdf",
+    "hmm.pair.gtest-234,235,236,238,239,246,247,254,255,256.pdf",
+    "hmm.pair.gtest-275.pdf",
+    "hmm.pair.gtest-31,32,34,37.pdf",
+    "hmm.pair.gtest-56.pdf",
+    "hmm.pair.gtest-67,73,74,77,79.pdf",
+    "hmm.pair.gtest-93,94,98,105,107.pdf"
+  ],
+  "leftover_temp_files": 0
+}

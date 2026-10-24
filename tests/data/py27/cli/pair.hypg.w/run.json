@@ -1,0 +1,53 @@
+{
+  "source": "cladecompare",
+  "makefile_target": null,
+  "commands": [
+    {
+      "argv": [
+        "cladecompare.py",
+        "scttlre-domain.fasta_aln.cma",
+        "cdc2-domain.fasta_aln.cma",
+        "-s",
+        "hypg",
+        "-w",
+        "-p",
+        "pair.hypg.w.pttrn",
+        "-o",
+        "pair.hypg.w.out"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "core [@89]: Using hypergeometric model\ncore [@395]: Purging 3 identical sequences from the alignment\ncore [@395]: Purging 1 identical sequences from the alignment\npairlogo [@111]: Wrote pair.hypg.w-14.pdf\npairlogo [@111]: Wrote pair.hypg.w-34.pdf\npairlogo [@111]: Wrote pair.hypg.w-47.pdf\npairlogo [@111]: Wrote pair.hypg.w-80,87.pdf\npairlogo [@111]: Wrote pair.hypg.w-102,105.pdf\npairlogo [@111]: Wrote pair.hypg.w-123.pdf\npairlogo [@111]: Wrote pair.hypg.w-144,149,151.pdf\npairlogo [@111]: Wrote pair.hypg.w-175.pdf\npairlogo [@111]: Wrote pair.hypg.w-194,199,208,209.pdf\n"
+    },
+    {
+      "argv": [
+        "cladereport.py",
+        "pair.hypg.w.out",
+        "-p",
+        "pair.hypg.w.pttrn",
+        "-o",
+        "pair.hypg.w.html"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "written_files": [
+    "pair.hypg.w.html",
+    "pair.hypg.w.out",
+    "pair.hypg.w.pttrn"
+  ],
+  "pdfs": [
+    "pair.hypg.w-102,105.pdf",
+    "pair.hypg.w-123.pdf",
+    "pair.hypg.w-14.pdf",
+    "pair.hypg.w-144,149,151.pdf",
+    "pair.hypg.w-175.pdf",
+    "pair.hypg.w-194,199,208,209.pdf",
+    "pair.hypg.w-34.pdf",
+    "pair.hypg.w-47.pdf",
+    "pair.hypg.w-80,87.pdf"
+  ],
+  "leftover_temp_files": 0
+}

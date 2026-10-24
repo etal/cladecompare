@@ -1,0 +1,41 @@
+{
+  "source": "cladecompare",
+  "makefile_target": null,
+  "commands": [
+    {
+      "argv": [
+        "cladecompare.py",
+        "cdc2-domain.fasta",
+        "--hmm",
+        "CDK.hmm",
+        "-p",
+        "hmm.single.gtest.pttrn",
+        "-o",
+        "hmm.single.gtest.out"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "core [@45]: Aligning cdc2-domain.fasta with HMM profile CDK.hmm\ncore [@77]: Using G-test of amino acid frequencies\n"
+    },
+    {
+      "argv": [
+        "cladereport.py",
+        "hmm.single.gtest.out",
+        "-p",
+        "hmm.single.gtest.pttrn",
+        "-o",
+        "hmm.single.gtest.html"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "written_files": [
+    "hmm.single.gtest.html",
+    "hmm.single.gtest.out",
+    "hmm.single.gtest.pttrn"
+  ],
+  "pdfs": [],
+  "leftover_temp_files": 0
+}

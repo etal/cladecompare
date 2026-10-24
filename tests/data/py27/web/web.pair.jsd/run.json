@@ -1,0 +1,32 @@
+{
+  "fields": [
+    [
+      "name",
+      "web-pair-jsd"
+    ],
+    [
+      "strategy",
+      "jsd"
+    ],
+    [
+      "alpha",
+      "0.005"
+    ]
+  ],
+  "uploads": [
+    [
+      "seqfile1",
+      "scttlre-domain.aln.fasta"
+    ],
+    [
+      "seqfile2",
+      "cdc2-domain.aln.fasta"
+    ]
+  ],
+  "status": "200 OK",
+  "error": null,
+  "log": "core [@395]: Purging 3 identical sequences from the alignment\ncore [@395]: Purging 1 identical sequences from the alignment\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-1,3,9.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-31,34.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-73,75.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-113.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-135,144,149,151,158.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-194.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-208,209.pdf\n",
+  "stdout": "Cleaned up <tmp>/tmpXXXXXX.seq\nCleaned up <tmp>/tmpXXXXXX.seq\nCleaned up <tmp>/tmpXXXXXX.out\nCleaned up <tmp>/tmpXXXXXX.pttrn\n",
+  "written_files": [],
+  "leftover_temp_files": 7
+}

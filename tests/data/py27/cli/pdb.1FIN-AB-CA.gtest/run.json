@@ -1,0 +1,27 @@
+{
+  "source": "cladecompare",
+  "makefile_target": null,
+  "commands": [
+    {
+      "argv": [
+        "cladecompare.py",
+        "scttlre-domain.fasta",
+        "cdc2-domain.fasta",
+        "--hmm",
+        "CDK.hmm",
+        "--pdb",
+        "1FIN-AB-CA.pdb",
+        "-p",
+        "pdb.1FIN-AB-CA.gtest.pttrn",
+        "-o",
+        "pdb.1FIN-AB-CA.gtest.out"
+      ],
+      "returncode": 1,
+      "stdout": "",
+      "stderr": "core [@45]: Aligning scttlre-domain.fasta with HMM profile CDK.hmm\ncore [@45]: Aligning cdc2-domain.fasta with HMM profile CDK.hmm\ncore [@60]: Aligning 1FIN-AB-CA.pdb with HMM profile CDK.hmm\nTraceback (most recent call last):\n  File \"<cladecompare>/cladecompare.py\", line 91, in <module>\n    process_args(args)\n  File \"<cladecompare>/cladecomparelib/core.py\", line 61, in process_args\n    pdb_rec, pdb_resnums, pdb_inserts = pdb_hmm(args.hmm, pdbfname)\n  File \"<cladecompare>/cladecomparelib/core.py\", line 547, in pdb_hmm\n    for rec in SeqIO.parse(StringIO(out), 'fasta')))\n  File \"<cladecompare>/cladecomparelib/core.py\", line 491, in choose_best_aligned\n    ref_aln = aligned[ref_id]\nKeyError: ('1FIN:A', '-QKVEKIGEGTYGVVYKARNKLTGEVVALKKIRLDTETEGVPSTAIREISLLKELNHPNIVKLLDVIHTEN--KLYLVFEFLHQDLKKFMDA--SALTGIPLPLIKSYLFQLLQGLAFCHSHRVLHRDLKPQNLLINTEGAIKLADFGLARAFGVPVRTYTHEVVTLWYRAPEILLGCKYYSTAVDIWSLGCIFAEMVTRRALFPGDSEIDQLFRIFRTLGTPDEVVWPGVTSMPDYKPS-FPKWARQDFSKVV-PPLDEDGRSLLSQMLHYDPNKRISAKAALAHPFF')\n"
+    }
+  ],
+  "written_files": [],
+  "pdfs": [],
+  "leftover_temp_files": 0
+}

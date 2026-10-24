@@ -1,0 +1,41 @@
+{
+  "source": "cladecompare",
+  "makefile_target": "cdc2-urn",
+  "commands": [
+    {
+      "argv": [
+        "cladecompare.py",
+        "cdc2-domain.fasta_aln.cma",
+        "-s",
+        "urn",
+        "-p",
+        "single.urn.pttrn",
+        "-o",
+        "single.urn.out"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "core [@80]: Using ball-in-urn statistical model\n"
+    },
+    {
+      "argv": [
+        "cladereport.py",
+        "single.urn.out",
+        "-p",
+        "single.urn.pttrn",
+        "-o",
+        "single.urn.html"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "written_files": [
+    "single.urn.html",
+    "single.urn.out",
+    "single.urn.pttrn"
+  ],
+  "pdfs": [],
+  "leftover_temp_files": 0
+}

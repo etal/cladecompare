@@ -1,0 +1,24 @@
+{
+  "source": "cladecompare",
+  "makefile_target": null,
+  "commands": [
+    {
+      "argv": [
+        "cladecompare.py",
+        "cdc2-domain.fasta_aln.cma",
+        "-s",
+        "phospho",
+        "-p",
+        "single.phospho.pttrn",
+        "-o",
+        "single.phospho.out"
+      ],
+      "returncode": 1,
+      "stdout": "",
+      "stderr": "core [@86]: Using urn model for phosphorylatable residues\nTraceback (most recent call last):\n  File \"<cladecompare>/cladecompare.py\", line 91, in <module>\n    process_args(args)\n  File \"<cladecompare>/cladecomparelib/core.py\", line 96, in process_args\n    aln, hits = process_one(all_alns[0], module, args.weight)\n  File \"<cladecompare>/cladecomparelib/core.py\", line 185, in process_one\n    aa_freqs, PSEUDO_SIZE)\n  File \"<cladecompare>/cladecomparelib/phospho.py\", line 49, in compare_one\n    pvalue = binom.pmf(range(int(math.ceil(col_tot)), aln_size + 2),\nTypeError: range() integer end argument expected, got float.\n"
+    }
+  ],
+  "written_files": [],
+  "pdfs": [],
+  "leftover_temp_files": 0
+}

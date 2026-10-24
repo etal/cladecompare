@@ -1,0 +1,32 @@
+{
+  "fields": [
+    [
+      "name",
+      "web-pair-phospho"
+    ],
+    [
+      "strategy",
+      "phospho"
+    ],
+    [
+      "alpha",
+      "0.005"
+    ]
+  ],
+  "uploads": [
+    [
+      "seqfile1",
+      "scttlre-domain.aln.fasta"
+    ],
+    [
+      "seqfile2",
+      "cdc2-domain.aln.fasta"
+    ]
+  ],
+  "status": "500 Internal Server Error",
+  "error": "Traceback (most recent call last):\n  File \"<python-prefix>/lib/python2.7/site-packages/bottle.py\", line 868, in _handle\n    return route.call(**args)\n  File \"<python-prefix>/lib/python2.7/site-packages/bottle.py\", line 1748, in wrapper\n    rv = callback(*a, **ka)\n  File \"<cladecompare>/cladeweb.py\", line 228, in form_submit\n    stat_module, False)\n  File \"<cladecompare>/cladecomparelib/core.py\", line 161, in process_pair\n    aa_freqs, PSEUDO_SIZE)\n  File \"<cladecompare>/cladecomparelib/phospho.py\", line 33, in compare_cols\n    pvalue = binom.pmf(range(int(math.ceil(fg_tot)), fg_size + 2),\nTypeError: range() integer end argument expected, got float.",
+  "log": "core [@395]: Purging 3 identical sequences from the alignment\ncore [@395]: Purging 1 identical sequences from the alignment\n",
+  "stdout": "",
+  "written_files": [],
+  "leftover_temp_files": 4
+}

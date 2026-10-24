@@ -1,0 +1,32 @@
+{
+  "fields": [
+    [
+      "name",
+      "web-pair-hypg"
+    ],
+    [
+      "strategy",
+      "hypg"
+    ],
+    [
+      "alpha",
+      "0.005"
+    ]
+  ],
+  "uploads": [
+    [
+      "seqfile1",
+      "scttlre-domain.aln.fasta"
+    ],
+    [
+      "seqfile2",
+      "cdc2-domain.aln.fasta"
+    ]
+  ],
+  "status": "500 Internal Server Error",
+  "error": "Traceback (most recent call last):\n  File \"<python-prefix>/lib/python2.7/site-packages/bottle.py\", line 868, in _handle\n    return route.call(**args)\n  File \"<python-prefix>/lib/python2.7/site-packages/bottle.py\", line 1748, in wrapper\n    rv = callback(*a, **ka)\n  File \"<cladecompare>/cladeweb.py\", line 210, in form_submit\n    )[bottle.request.forms.strategy]\nKeyError: u'hypg'",
+  "log": "",
+  "stdout": "",
+  "written_files": [],
+  "leftover_temp_files": 2
+}

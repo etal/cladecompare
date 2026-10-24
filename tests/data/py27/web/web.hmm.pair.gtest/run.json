@@ -1,0 +1,36 @@
+{
+  "fields": [
+    [
+      "name",
+      "web-hmm"
+    ],
+    [
+      "strategy",
+      "gtest"
+    ],
+    [
+      "alpha",
+      "0.005"
+    ]
+  ],
+  "uploads": [
+    [
+      "seqfile1",
+      "scttlre-domain.fasta"
+    ],
+    [
+      "seqfile2",
+      "cdc2-domain.fasta"
+    ],
+    [
+      "profile",
+      "CDK.hmm"
+    ]
+  ],
+  "status": "200 OK",
+  "error": null,
+  "log": "cladeweb [@177]: Aligning <tmp>/tmpXXXXXX.seq with profile <tmp>/tmpXXXXXX.hmm\ncladeweb [@180]: Aligning <tmp>/tmpXXXXXX.seq with profile <tmp>/tmpXXXXXX.hmm\ncore [@395]: Purging 2 identical sequences from the alignment\ncore [@395]: Purging 1 identical sequences from the alignment\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-2,3,9.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-20.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-31,32,34,37.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-56.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-67,73,74,77,79.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-93,94,98,105,107.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-124,125.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-147,154,156,158,159,163,165,167,168,172,179,184.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-207,208,210,212,217,218.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-234,235,236,238,239,246,247,254,255,256.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-275.pdf\n",
+  "stdout": "Cleaned up <tmp>/tmpXXXXXX.seq\nCleaned up <tmp>/tmpXXXXXX.seq\nCleaned up <tmp>/tmpXXXXXX.hmm\nCleaned up <tmp>/tmpXXXXXX.out\nCleaned up <tmp>/tmpXXXXXX.pttrn\n",
+  "written_files": [],
+  "leftover_temp_files": 11
+}

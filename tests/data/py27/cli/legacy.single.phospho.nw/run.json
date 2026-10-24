@@ -1,0 +1,30 @@
+{
+  "source": "cladecompare_legacy",
+  "makefile_target": null,
+  "commands": [
+    {
+      "argv": [
+        "cladecompare.py",
+        "cdc2-domain.fasta_aln.cma",
+        "-s",
+        "phospho",
+        "-nw",
+        "-a",
+        "0.005",
+        "-p",
+        "legacy.single.phospho.nw.pttrn",
+        "-o",
+        "legacy.single.phospho.nw.out"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "WARNING:root:Font 'DejaVuSansMono-Bold' unavailable; using lame Courier\n"
+    }
+  ],
+  "written_files": [
+    "legacy.single.phospho.nw.out",
+    "legacy.single.phospho.nw.pttrn"
+  ],
+  "pdfs": [],
+  "leftover_temp_files": 0
+}

@@ -1,0 +1,32 @@
+{
+  "fields": [
+    [
+      "name",
+      "web-pair-gtest"
+    ],
+    [
+      "strategy",
+      "gtest"
+    ],
+    [
+      "alpha",
+      "0.005"
+    ]
+  ],
+  "uploads": [
+    [
+      "seqfile1",
+      "scttlre-domain.aln.fasta"
+    ],
+    [
+      "seqfile2",
+      "cdc2-domain.aln.fasta"
+    ]
+  ],
+  "status": "200 OK",
+  "error": null,
+  "log": "core [@395]: Purging 3 identical sequences from the alignment\ncore [@395]: Purging 1 identical sequences from the alignment\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-1,2,3,9,14,21,26,31,32,34,37,47,53.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-65,73,75,80,85,87,92,93,95.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-110,112,113,123,128,135,141,142,143,144,145,149,151,153,154,158,164,169.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-192,194,196,198,201,202,207,208,209.pdf\npairlogo [@111]: Wrote <tmp>/tmpXXXXXX-228.pdf\n",
+  "stdout": "Cleaned up <tmp>/tmpXXXXXX.seq\nCleaned up <tmp>/tmpXXXXXX.seq\nCleaned up <tmp>/tmpXXXXXX.out\nCleaned up <tmp>/tmpXXXXXX.pttrn\n",
+  "written_files": [],
+  "leftover_temp_files": 5
+}

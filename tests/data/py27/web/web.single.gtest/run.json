@@ -1,0 +1,28 @@
+{
+  "fields": [
+    [
+      "name",
+      "web-single-gtest"
+    ],
+    [
+      "strategy",
+      "gtest"
+    ],
+    [
+      "alpha",
+      "0.005"
+    ]
+  ],
+  "uploads": [
+    [
+      "seqfile1",
+      "cdc2-domain.aln.fasta"
+    ]
+  ],
+  "status": "200 OK",
+  "error": null,
+  "log": "",
+  "stdout": "Cleaned up <tmp>/tmpXXXXXX.seq\nCleaned up <tmp>/tmpXXXXXX.out\nCleaned up <tmp>/tmpXXXXXX.pttrn\n",
+  "written_files": [],
+  "leftover_temp_files": 0
+}

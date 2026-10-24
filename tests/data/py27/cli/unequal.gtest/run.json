@@ -1,0 +1,48 @@
+{
+  "source": "cladecompare",
+  "makefile_target": null,
+  "commands": [
+    {
+      "argv": [
+        "cladecompare.py",
+        "scttlre-domain.aln.fasta",
+        "cdc2-trimmed.aln.fasta",
+        "-p",
+        "unequal.gtest.pttrn",
+        "-o",
+        "unequal.gtest.out"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "core [@77]: Using G-test of amino acid frequencies\ncore [@395]: Purging 3 identical sequences from the alignment\ncore [@395]: Purging 1 identical sequences from the alignment\ncore [@403]: Alignments are not of equal width; fixing with MUSCLE.\ncore [@349]: Wrote _cc_combined.seq\npairlogo [@111]: Wrote unequal.gtest-1,2,3,9,14,21,26,31,32,34,37,47,53.pdf\npairlogo [@111]: Wrote unequal.gtest-65,73,75,80,85,87,92,93,95.pdf\npairlogo [@111]: Wrote unequal.gtest-110,112,113,115.pdf\npairlogo [@111]: Wrote unequal.gtest-128,135,141,142,143,144,145,149,151,153,154,158,164,169.pdf\npairlogo [@111]: Wrote unequal.gtest-192,194,196,198,201,202,207,208,209.pdf\npairlogo [@111]: Wrote unequal.gtest-228.pdf\n"
+    },
+    {
+      "argv": [
+        "cladereport.py",
+        "unequal.gtest.out",
+        "-p",
+        "unequal.gtest.pttrn",
+        "-o",
+        "unequal.gtest.html"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "written_files": [
+    "_cc_combined.seq",
+    "unequal.gtest.html",
+    "unequal.gtest.out",
+    "unequal.gtest.pttrn"
+  ],
+  "pdfs": [
+    "unequal.gtest-1,2,3,9,14,21,26,31,32,34,37,47,53.pdf",
+    "unequal.gtest-110,112,113,115.pdf",
+    "unequal.gtest-128,135,141,142,143,144,145,149,151,153,154,158,164,169.pdf",
+    "unequal.gtest-192,194,196,198,201,202,207,208,209.pdf",
+    "unequal.gtest-228.pdf",
+    "unequal.gtest-65,73,75,80,85,87,92,93,95.pdf"
+  ],
+  "leftover_temp_files": 0
+}

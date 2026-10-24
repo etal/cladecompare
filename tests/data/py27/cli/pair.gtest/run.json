@@ -1,0 +1,48 @@
+{
+  "source": "cladecompare",
+  "makefile_target": null,
+  "commands": [
+    {
+      "argv": [
+        "cladecompare.py",
+        "scttlre-domain.fasta_aln.cma",
+        "cdc2-domain.fasta_aln.cma",
+        "-s",
+        "gtest",
+        "-p",
+        "pair.gtest.pttrn",
+        "-o",
+        "pair.gtest.out"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "core [@77]: Using G-test of amino acid frequencies\ncore [@395]: Purging 3 identical sequences from the alignment\ncore [@395]: Purging 1 identical sequences from the alignment\npairlogo [@111]: Wrote pair.gtest-1,2,3,9,14,21,26,31,32,34,37,47,53.pdf\npairlogo [@111]: Wrote pair.gtest-65,73,75,80,85,87,92,93,95.pdf\npairlogo [@111]: Wrote pair.gtest-110,112,113,123,128,135,141,142,143,144,145,149,151,153,154,158,164,169.pdf\npairlogo [@111]: Wrote pair.gtest-192,194,196,198,201,202,207,208,209.pdf\npairlogo [@111]: Wrote pair.gtest-228.pdf\n"
+    },
+    {
+      "argv": [
+        "cladereport.py",
+        "pair.gtest.out",
+        "-p",
+        "pair.gtest.pttrn",
+        "-o",
+        "pair.gtest.html"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "written_files": [
+    "pair.gtest.html",
+    "pair.gtest.out",
+    "pair.gtest.pttrn"
+  ],
+  "pdfs": [
+    "pair.gtest-1,2,3,9,14,21,26,31,32,34,37,47,53.pdf",
+    "pair.gtest-110,112,113,123,128,135,141,142,143,144,145,149,151,153,154,158,164,169.pdf",
+    "pair.gtest-192,194,196,198,201,202,207,208,209.pdf",
+    "pair.gtest-228.pdf",
+    "pair.gtest-65,73,75,80,85,87,92,93,95.pdf"
+  ],
+  "leftover_temp_files": 0
+}

@@ -484,24 +484,21 @@ def top_hits(hits, alpha, N=50):
 
 # --- PDB alignment magic ---
 
-# ENH: handle multiple PDBs
 @contextlib.contextmanager
 def read_pdb_seq(pdb_fname):
-    """Return the name of a temporary file containing the PDB atom sequence(s),
-    a list of the sequences themselves (as SeqRecords), and a same-length list
-    of tuples of (chain ID, chain start resnum, chain end resnum).
+    """Write the PDB atom sequence(s) to a FASTA file in a temporary directory.
 
-    Context manager, so temporary file is automatically removed.
+    Yields the name of the FASTA file and a list of the sequences themselves
+    (as SeqRecords).
+
+    Context manager: on exit, the directory is removed together with any files
+    that an aligner wrote beside the FASTA file.
     """
     pdbseqs = list(SeqIO.parse(pdb_fname, 'pdb-atom'))
-    try:
-        _fd, pdbseqfname = tempfile.mkstemp()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        pdbseqfname = os.path.join(tmpdir, 'pdbseq')
         SeqIO.write(pdbseqs, pdbseqfname, 'fasta')
         yield pdbseqfname, pdbseqs
-    finally:
-        os.close(_fd)
-        if os.path.exists(pdbseqfname):
-            os.remove(pdbseqfname)
 
 
 def choose_best_aligned(aligned):
@@ -598,6 +595,6 @@ def pdb_mapgaps(mapgaps_profile, pdb_fname):
     """
     with read_pdb_seq(pdb_fname) as (seqfname, seqs):
         call_quiet('run_gaps', mapgaps_profile, seqfname)
-    aligned = dict(cma_records(seqfname + '_aln.cma'))
+        aligned = dict(cma_records(seqfname + '_aln.cma'))
     return pdb_ref_resnums(aligned, seqs)
 

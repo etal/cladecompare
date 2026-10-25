@@ -15,14 +15,15 @@ residues that distinguish one subfamily from its relatives. It accompanies
 Talevich & Kannan (2013), *BMC Evolutionary Biology* 13:117,
 doi:10.1186/1471-2148-13-117, and is BSD 2-clause.
 
-Three entry points sit at the top level and share one library of about 2,100
-lines under `cladecomparelib/`:
+Three console commands share one library of about 2,100 lines under `cladecomparelib/`, and each is the `main()` function of a module there that keeps the name of the script it replaced:
 
-| script | role |
-|---|---|
-| `cladecompare.py` | command line; the full option surface |
-| `cladeweb.py` | local browser form; one server instance per machine |
-| `cladereport.py` | renders an existing `.out` file to HTML, no statistics |
+| command | module | role |
+|---|---|---|
+| `cladecompare` | `cladecomparelib/cladecompare.py` | command line; the full option surface |
+| `cladeweb` | `cladecomparelib/cladeweb.py` | local browser form; one server instance per machine |
+| `cladereport` | `cladecomparelib/cladereport.py` | renders an existing `.out` file to HTML, no statistics |
+
+The module names matter: the log format prints `%(module)s`, and the web reference cases record log lines from `cladeweb`.
 
 ## Five contrast statistics behind one flag
 
@@ -35,14 +36,14 @@ lines under `cladecomparelib/`:
 - `phospho` — Ser/Thr/Tyr phosphorylation sites specifically
 
 A strategy is not registered in one place.
-Adding a sixth means writing the module under `cladecomparelib/` and then listing it in four more places: the `if`/`elif` chain in `process_args` in `cladecomparelib/core.py` (with that file's module import), the `choices` tuple and help text of `-s` in `cladecompare.py`, the `stat_module` table in `form_submit` in `cladeweb.py` (with that file's module import), and a radio button in that file's `FORM_HTML`.
-`hypg` shows the cost of missing one: it reached `core.py` and `cladecompare.py` but never the web application, whose form does not offer it and whose strategy table raises `KeyError` on a request that names it.
+Adding a sixth means writing the module under `cladecomparelib/` and then listing it in four more places: the `if`/`elif` chain in `process_args` in `cladecomparelib/core.py` (with that file's module import), the `choices` tuple and help text of `-s` in `cladecomparelib/cladecompare.py`, the `stat_module` table in `form_submit` in `cladecomparelib/cladeweb.py` (with that file's module import), and a radio button in that file's `FORM_HTML`.
+`hypg` shows the cost of missing one: it reached `core.py` and the command line but never the web application, whose form does not offer it and whose strategy table raises `KeyError` on a request that names it.
 
 ## `.out` p-values are raw; Benjamini–Hochberg only selects the pattern
 
 The `.out` file holds each column's unadjusted p-value.
 `write_pvalues` in `cladecomparelib/core.py` writes the value as the statistic returned it, and its asterisks compare that raw value with `-a/--alpha`, one asterisk per order of magnitude.
-`cladereport.py` and the cladeweb result page color each column from the same raw value (`p2class` in `cladecomparelib/report.py`), at fixed cut points that do not depend on alpha.
+`cladereport` and the cladeweb result page color each column from the same raw value (`p2class` in `cladecomparelib/report.py`), at fixed cut points that do not depend on alpha.
 
 The multiple-testing correction exists only in `top_hits` in `core.py`: a Benjamini–Hochberg step-up procedure at false discovery rate alpha, with m equal to the number of columns in `hits`, including the columns that `process_pair` and `process_one` skip as gaps and assign p = 1.
 In paired mode that count is taken after `clean_alignments` has dropped the columns that are gaps in every sequence of both sets; the column numbers in `.out` and `.pttrn` refer to that cleaned alignment.
@@ -57,7 +58,7 @@ Judge such a change on the whole output, pattern included, never on the column y
 
 ## The program runs on Python 3; `tests/data/py27/` is the check
 
-The library and the three scripts run on Python 3.12 with current Biopython; they no longer run on Python 2.
+The library and the three commands run on Python 3.12 with current Biopython; they no longer run on Python 2.
 The port removed `Bio.Alphabet` and `Bio._py3k`, which Biopython dropped in 1.78 and 1.77, and otherwise changed only what Python 3 and current Biopython require, so it moves no number by design.
 
 `tests/data/py27/` holds the outputs of the unmodified code, captured under Python 2.7 and Biopython 1.76 from commit `e265b1f`, for the command line, `cladereport.py` and the web application.
@@ -66,7 +67,7 @@ A change should reproduce those outputs, or differ from them only by a documente
 
 With HMMER 3.0 or 3.4 and MUSCLE 3.8.1551, under Python 3.12 with the ported biofrills, the ported code reproduces the `.out`, `.pttrn`, `.html` and PyMOL files of every command-line case and the response of every successful web submission byte for byte, both with Biopython 1.83, SciPy 1.11.4 and bottle 0.12.25 and with Biopython 1.88, SciPy 1.18.1 and bottle 0.13.4, apart from the differences below, which come from SciPy, from the earlier phospho fix, from the removal of `_cc_combined.seq`, or from the form of logs and tracebacks.
 Under both SciPy versions, 13 small p-values of `pair.hypg` differ from the reference in the sixth significant digit; the values from both newer releases agree with exact rational arithmetic, and the reference values, computed with SciPy 1.2.1, do not.
-Under both SciPy versions `pair.hypg.w` yields no finite p-value, on which `cladereport.py` then fails.
+Under both SciPy versions `pair.hypg.w` yields no finite p-value, on which `cladereport` then fails.
 The `-s phospho` cases now complete where the reference records a failure, because of the earlier fix to the phospho sample size, and their unweighted outputs equal the legacy reference cases.
 `unequal.gtest` no longer writes `_cc_combined.seq` into the working directory, nor logs that it did.
 Standard error and logs differ in the line numbers that the log format prints, and tracebacks take Python 3's own form; `tests/data/README.md` lists these and the few differences that come from the bottle and Biopython versions.
@@ -90,12 +91,13 @@ No missing program is checked for at the start of a run.
 CladeCompare calls six names from four pure-Python [biofrills](https://github.com/etal/biofrills) modules, in `core.py`, `shared.py`, `gtest.py` and `pairlogo.py`: `alnutils.sequence_weights`, `alnutils.aa_frequencies`, `alnutils.remove_empty_cols`, `consensus.consensus`, `logoutils.aln2logodata` and `stats.chisq.chisqprob`.
 The latest release on PyPI, 0.3.1 from 2013, cannot be installed on a current Python, because its `setup.py` always builds a Cython extension that no longer compiles.
 The biofrills development branch has since removed that extension and been ported to Python 3: it builds as a pure-Python `py3-none-any` wheel for Python 3.12 and later, and all six names import from it on Python 3.12, 3.14 and 3.15.
-The dependency to declare is therefore `biofrills[logo]>=0.4`, where the `logo` extra supplies WebLogo, which `pairlogo` reaches through `logoutils`.
-Until 0.4.0 is published, `[tool.uv.sources]` is to take biofrills from its GitHub repository at a pinned commit, starting from `ff11246`, the commit measured below, so that `uv.lock` records exactly which biofrills a result came from; moving to a newer commit is a deliberate change of that pin.
+The dependency is therefore `biofrills[logo]`, where the `logo` extra supplies WebLogo, which `pairlogo` reaches through `logoutils`.
+Until 0.4.0 is published, `[tool.uv.sources]` takes biofrills from its GitHub repository at a pinned commit, starting from `ff11246`, the commit measured below, so that a lock file records exactly which biofrills a result came from; moving to a newer commit is a deliberate change of that pin.
 A path source to a checkout beside this one was the alternative, but the lock then records only the path, and the checkout may hold unpushed or uncommitted changes.
-The pinned commit's version, `0.4.0.dev0`, sorts below `0.4` under PEP 440.
-uv nevertheless installs the commit named in `[tool.uv.sources]`, and `uv.lock` does not record the `>=0.4` floor for biofrills, so the floor does not check the pin.
-pip does not read that table and therefore cannot satisfy the floor before 0.4.0 is released.
+The pinned commit's version, `0.4.0.dev0`, sorts below `0.4` under PEP 440, so the floor is declared as `>=0.4.0.dev0`: with `>=0.4`, no installer that checks the floor could install the built wheel before 0.4.0 exists.
+Raise the floor to `0.4.0` with that release.
+uv installs the commit named in `[tool.uv.sources]` without checking it against the floor, and a lock file does not record the floor, so the floor does not check the pin.
+pip does not read that table; `README.rst` gives the pip route, which installs the pinned commit first.
 Vendoring the four modules was the alternative while the extension blocked installation, and it no longer offers anything.
 
 Moving from the biofrills commit behind the reference (`36684bb`) to the ported one (`ff11246`, version `0.4.0.dev0`) leaves the values that biofrills returns to CladeCompare identical or within a few units in the last place.
@@ -111,14 +113,21 @@ Later biofrills releases can move numbers here, for instance through changes to 
 biofrills implements `chisqprob` itself, adapted from Cephes to avoid a SciPy dependency, and SciPy removed its own `chisqprob` in 1.0, so `scipy.stats.chi2.sf` is the nearest SciPy function.
 Do not substitute one for the other in passing: at the 19 degrees of freedom the G-test uses, they differ by up to 4.0e-8 relative, which reflects the convergence tolerance `MACHEP = 1e-7` in biofrills, and which can change the sixth significant digit of a printed p-value and the ranking that the Benjamini–Hochberg selection depends on.
 
+## Packaging
+
+`pyproject.toml` is the only build configuration, with setuptools as the backend.
+The floors of biopython, bottle, reportlab and scipy are the versions Ubuntu 26.04 ships; biopython's floor is also the one that biofrills `ff11246` declares, although CladeCompare's own code needs no Biopython newer than 1.83.
+The pair-logo font, DejaVu Sans Mono Bold 2.33, ships as package data in `cladecomparelib/data/` together with its license, which is the reason the license expression names `Bitstream-Vera`.
+`pairlogo` loads that copy unconditionally; it consults no system font directory and has no fallback font, so every installation draws the logos with the same font and line height.
+
 ## `test/` is a smoke harness; `tests/data/` holds the reference
 
-`cd test && make` runs the program in eight configurations — four statistics,
-paired and single-alignment — and writes `.out`, `.pttrn` and `.html` files for a
-human to look at. **There are no assertions.** A clean `make` means the program
-ran to completion, and says nothing about whether the numbers are right. Note
-also that the targets pass different `-a` thresholds (`.001`, `.2`, default), so
-they are not comparable to each other.
+`cd test && make` runs the program in eight configurations — four statistics, paired and single-alignment — and writes `.out`, `.pttrn` and `.html` files for a human to look at.
+It calls the `cladecompare` and `cladereport` commands, so they must be on the PATH, as they are after installation.
+Its targets depend only on the input files, so `make clean` must precede a repeated run after the program changes.
+**There are no assertions.**
+A clean `make` means the program ran to completion, and says nothing about whether the numbers are right.
+Note also that the targets pass different `-a` thresholds (`.001`, `.2`, default), so they are not comparable to each other.
 
 The fixtures are real alignments from Talevich, Mirza & Kannan (2011), *BMC
 Evolutionary Biology* 11:321.

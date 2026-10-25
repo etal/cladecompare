@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """Web browser interface for CladeCompare.
 
 Input (GET):
@@ -270,7 +268,7 @@ def cleanup(fname):
 
 # --- Run ---
 
-if __name__ == '__main__':
+def main():
     logging.basicConfig(level=logging.INFO,
                         format="%(module)s [@%(lineno)s]: %(message)s")
     webbrowser.open("http://localhost:8080/cladecompare")

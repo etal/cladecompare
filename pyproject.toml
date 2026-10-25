@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "CladeCompare"
+dynamic = ["version"]
+description = "Compare protein sequence alignments to identify contrasting sites."
+readme = "README.rst"
+requires-python = ">=3.12"
+# The bundled DejaVu font is under the Bitstream Vera license; the DejaVu
+# changes to it are in the public domain.
+license = "BSD-2-Clause AND Bitstream-Vera"
+license-files = ["LICENSE", "cladecomparelib/data/LICENSE.DejaVu"]
+authors = [
+    {name = "Eric Talevich", email = "me+code@etal.mozmail.com"},
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+# The biopython, bottle, reportlab and scipy floors follow the versions Ubuntu
+# 26.04 ships. bottle is not an extra, because the cladeweb command is always
+# installed. WebLogo comes in through the logo extra of biofrills. The
+# biofrills floor is a development version, because biofrills 0.4.0 is not yet
+# released and PEP 440 orders 0.4.0.dev0 below 0.4; a development floor also
+# admits later pre-releases, so raise it to 0.4.0 once that release exists.
+dependencies = [
+    "biofrills[logo]>=0.4.0.dev0",
+    "biopython>=1.86",
+    "bottle>=0.13.2",
+    "reportlab>=4.4.10",
+    "scipy>=1.16.3",
+]
+
+[project.scripts]
+cladecompare = "cladecomparelib.cladecompare:main"
+cladereport = "cladecomparelib.cladereport:main"
+cladeweb = "cladecomparelib.cladeweb:main"
+
+[project.urls]
+homepage = "https://github.com/etal/cladecompare"
+
+# Named explicitly: automatic discovery would also declare cladecomparelib.data
+# a package.
+[tool.setuptools]
+packages = ["cladecomparelib"]
+
+[tool.setuptools.package-data]
+cladecomparelib = ["data/DejaVuSansMono-Bold.ttf", "data/LICENSE.DejaVu"]
+
+[tool.setuptools.dynamic]
+version = {attr = "cladecomparelib.__version__"}
+
+# biofrills comes from its repository at a pinned commit, which a lock file
+# then records; moving to a newer commit is a deliberate change of the pin,
+# to be judged against the reference outputs in tests/data, and the pip
+# command in README.rst names the same commit. Installing needs a git
+# executable. Delete this table when biofrills 0.4.0 is on PyPI.
+[tool.uv.sources]
+biofrills = {git = "https://github.com/etal/biofrills.git", rev = "ff11246a93e14a35723e6f04a3952c88c0cbf29c"}

@@ -4,6 +4,11 @@ dist
 .DS_Store
 .directory
 
+# Python packaging, environments and tool caches
+__pycache__/
+*.egg-info/
+.venv/
+
 # Compiled Python and Cython files
 *.pyc
 *.pyo

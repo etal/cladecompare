@@ -169,10 +169,11 @@ A port that fixes one of them differs from the reference by design, and the test
 - **Log format.**
   Standard error and the web logs come from logging with the format `%(module)s [@%(lineno)s]`, so editing a module above a logging call changes them without changing behavior.
   The legacy cases log in the default format of the root logger instead (`WARNING:root:...`) and record no `INFO` lines.
-  `pairlogo.py` looks for the DejaVu font first under `/usr/share/fonts/truetype/ttf-dejavu/` and then for a bundled copy.
+  At both captured commits, `pairlogo.py` looked for the DejaVu font first under `/usr/share/fonts/truetype/ttf-dejavu/` and then for a bundled copy, and used Courier if it found neither.
   `e265b1f` added that copy as `data/DejaVuSansMono-Bold.ttf` and pointed the fallback at it; at the legacy commit the fallback pointed inside `cladecomparelib/`, where no font was ever committed.
   On the capture host the system path did not exist either, so at the legacy commit `pairlogo.py` warned while being imported, and that first call configured logging before `cladecompare.py` could.
   On a host that has the font at that system path, the legacy standard error would differ from this reference; at `e265b1f` a font is always found, at least the bundled copy, so the current cases do not depend on the host in this way.
+  The current code ships the same font file as package data and always loads that copy, with no system path and no fallback.
 - **Python 3, bottle and Biopython.**
   Under Python 3, tracebacks carry Python 3's own formatting and exception text; `web.pair.hypg`, for instance, logs `KeyError: 'hypg'` where this reference has `KeyError: u'hypg'`.
   bottle 0.13 words its error page slightly differently from 0.12 (`font-family: sans-serif` for `sans`), which changes the response body of the failing web cases.

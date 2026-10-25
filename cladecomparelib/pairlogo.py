@@ -3,8 +3,9 @@ from __future__ import division
 
 import logging
 import math
-import os.path
+from importlib import resources
 
+from reportlab.pdfbase import pdfmetrics, ttfonts
 from reportlab.pdfgen import canvas
 from reportlab.lib import units
 
@@ -14,22 +15,14 @@ from biofrills import logoutils
 UNIT = units.inch * 0.5  #= units.inch * 0.1
 WUNIT = 0.6 * UNIT  # NB: Seems to be the text width-to-height ratio
 
-# Try to find & register a nice monospace font
+# The font ships as package data. as_file gives reportlab a real file even
+# when the package is imported from a zip archive; the font is read in full
+# while it is registered.
 MONOSPACE = 'DejaVuSansMono-Bold'
-font_loc = '/usr/share/fonts/truetype/ttf-dejavu/%s.ttf' % MONOSPACE
-if not os.path.isfile(font_loc):
-    # If the font isn't already installed, try to use the bundled copy
-    font_loc = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
-                            '..', 'data', MONOSPACE) + '.ttf'
-if os.path.isfile(font_loc):
-    from reportlab.pdfbase import pdfmetrics, ttfonts
-    font = ttfonts.TTFont(MONOSPACE, font_loc)
-    pdfmetrics.registerFont(font)
-    LINE_HT = 0.75
-else:
-    MONOSPACE = "Courier-Bold"
-    logging.warning("Font 'DejaVuSansMono-Bold' unavailable; using lame Courier")
-    LINE_HT = 0.6
+LINE_HT = 0.75
+with resources.as_file(resources.files(__package__) / 'data'
+                       / (MONOSPACE + '.ttf')) as font_loc:
+    pdfmetrics.registerFont(ttfonts.TTFont(MONOSPACE, font_loc))
 
 
 aacolors = dict(

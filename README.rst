@@ -21,17 +21,28 @@ Freely distributed under the permissive BSD 2-clause license (see LICENSE).
 Installation
 ------------
 
-A proper installation looks like::
+CladeCompare requires Python 3.12 or later. It depends on Biopython_,
+BioFrills_ (with its ``logo`` extra, which brings in WebLogo), SciPy_,
+ReportLab_ and bottle_, and installs three commands: ``cladecompare``,
+``cladereport`` and ``cladeweb``.
 
-    python setup.py install
+Until BioFrills 0.4.0 is released on PyPI, install CladeCompare from a copy of
+this repository. With uv_, the dependencies are resolved automatically,
+BioFrills included, from the commit recorded in ``pyproject.toml``::
 
-If you have setuptools installed, the dependencies on Biopython_, BioFrills_,
-SciPy_ and ReportLab_ will be fetched and installed automatically.
+    uv tool install .
 
-.. _Biopython: http://biopython.org/wiki/Download
+With pip, install that BioFrills commit first, then CladeCompare::
+
+    pip install "biofrills[logo] @ git+https://github.com/etal/biofrills.git@ff11246a93e14a35723e6f04a3952c88c0cbf29c"
+    pip install .
+
+.. _Biopython: https://biopython.org/
 .. _biofrills: https://github.com/etal/biofrills
-.. _SciPy: http://scipy.org/
-.. _ReportLab: http://pypi.python.org/pypi/reportlab
+.. _SciPy: https://scipy.org/
+.. _ReportLab: https://pypi.org/project/reportlab/
+.. _bottle: https://bottlepy.org/
+.. _uv: https://docs.astral.sh/uv/
 
 Optionally, CladeCompare can align your sequences for you if you have HMMER3_
 (3.0 or later) or MAPGAPS_ installed. If a foreground and a
@@ -45,26 +56,22 @@ finds MUSCLE 4 or later.
 .. _MAPGAPS: http://mapgaps.igs.umaryland.edu/
 
 
-If you have the dependencies installed, you can use this package in-place,
-without installing it. Just download the source code (git clone, or download
-the ZIP file and unpack it) and include the top-level directory in your system
-path, or add symbolic links to cladecompare.py, cladereport.py and cladeweb.py
-to an existing directory that's in your path (e.g. ``~/bin``).
-
-
 Testing
 ~~~~~~~
 
 Finally, if you are on a Unix-like system (i.e. Linux, Mac or Cygwin), you can
-verify your installation by running the test suite. Change to the ``test/``
-directory and run ``make``::
+run the program in several modes by changing to the ``test/`` directory and
+running ``make``, with the ``cladecompare`` and ``cladereport`` commands on
+your path::
 
     cd test
     make
 
-If CladeCompare is installed correctly, the program will run in several modes
-and generate output files. View the ``.html`` files in your web browser to see
-what happened.
+The program will run in several modes and generate output files. View the
+``.html`` files in your web browser to see what happened. The targets depend
+only on the input files, so run ``make clean`` first to repeat the runs after
+changing the program. These runs check only that the program completes, not
+that its results are correct.
 
 
 Usage
@@ -73,7 +80,7 @@ Usage
 Web interface
 ~~~~~~~~~~~~~
 
-Launch the script ``cladeweb.py`` and fill in the form in your web browser.
+Launch the command ``cladeweb`` and fill in the form in your web browser.
 The form accepts sequences in FASTA or CMA format, and you can upload an HMM
 profile to align unaligned FASTA sequence sets. (See below for details about
 each field.)
@@ -82,24 +89,24 @@ If you launched the application from the command line, press Ctrl-C (on
 Unix-like systems) to stop the web server application.
 
 Note that only one instance of the server will run on your system at a time; if
-you launch ``cladeweb.py`` twice in a row, another browser tab or window will
+you launch ``cladeweb`` twice in a row, another browser tab or window will
 open but the server will not restart.
 
 
 Command line
 ~~~~~~~~~~~~
 
-The command-line interface ``cladecompare.py`` provides the same functionality
+The command-line interface ``cladecompare`` provides the same functionality
 as the web interface, plus a few more options.  To read the built-in help and
 option descriptions::
 
-    cladecompare.py --help
+    cladecompare --help
 
 Two alignments are compared by specifying the foreground and background sets,
 in that order, as arguments::
 
     # Compare two alignments
-    cladecompare.py fg_aln.seq bg_aln.seq
+    cladecompare fg_aln.seq bg_aln.seq
 
 The program prints the following information for each column in the alignment(s):
 
@@ -116,11 +123,11 @@ correction applies to the pattern file described below.
 Redirect the output to a file with the extension ".out"::
 
     # Compare two alignments
-    cladecompare.py fg_aln.seq bg_aln.seq > fg-v-bg.out
+    cladecompare fg_aln.seq bg_aln.seq > fg-v-bg.out
 
 Or specify the output file name with the ``-o`` option (same effect)::
 
-    cladecompare.py fg_aln.seq bg_aln.seq -o fg-v-bg.out
+    cladecompare fg_aln.seq bg_aln.seq -o fg-v-bg.out
 
 If you're not using MAPGAPS_, it would make sense to either:
 
@@ -137,16 +144,16 @@ To align the FASTA sequences with MAPGAPS on the fly, specify the profile name
 (minus the extension) with the ``--mapgaps`` flag::
 
     # Align sequence sets w/ MAPGAPS, then compare
-    cladecompare.py test/scttlre-domain.fasta test/cdc2-domain.fasta --mapgaps test/CDK_CMGC \
+    cladecompare test/scttlre-domain.fasta test/cdc2-domain.fasta --mapgaps test/CDK_CMGC \
         -o scttlre-v-cdc2.out
 
 Pre-aligned sequences in CMA format (.cma) are also accepted::
 
     # Use pre-aligned sequence sets (MAPGAPS "CMA" format)
-    cladecompare.py test/scttlre-domain.fasta_aln.cma test/cdc2-domain.fasta_aln.cma \
+    cladecompare test/scttlre-domain.fasta_aln.cma test/cdc2-domain.fasta_aln.cma \
         -o scttlre-v-cdc2.out
 
-Finally, given the '-p' option, cladecompare.py will write a "pattern" file
+Finally, given the '-p' option, cladecompare will write a "pattern" file
 listing the alignment column numbers with significant contrasts, most
 significant first (this can be useful input to other scripts of your own), as
 well as PDF files of paired sequence logos representing the foreground and
@@ -158,12 +165,12 @@ Benjamini-Hochberg "step-up" procedure at a false discovery rate (FDR) of alpha
 most significant columns are considered::
 
     # Specify where the outputs go
-    cladecompare.py fg_aln.seq bg_aln.seq -o fg-v-bg.out -p fg-v-bg.pttrn
+    cladecompare fg_aln.seq bg_aln.seq -o fg-v-bg.out -p fg-v-bg.pttrn
 
 Outputs
 ```````
 
-The script ``cladereport.py`` converts the "\*.out" files to an HTML file showing
+The command ``cladereport`` converts the "\*.out" files to an HTML file showing
 the alignment of the FG and BG consensus sequences, with the FG sequence
 colorized by the uncorrected p-value of each site (red for p below 0.1, darker
 as p decreases; white from 0.1 to 0.5; blue for larger p-values, i.e. similar
@@ -171,7 +178,7 @@ columns), inserts (yellow) and deletions (gray gaps). The colors do not depend
 on alpha::
 
     # Visualize the per-site contrasts as a colorized alignment
-    cladereport.py scttlre-v-cdc2.out > scttlre-v-cdc2.html
+    cladereport scttlre-v-cdc2.out > scttlre-v-cdc2.html
 
 Single- and multi-profile modes
 ```````````````````````````````
@@ -179,19 +186,19 @@ Single- and multi-profile modes
 If a single sequence set is given, the aligned columns are compared to the
 overall amino-acid frequencies of the alignment::
 
-    cladecompare.py subfam1.seq -o subfam1-single.out
+    cladecompare subfam1.seq -o subfam1-single.out
 
 When more than 2 sequence sets are given, each set is individually treated as a
 foreground and the rest treated as the background for evaluation::
 
     # Compare several related alignments, e.g. all subfamilies
-    cladecompare.py subfam1.seq subfam2.seq subfam3.seq ...
+    cladecompare subfam1.seq subfam2.seq subfam3.seq ...
 
 This multi-mode generates and names the "\*.out" files according to the
 corresponding sequence file names. You can visualize these all together::
 
     # Visualize each subfamily's contrasts together
-    cladereport.py subfam2.out subfam2.out subfam3.out ... > somefamily.html
+    cladereport subfam2.out subfam2.out subfam3.out ... > somefamily.html
 
 
 Strategies

@@ -1,33 +1,31 @@
-#!/usr/bin/env python
-
 """Compare protein sequence alignments to identify contrasting sites."""
 
+import argparse
 import logging
 import sys
 
 from cladecomparelib.core import process_args
 
 
-if __name__ == '__main__':
-    import argparse
+def main():
     AP = argparse.ArgumentParser(description=__doc__,
                                  epilog="""Examples:
 
 # Basic
-cladecompare.py fg.seq bg.seq > fg-v-bg.out
-cladecompare.py fg.cma bg.cma > fg-v-bg.out
+cladecompare fg.seq bg.seq > fg-v-bg.out
+cladecompare fg.cma bg.cma > fg-v-bg.out
 
 # Save per-site p-values and "pattern" file of significant sites
-cladecompare.py fg.seq bg.seq -p fg-v-bg.pttrn -o fg-v-bg.out
+cladecompare fg.seq bg.seq -p fg-v-bg.pttrn -o fg-v-bg.out
 
 # Align sequences on the fly by giving the MAPGAPS profile
-cladecompare.py fg.fasta bg.fasta -s urn --mapgaps /share/data/PK \\
+cladecompare fg.fasta bg.fasta -s urn --mapgaps /share/data/PK \\
         -p fg.pttrn -o fg.out
 
 # HMMER/PDB style
-cladecompare.py fg.fasta bg.fasta --hmm Pkinase.hmm --pdb 1ATP.pdb
+cladecompare fg.fasta bg.fasta --hmm Pkinase.hmm --pdb 1ATP.pdb
 
-See README or http://github.com/etal/cladecompare for full documentation.
+See README or https://github.com/etal/cladecompare for full documentation.
 """, formatter_class=argparse.RawDescriptionHelpFormatter)
     # Input
     AP.add_argument('foreground',
@@ -70,7 +68,7 @@ See README or http://github.com/etal/cladecompare for full documentation.
     AP.add_argument('-o', '--output',
             default=sys.stdout,
             help="""Write per-column probabilities (standard output) to this
-            filename, for use with cladereport.py. (Single-foreground
+            filename, for use with cladereport. (Single-foreground
             comparison only.""")
     AP.add_argument('-p', '--pattern',
             help="""Write an mcBPPS-style pattern file to this filename.

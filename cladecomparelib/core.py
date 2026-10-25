@@ -251,9 +251,15 @@ def call_quiet(*args):
 
     Like subprocess.check_output, but silent in the normal case where the
     command logs unimportant stuff to stderr. If there is an error, then the
-    full error message(s) is shown in the exception message.
+    full error message(s) is shown in the exception message. If the program
+    is not found, a RuntimeError naming it is raised as well.
     """
-    proc = subprocess.run(args, capture_output=True, text=True)
+    try:
+        proc = subprocess.run(args, capture_output=True, text=True)
+    except FileNotFoundError as exc:
+        raise RuntimeError("Subprocess command failed:\n$ %s\n\n%s\n"
+                           "Is %s installed and on the PATH?"
+                           % (' '.join(args), exc, args[0])) from None
     if proc.returncode != 0:
         raise RuntimeError("Subprocess command failed:\n$ %s\n\n%s"
                            % (' '.join(args), proc.stdout + proc.stderr))
@@ -290,14 +296,13 @@ CMA_SEQ_LINE = re.compile(r'[A-Za-z-]*\{\([A-Za-z-]*\)(?P<aligned>[^()]*)'
                           r'\([A-Za-z-]*\)\}[A-Za-z-]*\*\Z')
 
 
-def cma_blocks(cma_fname):
-    """Select the conserved/consensus columns in the alignment.
+def cma_records(cma_fname):
+    """Read the records of a CMA file.
 
-    This removes inserts relative to the consensus sequence, and the flanking
-    residues that some records carry around the aligned sequence. A sequence
-    line that does not have the expected shape raises ValueError.
-
-    Return a Biopython MultipleSeqAlignment.
+    Return a list of (ID, aligned sequence) pairs. The aligned sequence is
+    taken verbatim, with lowercase inserts, and without the flanking residues
+    that some records carry around it. A sequence line that does not have the
+    expected shape raises ValueError.
     """
     records = []
     with open(cma_fname) as infile:
@@ -311,11 +316,23 @@ def cma_blocks(cma_fname):
                     raise ValueError("Unparseable CMA sequence line for "
                                      "record %s in %s: %s"
                                      % (acc, cma_fname, seq_line))
-                seq = ''.join((c for c in match.group('aligned')
-                               if not c.islower()))
-                records.append(
-                        SeqRecord(Seq(seq), id=acc, description=''))
-    return MultipleSeqAlignment(records)
+                records.append((acc, match.group('aligned')))
+    return records
+
+
+def cma_blocks(cma_fname):
+    """Select the conserved/consensus columns in the alignment.
+
+    This removes inserts relative to the consensus sequence, and the flanking
+    residues that some records carry around the aligned sequence. A sequence
+    line that does not have the expected shape raises ValueError.
+
+    Return a Biopython MultipleSeqAlignment.
+    """
+    return MultipleSeqAlignment(
+        [SeqRecord(Seq(''.join(c for c in aligned if not c.islower())),
+                   id=acc, description='')
+         for acc, aligned in cma_records(cma_fname)])
 
 
 def read_aln(fname, format):
@@ -544,20 +561,14 @@ def aln_resnums_inserts(record, aln, offset):
     return aln_resnums, aln_inserts
 
 
-def pdb_hmm(hmm_profile, pdb_fname):
-    """Align a PDB structure to an HMM profile.
+def pdb_ref_resnums(aligned, seqs):
+    """Choose the reference chain and map the alignment to its residues.
 
     Returns a tuple: (SeqRecord,
-                    //chain ID,
                       list of aligned residue numbers,
                       list of insert ranges as tuple pairs)
     """
-    with read_pdb_seq(pdb_fname) as (seqfname, seqs):
-        out = call_quiet('hmmalign', '--allcol', '--trim', '--amino',
-                         '--outformat', 'a2m', hmm_profile, seqfname)
-    ref_id, ref_aln = choose_best_aligned(
-        dict((rec.id, str(rec.seq))
-             for rec in SeqIO.parse(StringIO(out), 'fasta')))
+    ref_id, ref_aln = choose_best_aligned(aligned)
     ref_record = SeqIO.to_dict(seqs)[ref_id]
     # Calculate aligned residue numbers & insert ranges
     offset = (ref_record.annotations['start']
@@ -567,26 +578,26 @@ def pdb_hmm(hmm_profile, pdb_fname):
     return ref_record, resnums, inserts
 
 
+def pdb_hmm(hmm_profile, pdb_fname):
+    """Align a PDB structure to an HMM profile.
+
+    Returns a tuple as pdb_ref_resnums does.
+    """
+    with read_pdb_seq(pdb_fname) as (seqfname, seqs):
+        out = call_quiet('hmmalign', '--allcol', '--trim', '--amino',
+                         '--outformat', 'a2m', hmm_profile, seqfname)
+    aligned = dict((rec.id, str(rec.seq))
+                   for rec in SeqIO.parse(StringIO(out), 'fasta'))
+    return pdb_ref_resnums(aligned, seqs)
+
+
 def pdb_mapgaps(mapgaps_profile, pdb_fname):
     """Align a PDB structure to a MAPGAPS profile.
 
-    Returns a tuple: (SeqRecord, list of aligned residue numbers)
+    Returns a tuple as pdb_ref_resnums does.
     """
-    from biocma import cma
-
     with read_pdb_seq(pdb_fname) as (seqfname, seqs):
         call_quiet('run_gaps', mapgaps_profile, seqfname)
-    pdb_cma = cma.read(seqfname + '_aln.cma')
-    hits = {}
-    head_lengths = {}
-    for seq in pdb_cma['sequences']:
-        hits[seq['id']] = seq['seq']
-        head_lengths[seq['id']] = seq['head_len']
-    ref_id, ref_aln = choose_best_aligned(hits)
-    ref_record = SeqIO.to_dict(seqs)[ref_id]
-    offset = (ref_record.annotations['start']
-              + head_lengths[ref_id]
-              - 1)
-    resnums, inserts = aln_resnums_inserts(ref_record, ref_aln, offset)
-    return ref_record, resnums, inserts
+    aligned = dict(cma_records(seqfname + '_aln.cma'))
+    return pdb_ref_resnums(aligned, seqs)
 

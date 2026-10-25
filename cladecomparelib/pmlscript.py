@@ -11,13 +11,9 @@ import os.path
 # ---------------------------------------------------------
 # Mapping pattern to PDB sequence alignment 
 
-# New shit:
-#   - for each PDB, build a mapping of overall alignment column numbers to
-#     PDB resnums
-#       - like biocma.utils.get_equivs; currently in cladecompare.py
-#   - Also record locations of inserts
-#       - biocma.utils.get_inserts
-#       - cladecompare.py still botches this
+# The builders below take a mapping of alignment columns to PDB residue
+# numbers and a list of insert ranges, both computed by
+# core.aln_resnums_inserts.
 
 
 # ---------------------------------------------------------

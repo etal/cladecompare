@@ -225,16 +225,16 @@ def test_phospho_weighted_completes(mode, tmp_path):
     assert_valid_pvalues(workdir / (case + ".out"))
 
 
-@pytest.mark.xfail(strict=True, reason="the weighted population count "
-                   "reaches SciPy unrounded, which returns nan")
 def test_hypg_weighted(tmp_path):
     """Weighted hypg gives finite p-values, and on these inputs no pattern.
 
     The reference values came from SciPy 1.2.1, which accepted a non-integral
     population count, and have no counterpart in an integer model. With the
-    counts rounded up, the smallest p-value attainable from 6 draws out of 13
-    is 1 / C(13, 6), about 5.8e-4, which no Benjamini-Hochberg threshold at
-    the default alpha reaches.
+    counts rounded up, 6 sequences are drawn from 13, and the smallest
+    attainable p-value, 1 / C(13, 6) or about 5.8e-4, is attained by only 16
+    columns, too few to pass the Benjamini-Hochberg threshold at the default
+    alpha, which first reaches that value at rank 29; every larger p-value
+    exceeds the threshold at its rank.
     """
     case = "pair.hypg.w"
     workdir, written, results, _tmpdir = run_commands(

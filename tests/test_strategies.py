@@ -64,8 +64,6 @@ def test_hypg_keeps_precision_for_small_tails():
                                                            rel=1e-9, abs=0)
 
 
-@pytest.mark.xfail(strict=True, reason="the weighted population count "
-                   "reaches SciPy unrounded, which returns nan")
 def test_hypg_rounds_weighted_counts_up():
     # Weighted: foreground D count 2.5 of size 3.5; background D count 0.9
     # of size 7.9. Rounded up: k = 3, N = 4, M = 4 + 8, and n = ceil(3.4)

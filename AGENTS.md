@@ -72,14 +72,17 @@ A port nevertheless has a reference to be checked against.
 `tests/data/README.md` records the environment and how to regenerate it, the inputs, and the defects the reference preserves on purpose.
 A ported program should reproduce those outputs, or differ from them only by a documented, deliberate change; the statistics are exactly the kind of output where a wrong answer looks entirely plausible.
 
-## biofrills is a dependency, taken from a sibling checkout until 0.4.0
+## biofrills is a dependency, pinned to a git commit until 0.4.0
 
 CladeCompare calls six names from four pure-Python [biofrills](https://github.com/etal/biofrills) modules, in `core.py`, `shared.py`, `gtest.py` and `pairlogo.py`: `alnutils.sequence_weights`, `alnutils.aa_frequencies`, `alnutils.remove_empty_cols`, `consensus.consensus`, `logoutils.aln2logodata` and `stats.chisq.chisqprob`.
 The latest release on PyPI, 0.3.1 from 2013, cannot be installed on a current Python, because its `setup.py` always builds a Cython extension that no longer compiles.
 The biofrills development branch has since removed that extension and been ported to Python 3: it builds as a pure-Python `py3-none-any` wheel for Python 3.12 and later, and all six names import from it on Python 3.12, 3.14 and 3.15.
 The dependency to declare is therefore `biofrills[logo]>=0.4`, where the `logo` extra supplies WebLogo, which `pairlogo` reaches through `logoutils`.
-Until 0.4.0 is published, a development environment takes biofrills from a checkout beside this one, as `tests/data/capture_py27.py` already does for the reference.
-The checkout's version, `0.4.0.dev0`, sorts below `0.4` under PEP 440; uv nevertheless resolves the floor to the checkout when `[tool.uv.sources]` names it as a path source, while pip, which does not read that table, cannot satisfy the floor from the checkout.
+Until 0.4.0 is published, `[tool.uv.sources]` is to take biofrills from its GitHub repository at a pinned commit, starting from `ff11246`, the commit measured below, so that `uv.lock` records exactly which biofrills a result came from; moving to a newer commit is a deliberate change of that pin.
+A path source to a checkout beside this one was the alternative, but the lock then records only the path, and the checkout may hold unpushed or uncommitted changes.
+The pinned commit's version, `0.4.0.dev0`, sorts below `0.4` under PEP 440.
+uv nevertheless installs the commit named in `[tool.uv.sources]`, and `uv.lock` does not record the `>=0.4` floor for biofrills, so the floor does not check the pin.
+pip does not read that table and therefore cannot satisfy the floor before 0.4.0 is released.
 Vendoring the four modules was the alternative while the extension blocked installation, and it no longer offers anything.
 
 Moving from the biofrills commit behind the reference (`36684bb`) to the ported one (`ff11246`, version `0.4.0.dev0`) leaves the values that biofrills returns to CladeCompare identical or within a few units in the last place.

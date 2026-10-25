@@ -146,8 +146,9 @@ A port that fixes one of them differs from the reference by design, and the test
 ## Interpreting a mismatch
 
 - **SciPy version.**
-  hypg computes `1 - hypergeom.cdf(...)`, which loses precision for small probabilities, and SciPy releases differ there: under SciPy 1.11.4 and 1.18.1 alike, 13 of the small p-values in `pair.hypg` differ from this reference in the sixth significant digit.
+  The reference computed hypg as `1 - hypergeom.cdf(...)`, which loses precision for small probabilities, and SciPy releases differ there: under SciPy 1.11.4 and 1.18.1 alike, 13 of the small p-values in `pair.hypg` differ from this reference in the sixth significant digit.
   The newer values are the accurate ones: exact rational arithmetic for the three hypergeometric tails behind those 13 sites gives 6.88977e-10, 5.74147e-11 and 2.12434e-09, as both newer releases do, where this reference has 6.8898e-10, 5.74155e-11 and 2.12435e-09.
+  The code now computes the tail directly with `hypergeom.sf`: on the 242 columns of `pair.hypg` under SciPy 1.18.1, its largest relative error against exact arithmetic is 6e-16, against 2e-7 for `1 - cdf`, and at the six significant digits of the `.out` file both print the newer values, which `tests/test_cli_cases.py` substitutes for the recorded ones.
   Under SciPy 1.11.4 and 1.18.1, `hypergeom` also returns `nan` for a non-integral number of successes, which is what weighted counts supply, so `pair.hypg.w` produces no finite p-values there, and `cladereport.py` then fails with `ValueError` on its output; the values recorded here come from SciPy 1.2.1, which accepted the non-integral argument.
   (`single.hypg.w.a.2` does not call `hypergeom`; see the recorded defects.)
 - **Consensus ties.**

@@ -56,7 +56,6 @@ def test_hypg_is_the_hypergeometric_tail():
                                                            rel=1e-12)
 
 
-@pytest.mark.xfail(strict=True, reason="1 - cdf cancels for small tails")
 def test_hypg_keeps_precision_for_small_tails():
     # 20 of 20 foreground D, none among 180 background: p = 1 / C(200, 20).
     expected = hypergeom_tail(20, 200, 20, 20)

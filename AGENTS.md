@@ -67,6 +67,7 @@ A change should reproduce those outputs, or differ from them only by a documente
 
 With HMMER 3.0 or 3.4 and MUSCLE 3.8.1551, under Python 3.12 with the ported biofrills, the ported code reproduces the `.out`, `.pttrn`, `.html` and PyMOL files of every command-line case and the response of every successful web submission byte for byte, both with Biopython 1.83, SciPy 1.11.4 and bottle 0.12.25 and with Biopython 1.88, SciPy 1.18.1 and bottle 0.13.4, apart from the differences below, which come from SciPy, from the earlier phospho fix, from the removal of `_cc_combined.seq`, or from the form of logs and tracebacks.
 Under both SciPy versions, 13 small p-values of `pair.hypg` differ from the reference in the sixth significant digit; the values from both newer releases agree with exact rational arithmetic, and the reference values, computed with SciPy 1.2.1, do not.
+hypg now computes the tail with `hypergeom.sf`, which stays accurate for small tails, rather than as `1 - hypergeom.cdf`; on these inputs the two forms print the same values.
 Under both SciPy versions `pair.hypg.w` yields no finite p-value, on which `cladereport` then fails.
 The `-s phospho` cases now complete where the reference records a failure, because of the earlier fix to the phospho sample size, and their unweighted outputs equal the legacy reference cases.
 `unequal.gtest` no longer writes `_cc_combined.seq` into the working directory, nor logs that it did.

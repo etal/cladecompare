@@ -33,9 +33,10 @@ def compare_cols(fg_col, fg_cons, fg_size, fg_weights,
     fg_cons_count_i = max(1, int(ceil(fg_cons_count)))
     fg_size_i = int(ceil(fg_size))
     bg_size_i = int(ceil(bg_size))
-    # Probability of fg col conservation vs. the combined/main set
-    pvalue = 1.0 - hypergeom.cdf(fg_cons_count_i - 1, fg_size_i + bg_size_i,
-                                 p_j, fg_size_i)
+    # Probability of fg col conservation vs. the combined/main set: the upper
+    # tail P(X >= k), computed directly, since 1 - cdf cancels for small tails
+    pvalue = hypergeom.sf(fg_cons_count_i - 1, fg_size_i + bg_size_i,
+                          p_j, fg_size_i)
     return pvalue
 
 

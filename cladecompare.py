@@ -24,7 +24,7 @@ cladecompare.py fg.seq bg.seq -p fg-v-bg.pttrn -o fg-v-bg.out
 cladecompare.py fg.fasta bg.fasta -s urn --mapgaps /share/data/PK \\
         -p fg.pttrn -o fg.out
 
-# HMMer/PDB style
+# HMMER/PDB style
 cladecompare.py fg.fasta bg.fasta --hmm Pkinase.hmm --pdb 1ATP.pdb
 
 See README or http://github.com/etal/cladecompare for full documentation.
@@ -41,7 +41,7 @@ See README or http://github.com/etal/cladecompare for full documentation.
             help="Input alignment format (default: fasta).")
     AP.add_argument('--hmm',
             help="""Align the foreground and background sequences with this
-            HMMer 3.0 profile.""")
+            HMMER 3 profile.""")
     AP.add_argument('--mapgaps',
             help="""Align the foreground and background sequences with this
             MAPGAPS profile.""")

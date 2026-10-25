@@ -30,6 +30,7 @@ It extracts each commit above from git into a scratch directory and runs that, s
 
 The unmodified code needs HMMER 3.0, because it calls `hmmalign --allcol`, and the later bioconda releases checked (3.1b2, 3.2.1, 3.3.2 and 3.4) all lack that option.
 MUSCLE 3.8 is needed for the same reason: MUSCLE 5.3 rejects the `-profile` option that the code uses.
+The current code does not need these particular releases; the external-aligner section of `AGENTS.md` states what it requires.
 
 ## Regenerating
 
@@ -160,7 +161,7 @@ A port that fixes one of them differs from the reference by design, and the test
 - **biofrills version.**
   The ported CladeCompare runs against the ported biofrills rather than `36684bb`.
   On the alignments that the biofrills section of `AGENTS.md` lists as measured, the values biofrills returns to CladeCompare are identical or differ by at most a few units in the last place.
-  End to end, with `ff11246`, every output file of every command-line case and the response of every successful web submission reproduce this reference, including `multi.gtest` and the cases that align with hmmalign and MUSCLE, apart from the SciPy differences above, the deliberate change to `-s phospho` under "Recorded defects", and the differences listed under "Python 3, bottle and Biopython" below.
+  End to end, with `ff11246`, every output file of every command-line case and the response of every successful web submission reproduce this reference, including `multi.gtest` and the cases that align with hmmalign and MUSCLE, under HMMER 3.0 and 3.4 alike, apart from the SciPy differences above, the deliberate change to `-s phospho` under "Recorded defects", and the differences listed under "Python 3, bottle and Biopython" below.
 - **Raw p-values.**
   The `.out` files hold unadjusted p-values, and their stars compare those raw values with alpha.
   The Benjamini-Hochberg procedure, limited to the 50 most significant sites, only selects the sites in the `.pttrn` file, which also name the pair logos and the PyMOL script.

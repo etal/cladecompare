@@ -33,11 +33,15 @@ SciPy_ and ReportLab_ will be fetched and installed automatically.
 .. _SciPy: http://scipy.org/
 .. _ReportLab: http://pypi.python.org/pypi/reportlab
 
-Optionally, CladeCompare can align your sequences for you if you have MUSCLE_,
-HMMer3_ or MAPGAPS_ installed.
+Optionally, CladeCompare can align your sequences for you if you have HMMER3_
+(3.0 or later) or MAPGAPS_ installed. If a foreground and a
+background alignment differ in width, CladeCompare aligns them to each other
+with MUSCLE_, which must be MUSCLE 3, such as 3.8.1551: MUSCLE 5 has no
+profile-profile alignment mode, and CladeCompare stops with an error if it
+finds MUSCLE 4 or later.
 
 .. _MUSCLE: http://www.drive5.com/muscle/
-.. _HMMer3: http://hmmer.janelia.org/
+.. _HMMER3: http://hmmer.org/
 .. _MAPGAPS: http://mapgaps.igs.umaryland.edu/
 
 
@@ -123,12 +127,11 @@ If you're not using MAPGAPS_, it would make sense to either:
 - Create a sequence alignment of all sequences, foreground and background,
   together; then divide the alignment into two FASTA files (e.g. by sequence
   ID).
-- Align both the foreground and background sets with hmmalign (HMMer3_) using
+- Align both the foreground and background sets with hmmalign (HMMER3_) using
   the same profile, then use a script (your own) to delete any insert columns.
 
-In case you botch all that, CladeCompare will check then number of columns in
-the FG and BG alignments, and if they don't match, will automatically run MUSCLE
-to align the alignments to each other.
+If you do neither, and the foreground and background alignments differ in
+width, CladeCompare aligns them to each other with MUSCLE.
 
 To align the FASTA sequences with MAPGAPS on the fly, specify the profile name
 (minus the extension) with the ``--mapgaps`` flag::

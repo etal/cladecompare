@@ -64,12 +64,25 @@ The port removed `Bio.Alphabet` and `Bio._py3k`, which Biopython dropped in 1.78
 `tests/data/README.md` records the environment and how to regenerate it, the inputs, the defects the reference preserves on purpose, and how to read a mismatch.
 A change should reproduce those outputs, or differ from them only by a documented, deliberate change; the statistics are exactly the kind of output where a wrong answer looks entirely plausible.
 
-With HMMER 3.0 and MUSCLE 3.8.1551, under Python 3.12 with the ported biofrills, the ported code reproduces the `.out`, `.pttrn`, `.html` and PyMOL files of every command-line case and the response of every successful web submission byte for byte, both with Biopython 1.83, SciPy 1.11.4 and bottle 0.12.25 and with Biopython 1.88, SciPy 1.18.1 and bottle 0.13.4, apart from the differences below, which come from SciPy, from the earlier phospho fix, or from the form of logs and tracebacks.
+With HMMER 3.0 or 3.4 and MUSCLE 3.8.1551, under Python 3.12 with the ported biofrills, the ported code reproduces the `.out`, `.pttrn`, `.html` and PyMOL files of every command-line case and the response of every successful web submission byte for byte, both with Biopython 1.83, SciPy 1.11.4 and bottle 0.12.25 and with Biopython 1.88, SciPy 1.18.1 and bottle 0.13.4, apart from the differences below, which come from SciPy, from the earlier phospho fix, or from the form of logs and tracebacks.
 Under both SciPy versions, 13 small p-values of `pair.hypg` differ from the reference in the sixth significant digit; the values from both newer releases agree with exact rational arithmetic, and the reference values, computed with SciPy 1.2.1, do not.
 Under both SciPy versions `pair.hypg.w` yields no finite p-value, on which `cladereport.py` then fails.
 The `-s phospho` cases now complete where the reference records a failure, because of the earlier fix to the phospho sample size, and their unweighted outputs equal the legacy reference cases.
 Standard error and logs differ in the line numbers that the log format prints, and tracebacks take Python 3's own form; `tests/data/README.md` lists these and the few differences that come from the bottle and Biopython versions.
 biofrills `ff11246` declares `biopython>=1.86`, so the run with Biopython 1.83 installed biofrills without its dependencies; CladeCompare's own code needs no Biopython newer than 1.83.
+
+## External aligners: any HMMER 3, and MUSCLE 3 only
+
+`hmmalign_a2m` in `cladecomparelib/core.py` is the one place that runs `hmmalign`, for the `--hmm` sequences and for `--pdb` structures alike.
+Its output must hold one column per match state of the profile, including match states that no sequence occupies, because the foreground, the background and each structure are aligned to the profile separately and are then compared column by column.
+HMMER 3.1 and later always produce that, and reject the `--allcol` option; HMMER 3.0 produces it only with `--allcol`, so the option is passed when `hmmalign -h` lists it.
+On the two unaligned FASTA inputs, `scttlre-domain.fasta` and `cdc2-domain.fasta`, HMMER 3.1b2, 3.2.1, 3.3.2 and 3.4 without `--allcol` give a2m output byte-identical to HMMER 3.0 with it, and the reference cases that use hmmalign, including the `--pdb` cases, reproduce under each of them.
+HMMER 3.0 without the option drops all-gap match columns: one of 289 for `scttlre-domain.fasta`, which then reaches MUSCLE as an alignment of unequal width, and 7 of 289 for chain A of `1HCK.pdb`, which shifts the residues in the PyMOL script without any error.
+
+`combine_alignments` aligns two alignments of unequal width to each other with `muscle -profile`, a mode MUSCLE 5 no longer has, so it reads `muscle -version` first and stops with an error for MUSCLE 4 or later; where the version cannot be read, it warns and runs MUSCLE anyway.
+Replacing MUSCLE 3 with another profile-profile aligner would change the output of every unequal-width run.
+No missing program is checked for at the start of a run.
+`call_quiet` names a program that is not on the PATH when it is first run: for `hmmalign` and `muscle` that is the probe preceding each alignment, and for MAPGAPS it is the `run_gaps` call itself.
 
 ## biofrills is a dependency, pinned to a git commit until 0.4.0
 

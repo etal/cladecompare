@@ -267,10 +267,23 @@ def call_quiet(*args):
     return proc.stdout
 
 
+def hmmalign_a2m(hmm_profile, seq_fname):
+    """Align sequences to an HMM profile and return hmmalign's a2m output.
+
+    Every match state of the profile becomes a column, including one that is
+    a gap in every sequence, so that sequence sets aligned separately to the
+    same profile share the same columns. HMMER 3.1 and later always keep
+    such columns and reject the --allcol option; HMMER 3.0 keeps them only
+    with --allcol, so the option is given when hmmalign's help lists it.
+    """
+    allcol = ['--allcol'] if '--allcol' in call_quiet('hmmalign', '-h') else []
+    return call_quiet('hmmalign', *allcol, '--trim', '--amino',
+                      '--outformat', 'a2m', hmm_profile, seq_fname)
+
+
 def hmm_align_and_read(hmm_profile, fasta_fname):
-    """Align a FASTA file with HMMer 3 and read the alignment."""
-    out = call_quiet('hmmalign', '--allcol', '--trim', '--amino',
-                     '--outformat', 'a2m', hmm_profile, fasta_fname)
+    """Align a FASTA file with HMMER 3 and read the alignment."""
+    out = hmmalign_a2m(hmm_profile, fasta_fname)
     # ENH: write to file, then parse incrementally
     records = list(SeqIO.parse(StringIO(out), 'fasta'))
     # Remove inserts, i.e. lowercase characters
@@ -350,11 +363,30 @@ def read_aln(fname, format):
         return aln
 
 
+# The program name and version at the start of `muscle -version`, e.g.
+# "MUSCLE v3.8.1551 by Robert C. Edgar" or "muscle 5.3.osxarm64 []".
+MUSCLE_VERSION_LINE = re.compile(r'muscle +v?(\d+)\.(\d+)', re.IGNORECASE)
+
+
 def combine_alignments(fg_aln, bg_aln):
     """Align FG and BG to each other so column numbers match.
 
-    Uses MUSCLE for profile-profile alignment.
+    Uses MUSCLE 3 for profile-profile alignment, which MUSCLE 5 no longer
+    offers; a MUSCLE of version 4 or later raises RuntimeError. If the
+    version cannot be read, a warning is logged and MUSCLE is run anyway.
     """
+    match = MUSCLE_VERSION_LINE.search(call_quiet('muscle', '-version'))
+    if match is None:
+        logging.warning("Could not determine the version of MUSCLE; "
+                        "trying profile-profile alignment anyway")
+    elif int(match.group(1)) >= 4:
+        raise RuntimeError("Aligning alignments of different widths to each "
+                           "other requires MUSCLE 3, but the muscle on the "
+                           "PATH is version %s.%s, which has no "
+                           "profile-profile alignment mode. Install a "
+                           "MUSCLE 3 release such as 3.8.1551, or give "
+                           "alignments of equal width."
+                           % match.groups())
     # This would be simpler with NamedTemporaryFile, but Windows doesn't allow
     # multiple open file handles on the same file, so here we are.
     afd, aseqfname = tempfile.mkstemp(text=True)
@@ -582,8 +614,7 @@ def pdb_hmm(hmm_profile, pdb_fname):
     Returns a tuple as pdb_ref_resnums does.
     """
     with read_pdb_seq(pdb_fname) as (seqfname, seqs):
-        out = call_quiet('hmmalign', '--allcol', '--trim', '--amino',
-                         '--outformat', 'a2m', hmm_profile, seqfname)
+        out = hmmalign_a2m(hmm_profile, seqfname)
     aligned = dict((rec.id, str(rec.seq))
                    for rec in SeqIO.parse(StringIO(out), 'fasta'))
     return pdb_ref_resnums(aligned, seqs)

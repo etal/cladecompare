@@ -255,13 +255,15 @@ conda-forge provides, and ``py312`` the oldest supported one::
     pixi run -e py312 test
     pixi run test-integration
 
-The tests marked ``integration`` run ``cladecompare`` and ``cladereport`` on
-the inputs in ``tests/data/inputs``, aligning them with ``hmmalign`` or
-``muscle``, compare the text files they write with the reference outputs in
-``tests/data/py27``, and check that the pair-logo PDFs embed the bundled font.
-Each is skipped unless the program it needs is on ``PATH``; ``pixi run
-test-integration`` runs them alone and fails instead of skipping when a
-program is missing.
+The tests run ``cladecompare``, ``cladereport`` and the ``cladeweb``
+application on the inputs in ``tests/data/inputs`` and compare what they
+write with the reference outputs in ``tests/data/py27``, apart from the
+deliberate differences that ``tests/data/README.md`` lists; unit tests check
+the parsing, site-selection and statistics functions against hand
+computations. The tests marked ``integration`` also align the inputs with
+``hmmalign`` or ``muscle``. Each is skipped unless the program it needs is on
+``PATH``; ``pixi run test-integration`` runs them alone and fails instead of
+skipping when a program is missing.
 
 The reference outputs come from the Python 2 code base. On macOS, the
 ``py27-oracle`` environment reproduces the environment that captured them,

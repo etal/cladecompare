@@ -137,7 +137,14 @@ The fixtures are real alignments from Talevich, Mirza & Kannan (2011), *BMC
 Evolutionary Biology* 11:321.
 
 `tests/data/` is the committed counterpart: the reference outputs described above, covering the eight Makefile targets and further command-line and web cases.
-`tests/test_integration.py` replays the command-line cases that run hmmalign or MUSCLE (`hmm.pair.gtest`, `hmm.single.gtest`, `pdb.1HCK.gtest` and `unequal.gtest`) with the installed commands, compares the text files they write with the reference, and checks that their pair-logo PDFs have the recorded names and embed the bundled font; no test yet covers the other cases.
+`uv run pytest` or `pixi run test` runs the suite under `tests/`.
+`tests/test_cli_cases.py` replays every recorded command-line case that the current command line can run with the installed `cladecompare` and `cladereport` commands, in a scratch directory holding copies of `tests/data/inputs`; the two legacy phospho cases, whose `-nw` option no longer exists, serve as the expected output of the unweighted phospho cases.
+`tests/test_web.py` submits every recorded form to the cladeweb WSGI application.
+Each command or submission must give the recorded return code or status, each written file and successful response must equal the reference byte for byte, and every p-value written to a `.out` file must be finite and within [0, 1].
+Where the code departs from the reference by design, the test module declares the difference — a substituted value, a file no longer written, or a test of its own — and `tests/data/README.md` explains it.
+`tests/test_core.py`, `tests/test_strategies.py` and `tests/test_report.py` test the parsing, site-selection and statistics functions on small constructed inputs, against hand computations and, for the site selection, against `scipy.stats.false_discovery_control`.
+A known defect that a test exposes is marked as a strict expected failure, so that fixing it fails the suite until the marker is removed.
+The cases that run hmmalign or MUSCLE, and a `--mapgaps` case that replaces MAPGAPS with a stand-in `run_gaps` built on hmmalign, are marked `integration` and are skipped unless the programs are on the PATH; `pixi run test-integration` runs them alone and fails instead of skipping.
 
 ## Conventions
 

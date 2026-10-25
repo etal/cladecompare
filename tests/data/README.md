@@ -60,7 +60,7 @@ Two consecutive captures produce identical files, and captures with `PYTHONHASHS
 
 | File | Source | Used for |
 |---|---|---|
-| `scttlre-domain.fasta_aln.cma`, `cdc2-domain.fasta_aln.cma` | `test/`, unchanged | paired and single-alignment cases, as in `test/Makefile`; a web submission of CMA files; `scttlre-domain.fasta_aln.cma` is also one of the three alignments of the three-alignment mode |
+| `scttlre-domain.fasta_aln.cma`, `cdc2-domain.fasta_aln.cma` | `test/`, unchanged | paired and single-alignment cases; a web submission of CMA files; `scttlre-domain.fasta_aln.cma` is also one of the three alignments of the three-alignment mode |
 | `scttlre-domain.fasta`, `cdc2-domain.fasta` | `test/`, unchanged (unaligned) | `--hmm` and `--pdb` cases |
 | `CDK.hmm` | `test/`, unchanged (HMMER 3 profile `CDK_CMGC`) | `--hmm` and `--pdb` cases |
 | `scttlre-domain.aln.fasta`, `cdc2-domain.aln.fasta` | the two CMA files, reduced to their consensus columns | web submissions; `scttlre-domain.aln.fasta` is also the foreground of the unequal-width case |
@@ -85,8 +85,8 @@ A failing command ends the case, and its failure is part of the reference.
 `written_files` lists the text files the commands wrote, which sit beside `run.json`; `pdfs` lists the pair-logo PDFs by name only, since they embed their creation time; `leftover_temp_files` counts the files left in the case's temporary directory.
 
 Case names have the form `<mode>.<strategy>[.w][.a<alpha>]`: `pair` compares `scttlre-domain` (foreground) with `cdc2-domain` (background), `single` analyzes `cdc2-domain` alone, `.w` adds `-w`, and `.a<alpha>` gives `-a`.
-Every combination of mode, strategy and weighting is recorded, with the `-a` value the Makefile uses for that mode and strategy.
-Each successful run is followed by `cladereport.py` on its output, as in the Makefile.
+Every combination of mode, strategy and weighting is recorded, with the `-a` value that `test/Makefile` used for that mode and strategy; that file was an unasserted smoke test of eight configurations, since replaced by the test suite.
+Each successful run is followed by `cladereport.py` on its output, as the Makefile did.
 The eight Makefile targets are marked in `makefile_target`:
 
 | Makefile target | Case |
@@ -100,7 +100,7 @@ The eight Makefile targets are marked in `makefile_target`:
 | `cdc2-jsd` | `single.jsd.a.2` |
 | `cdc2-hypg` | `single.hypg.a.2` |
 
-Their `.out`, `.pttrn` and `.html` files are byte-identical to those of an independent `make` in `test/` with the same interpreter and packages, apart from the output file names, which appear in the HTML title and heading.
+Their `.out`, `.pttrn` and `.html` files were byte-identical to those of an independent `make` in `test/` with the same interpreter and packages, apart from the output file names, which appear in the HTML title and heading.
 
 The remaining cases:
 

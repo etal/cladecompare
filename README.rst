@@ -61,25 +61,6 @@ MUSCLE 3.8.1551 from Bioconda, together with CladeCompare itself.
 .. _pixi: https://pixi.sh/
 
 
-Testing
-~~~~~~~
-
-Finally, if you are on a Unix-like system (i.e. Linux, Mac or Cygwin), you can
-run the program in several modes by changing to the ``test/`` directory and
-running ``make``, with the ``cladecompare`` and ``cladereport`` commands on
-your path::
-
-    cd test
-    make
-
-The program will run in several modes and generate output files. View the
-``.html`` files in your web browser to see what happened. The targets depend
-only on the input files, so run ``make clean`` first to repeat the runs after
-changing the program. These runs check only that the program completes; the
-tests described under Development below compare its output with reference
-results.
-
-
 Usage
 -----
 

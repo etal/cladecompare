@@ -30,13 +30,6 @@ __pycache__/
 *.orig
 *.rej
 
-# Test output
-test/*.pdf
-test/*.pttrn
-test/*.pml
-test/*.out
-test/*.html
-
 # Configuration for AI coding harnesses this project does not run. Refusing a
 # harness is the same in every clone, so it belongs here rather than in a
 # personal exclude file. Directories for a harness someone does use are their

@@ -67,8 +67,9 @@ STRATEGIES = ['gtest', 'urn', 'jsd', 'hypg', 'phospho']
 FG_CMA = 'scttlre-domain.fasta_aln.cma'
 BG_CMA = 'cdc2-domain.fasta_aln.cma'
 
-# The eight test/Makefile targets, keyed by (mode, strategy): the target's
-# name, whether it passes -w, and its -a value (None for the default).
+# The eight targets of test/Makefile, a smoke test since replaced by the test
+# suite, keyed by (mode, strategy): the target's name, whether it passes -w,
+# and its -a value (None for the default).
 MAKEFILE = {
     ('pair', 'gtest'): ('scttlre-v-cdc2-gtest', True, None),
     ('pair', 'urn'): ('scttlre-v-cdc2-urn', False, None),

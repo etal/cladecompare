@@ -124,19 +124,12 @@ uv installs the Python packages from PyPI as `uv.lock` records them, apart from 
 pixi installs them from conda-forge as `pixi.lock` records them, apart from biofrills, WebLogo and the three small packages that WebLogo brings in, which come from GitHub and PyPI, and adds HMMER 3.4 and MUSCLE 3.8.1551 from Bioconda; its `test-integration` task fails rather than skips when either program is missing.
 The `py27-oracle` pixi environment, for osx-64 only, holds the versions that captured `tests/data/py27/`; `tests/data/README.md` describes how it regenerates them.
 
-## `test/` is a smoke harness; `tests/data/` holds the reference
+## `tests/` compares the program with the reference; `test/` holds example inputs
 
-`cd test && make` runs the program in eight configurations — four statistics, paired and single-alignment — and writes `.out`, `.pttrn` and `.html` files for a human to look at.
-It calls the `cladecompare` and `cladereport` commands, so they must be on the PATH, as they are under `uv run` or `pixi run`.
-Its targets depend only on the input files, so `make clean` must precede a repeated run after the program changes.
-**There are no assertions.**
-A clean `make` means the program ran to completion, and says nothing about whether the numbers are right.
-Note also that the targets pass different `-a` thresholds (`.001`, `.2`, default), so they are not comparable to each other.
+`tests/data/` holds the reference outputs described above: every combination of mode, strategy and weighting on the example alignments, and further command-line and web cases.
+The example alignments are real alignments from Talevich, Mirza & Kannan (2011), *BMC Evolutionary Biology* 11:321.
+`test/` holds them under the names that the examples in `README.rst` use, and `tests/data/make_inputs.py` copies them from there into `tests/data/inputs`.
 
-The fixtures are real alignments from Talevich, Mirza & Kannan (2011), *BMC
-Evolutionary Biology* 11:321.
-
-`tests/data/` is the committed counterpart: the reference outputs described above, covering the eight Makefile targets and further command-line and web cases.
 `uv run pytest` or `pixi run test` runs the suite under `tests/`.
 `tests/test_cli_cases.py` replays every recorded command-line case that the current command line can run with the installed `cladecompare` and `cladereport` commands, in a scratch directory holding copies of `tests/data/inputs`; the two legacy phospho cases, whose `-nw` option no longer exists, serve as the expected output of the unweighted phospho cases.
 `tests/test_web.py` submits every recorded form to the cladeweb WSGI application.
@@ -150,8 +143,7 @@ The cases that run hmmalign or MUSCLE, and a `--mapgaps` case that replaces MAPG
 
 - The code predates this project's current Python baseline; it is 2013-era style, ported to Python 3 but not otherwise modernized.
   Modernize deliberately and in separate commits from behavior changes, so a numerical difference is never buried in a reformat.
-- Output files under `test/` are generated, gitignored, and should stay so.
-  The files under `tests/data/py27/` are generated too but committed deliberately, as the reference; regenerate them with `tests/data/capture_py27.py`, for instance through `pixi run -e py27-oracle capture`, rather than editing them.
+- The files under `tests/data/py27/` are generated but committed deliberately, as the reference; regenerate them with `tests/data/capture_py27.py`, for instance through `pixi run -e py27-oracle capture`, rather than editing them.
 - Maintainer planning for this repository lives in a local beads store that is excluded from git and is not present in a clone.
   If you have `bd`, run `bd prime --mcp`, which renders each memory as a one-line summary because the full text printed by plain `bd prime` can exceed an agent's tool-output limits; `bd memories <keyword>` searches the full text, and `bd recall <key>` prints one memory in full.
   If you do not have `bd`, nothing here depends on it.

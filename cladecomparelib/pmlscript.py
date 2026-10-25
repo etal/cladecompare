@@ -131,9 +131,9 @@ def colorize(patterns, pale):
         return [(colorset[4], patterns[0])]
     if len(patterns) == len(colorset):
         # Maxed-out mcBPPS result
-        return zip(colorset, patterns)
+        return list(zip(colorset, patterns))
     # Follow the spectrum but make sure the last category is shown in cyan
-    return zip(colorset, patterns[:-1]) + [(colorset[-2], patterns[-1])]
+    return list(zip(colorset, patterns[:-1])) + [(colorset[-2], patterns[-1])]
 
 
 def get_pml_name(pdb_fname, chain_id):

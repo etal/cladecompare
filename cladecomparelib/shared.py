@@ -25,7 +25,7 @@ def count_col(col, weights, pseudo=None, pseudo_size=1.0):
         counts[char] += wt
     if pseudo:
         # Apply pseudocounts
-        for char, pcount in pseudo.iteritems():
+        for char, pcount in pseudo.items():
             counts[char] += pcount * pseudo_size
     return counts
 
@@ -57,5 +57,5 @@ def combined_frequencies(fg_aln, fg_weights, bg_aln, bg_weights):
 def scale_counts(counts):
     """Scale a dict of keys-to-integer counts so values sum to 1."""
     scale = 1.0 / fsum(counts.values())
-    return dict((key, cnt * scale) for key, cnt in counts.iteritems())
+    return dict((key, cnt * scale) for key, cnt in counts.items())
 

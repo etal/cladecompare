@@ -73,7 +73,7 @@ Two consecutive captures produce identical files, and captures with `PYTHONHASHS
 | `1HCK.pdb` | RCSB entry 1HCK (CDK2 with ATP, one chain), unchanged | `--pdb` |
 | `1FIN-AB-CA.pdb` | RCSB entry 1FIN reduced to its HEADER line and the C-alpha atoms of chains A (CDK2) and B (cyclin A) | `--pdb` with more than one chain |
 
-`1HCK.pdb` is kept complete, with its ATP `HETATM`, `SEQRES` and `CONECT` records, because the structure reader that the port will use is a different Biopython release and should be checked on a full entry; reduced to its C-alpha atoms, it would give the same outputs here.
+`1HCK.pdb` is kept complete, with its ATP `HETATM`, `SEQRES` and `CONECT` records, because the ported code reads it with a later Biopython release than the reference did, and that reader should be checked on a full entry; reduced to its C-alpha atoms, it would give the same outputs here.
 
 The `.aln.fasta` files apply the rule of `cladecomparelib.core.cma_blocks`: keep the aligned part of each CMA sequence line and drop its lowercase insert residues.
 In these files the aligned part always lies between a leading `{()` and a trailing `()}*`.
@@ -149,17 +149,18 @@ A port that fixes one of them differs from the reference by design, and the test
 ## Interpreting a mismatch
 
 - **SciPy version.**
-  hypg computes `1 - hypergeom.cdf(...)`, which loses precision for small probabilities, and SciPy releases differ there: under SciPy 1.18.1, 13 of the small p-values in `pair.hypg` differ from this reference in the sixth significant digit.
-  Under SciPy 1.18.1, `hypergeom` also returns `nan` for a non-integral number of successes, which is what weighted counts supply, so `pair.hypg.w` produces no finite p-values there; the values recorded here come from SciPy 1.2.1, which accepted the non-integral argument.
+  hypg computes `1 - hypergeom.cdf(...)`, which loses precision for small probabilities, and SciPy releases differ there: under SciPy 1.11.4 and 1.18.1 alike, 13 of the small p-values in `pair.hypg` differ from this reference in the sixth significant digit.
+  The newer values are the accurate ones: exact rational arithmetic for the three hypergeometric tails behind those 13 sites gives 6.88977e-10, 5.74147e-11 and 2.12434e-09, as both newer releases do, where this reference has 6.8898e-10, 5.74155e-11 and 2.12435e-09.
+  Under SciPy 1.11.4 and 1.18.1, `hypergeom` also returns `nan` for a non-integral number of successes, which is what weighted counts supply, so `pair.hypg.w` produces no finite p-values there, and `cladereport.py` then fails with `ValueError` on its output; the values recorded here come from SciPy 1.2.1, which accepted the non-integral argument.
   (`single.hypg.w.a.2` does not call `hypergeom`; see the recorded defects.)
 - **Consensus ties.**
   The consensus residue of a tied column comes from Python 2 dictionary order in biofrills.
   Every case was also captured with `PYTHONHASHSEED` set to 1, 2 and 3, with identical outputs each time, so tie-breaking does not affect these inputs; a different consensus letter on other data may originate in biofrills' own tie-breaking rule rather than in CladeCompare.
   The ported biofrills breaks ties by an explicit rule instead, and gives the same consensus as `36684bb` on the alignments that the biofrills section of `AGENTS.md` lists as measured.
 - **biofrills version.**
-  A ported CladeCompare runs against the ported biofrills rather than `36684bb`.
+  The ported CladeCompare runs against the ported biofrills rather than `36684bb`.
   On the alignments that the biofrills section of `AGENTS.md` lists as measured, the values biofrills returns to CladeCompare are identical or differ by at most a few units in the last place.
-  Not compared: the pairs that `multi.gtest` forms, `scttlre-domain` as a single alignment, and the alignments that hmmalign and MUSCLE produce during a run.
+  End to end, with `ff11246`, every output file of every command-line case and the response of every successful web submission reproduce this reference, including `multi.gtest` and the cases that align with hmmalign and MUSCLE, apart from the SciPy differences above, the deliberate change to `-s phospho` under "Recorded defects", and the differences listed under "Python 3, bottle and Biopython" below.
 - **Raw p-values.**
   The `.out` files hold unadjusted p-values, and their stars compare those raw values with alpha.
   The Benjamini-Hochberg procedure, limited to the 50 most significant sites, only selects the sites in the `.pttrn` file, which also name the pair logos and the PyMOL script.
@@ -170,6 +171,11 @@ A port that fixes one of them differs from the reference by design, and the test
   `e265b1f` added that copy as `data/DejaVuSansMono-Bold.ttf` and pointed the fallback at it; at the legacy commit the fallback pointed inside `cladecomparelib/`, where no font was ever committed.
   On the capture host the system path did not exist either, so at the legacy commit `pairlogo.py` warned while being imported, and that first call configured logging before `cladecompare.py` could.
   On a host that has the font at that system path, the legacy standard error would differ from this reference; at `e265b1f` a font is always found, at least the bundled copy, so the current cases do not depend on the host in this way.
+- **Python 3, bottle and Biopython.**
+  Under Python 3, tracebacks carry Python 3's own formatting and exception text; `web.pair.hypg`, for instance, logs `KeyError: 'hypg'` where this reference has `KeyError: u'hypg'`.
+  bottle 0.13 words its error page slightly differently from 0.12 (`font-family: sans-serif` for `sans`), which changes the response body of the failing web cases.
+  bottle 0.13 also spools a request body or upload larger than 100 KiB to a named temporary file, which remains in the temporary directory while the request is still referenced, so `leftover_temp_files` is larger by one for the request and one for each such upload (`CDK.hmm`, `1HCK.pdb`) when counted inside the capture process; bottle 0.12.25 gives the recorded counts.
+  Biopython 1.83 and 1.88 warn about the `END` record of `1FIN-AB-CA.pdb` (`PDBConstructionWarning`), which adds two lines to the standard error of `pdb.1FIN-AB-CA.gtest`.
 - **Not captured.**
   MAPGAPS (`--mapgaps`): `run_gaps` is not available from conda-forge or bioconda.
   The pair-logo PDFs, beyond their names.

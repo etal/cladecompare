@@ -28,7 +28,7 @@ if os.path.isfile(font_loc):
     LINE_HT = 0.75
 else:
     MONOSPACE = "Courier-Bold"
-    logging.warn("Font 'DejaVuSansMono-Bold' unavailable; using lame Courier")
+    logging.warning("Font 'DejaVuSansMono-Bold' unavailable; using lame Courier")
     LINE_HT = 0.6
 
 
@@ -137,7 +137,7 @@ def letter_scales(counts):
     except ZeroDivisionError:
         # This logo is all gaps, nothing can be done
         return []
-    freqs = [(aa, cnt*scale) for aa, cnt in counts.iteritems() if cnt]
+    freqs = [(aa, cnt*scale) for aa, cnt in counts.items() if cnt]
     freqs.sort(key=lambda pair: pair[1])
     return freqs
 

@@ -49,7 +49,7 @@ def compare_cols(fg_col, fg_cons, fg_size, fg_weights,
     # Calculate the G-value of observed vs. expected
     observed = count_col(fg_col, fg_weights)
     G = 2 * sum(obsv * math.log(obsv / expected[aa])
-                for aa, obsv in observed.iteritems())
+                for aa, obsv in observed.items())
     # 4. Calculate the Chi-squared p-value of G
     pvalue = chisqprob(G, 19)
     return pvalue
@@ -59,7 +59,7 @@ def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
     """Compare column amino acid frequencies to overall via G-test."""
     observed = count_col(col, weights, aa_freqs, pseudo_size)
     G = 2 * sum(obsv * math.log(obsv / aa_freqs.get(aa, 0.0))
-                for aa, obsv in observed.iteritems())
+                for aa, obsv in observed.items())
     pvalue = chisqprob(G, 19)
     return pvalue
 

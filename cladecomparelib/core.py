@@ -7,8 +7,8 @@ import os
 import re
 import subprocess
 import tempfile
-# from cStringIO import StringIO
 from copy import deepcopy
+from io import StringIO
 from math import fsum, log10
 from os.path import basename
 
@@ -16,9 +16,7 @@ from Bio import AlignIO, SeqIO
 from Bio.Align import MultipleSeqAlignment
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from Bio.Alphabet import generic_protein
 from Bio.File import as_handle
-from Bio._py3k import StringIO
 
 from biofrills import alnutils, consensus
 
@@ -233,7 +231,7 @@ def write_pvalues(hits, outfile, alpha):
     for idx, data in enumerate(hits):
         fg_char, bg_char, pvalue = data
         if not (0.0 <= pvalue <= 1.0):
-            logging.warn("Out-of-domain p-value at site %s: %s",
+            logging.warning("Out-of-domain p-value at site %s: %s",
                          idx, pvalue)
         stars = ('*'*int(-log10(pvalue)) if 0 < pvalue < alpha else '')
         outfile.write("%s (%s) %d : prob=%g\t%s\n"
@@ -255,14 +253,11 @@ def call_quiet(*args):
     command logs unimportant stuff to stderr. If there is an error, then the
     full error message(s) is shown in the exception message.
     """
-    # args = map(str, args)
-    proc = subprocess.Popen(args, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-    out, err = proc.communicate()
+    proc = subprocess.run(args, capture_output=True, text=True)
     if proc.returncode != 0:
         raise RuntimeError("Subprocess command failed:\n$ %s\n\n%s"
-                           % (' '.join(args), out + err))
-    return out
+                           % (' '.join(args), proc.stdout + proc.stderr))
+    return proc.stdout
 
 
 def hmm_align_and_read(hmm_profile, fasta_fname):
@@ -273,8 +268,8 @@ def hmm_align_and_read(hmm_profile, fasta_fname):
     records = list(SeqIO.parse(StringIO(out), 'fasta'))
     # Remove inserts, i.e. lowercase characters
     for rec in records:
-        rec.seq._data = ''.join([c for c in str(rec.seq) if not c.islower()])
-    return MultipleSeqAlignment(records, generic_protein)
+        rec.seq = Seq(''.join([c for c in str(rec.seq) if not c.islower()]))
+    return MultipleSeqAlignment(records)
 
 
 def mapgaps_align_and_read(mapgaps_profile, fasta_fname):
@@ -319,9 +314,8 @@ def cma_blocks(cma_fname):
                 seq = ''.join((c for c in match.group('aligned')
                                if not c.islower()))
                 records.append(
-                        SeqRecord(Seq(seq, generic_protein),
-                                  id=acc, description=''))
-    return MultipleSeqAlignment(records, generic_protein)
+                        SeqRecord(Seq(seq), id=acc, description=''))
+    return MultipleSeqAlignment(records)
 
 
 def read_aln(fname, format):
@@ -361,8 +355,7 @@ def combine_alignments(fg_aln, bg_aln):
             os.remove(bseqfname)
 
     full_aln = AlignIO.read(StringIO(output), 'fasta')
-    full_aln = MultipleSeqAlignment(alnutils.remove_empty_cols(full_aln),
-                                    generic_protein)
+    full_aln = MultipleSeqAlignment(alnutils.remove_empty_cols(full_aln))
     # Save a copy
     # ENH: choose a reasonable name
     AlignIO.write(full_aln, '_cc_combined.seq', 'fasta')
@@ -388,7 +381,7 @@ def clean_alignments(fg_aln, bg_aln):
         for idx, bg_seq in enumerate(bg_aln):
             if fg_seq.id == bg_seq.id != 'consensus':
                 if str(fg_seq.seq) != str(bg_seq.seq):
-                    logging.warn("Different sequences for %s in fg, bg",
+                    logging.warning("Different sequences for %s in fg, bg",
                             fg_seq.id)
                 killme.append(idx)
     if killme:
@@ -411,7 +404,7 @@ def clean_alignments(fg_aln, bg_aln):
                 seen.add(str(rec.seq))
         diff_fg = len(aln) - len(out_recs)
         if diff_fg:
-            logging.warn("Purging %d identical sequences from the alignment",
+            logging.warning("Purging %d identical sequences from the alignment",
                     diff_fg)
         return out_recs
 
@@ -420,7 +413,7 @@ def clean_alignments(fg_aln, bg_aln):
 
     # Ensure alignments are the same width
     if len(fg_aln[0]) != len(bg_aln[0]):
-        logging.warn("Alignments are not of equal width; fixing with MUSCLE.")
+        logging.warning("Alignments are not of equal width; fixing with MUSCLE.")
         full_aln = combine_alignments(fg_aln, bg_aln)
     else:
         full_aln = deepcopy(fg_aln)
@@ -432,7 +425,7 @@ def clean_alignments(fg_aln, bg_aln):
                   if not all(c == '-' for c in col)]
     clean_seqs = [''.join(row) for row in zip(*clean_cols)]
     for rec, clean_seq in zip(full_aln, clean_seqs):
-        rec.seq = Seq(clean_seq, rec.seq.alphabet)
+        rec.seq = Seq(clean_seq)
 
     # Split the full alignment back into FG and BG sets
     fg_labels = set([seq.id for seq in fg_aln])
@@ -463,7 +456,7 @@ def top_hits(hits, alpha, N=50):
     if m < N:
         N = m
     tophits = [(posn, faa, baa) for posn, faa, baa, pval in hit_quads]
-    for k, ifbp in zip(range(m, 0, -1), reversed(hit_quads))[-N:]:
+    for k, ifbp in list(zip(range(m, 0, -1), reversed(hit_quads)))[-N:]:
         # logging.info("BH: a=%s, m=%s, k=%s, p=%s, compare=%s",
         #              alpha, m, k, get_pval(ifbp), alpha * k / m)
         if get_pval(ifbp) <= alpha * k / m:
@@ -505,9 +498,9 @@ def choose_best_aligned(aligned):
     if not aligned:
         raise RuntimeError("No PDB sequences were aligned by the profile!")
     elif len(aligned) == 1:
-        ref_id, ref_aln = aligned.items()[0]
+        ref_id, ref_aln = list(aligned.items())[0]
     else:
-        ref_id = max(aligned.iteritems(), key=lambda kv: aligned_len(kv[1]))
+        ref_id = max(aligned.items(), key=lambda kv: aligned_len(kv[1]))
         ref_aln = aligned[ref_id]
     return ref_id, ref_aln
 

@@ -69,7 +69,7 @@ def parse_pattern(fname):
         line = infile.readline()
         _idx, site_ln = map(str.strip, line.split(':'))
         if not site_ln:
-            logging.warn("Empty pattern file: %s", fname)
+            logging.warning("Empty pattern file: %s", fname)
             return []
         sites = site_ln.split(',')
         # Convert to number...

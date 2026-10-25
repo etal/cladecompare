@@ -55,22 +55,21 @@ Either can move which columns reach the pattern, the logos and the PyMOL script.
 The raw values are not purely local either: pseudocounts come from amino-acid frequencies over the whole alignment (`combined_frequencies` in `cladecomparelib/shared.py` in paired mode, `alnutils.aa_frequencies` in single mode), so a change to which sequences or residues enter those frequencies moves the p-value of every column.
 Judge such a change on the whole output, pattern included, never on the column you were looking at.
 
-## The library does not currently import
+## The program runs on Python 3; `tests/data/py27/` is the check
 
-`cladecomparelib/core.py` uses two Biopython APIs that no longer exist:
+The library and the three scripts run on Python 3.12 with current Biopython; they no longer run on Python 2.
+The port removed `Bio.Alphabet` and `Bio._py3k`, which Biopython dropped in 1.78 and 1.77, and otherwise changed only what Python 3 and current Biopython require, so it moves no number by design.
 
-```python
-from Bio.Alphabet import generic_protein   # Bio.Alphabet removed in 1.78
-from Bio._py3k import StringIO             # removed in 1.76
-```
-
-`generic_protein` is then passed at four call sites, in `hmm_align_and_read`, `cma_blocks` (twice) and `combine_alignments`.
-Because the failure is at import time, *nothing* in the package runs on a current Biopython.
-
-A port nevertheless has a reference to be checked against.
 `tests/data/py27/` holds the outputs of the unmodified code, captured under Python 2.7 and Biopython 1.76 from commit `e265b1f`, for the command line, `cladereport.py` and the web application.
-`tests/data/README.md` records the environment and how to regenerate it, the inputs, and the defects the reference preserves on purpose.
-A ported program should reproduce those outputs, or differ from them only by a documented, deliberate change; the statistics are exactly the kind of output where a wrong answer looks entirely plausible.
+`tests/data/README.md` records the environment and how to regenerate it, the inputs, the defects the reference preserves on purpose, and how to read a mismatch.
+A change should reproduce those outputs, or differ from them only by a documented, deliberate change; the statistics are exactly the kind of output where a wrong answer looks entirely plausible.
+
+With HMMER 3.0 and MUSCLE 3.8.1551, under Python 3.12 with the ported biofrills, the ported code reproduces the `.out`, `.pttrn`, `.html` and PyMOL files of every command-line case and the response of every successful web submission byte for byte, both with Biopython 1.83, SciPy 1.11.4 and bottle 0.12.25 and with Biopython 1.88, SciPy 1.18.1 and bottle 0.13.4, apart from the differences below, which come from SciPy, from the earlier phospho fix, or from the form of logs and tracebacks.
+Under both SciPy versions, 13 small p-values of `pair.hypg` differ from the reference in the sixth significant digit; the values from both newer releases agree with exact rational arithmetic, and the reference values, computed with SciPy 1.2.1, do not.
+Under both SciPy versions `pair.hypg.w` yields no finite p-value, on which `cladereport.py` then fails.
+The `-s phospho` cases now complete where the reference records a failure, because of the earlier fix to the phospho sample size, and their unweighted outputs equal the legacy reference cases.
+Standard error and logs differ in the line numbers that the log format prints, and tracebacks take Python 3's own form; `tests/data/README.md` lists these and the few differences that come from the bottle and Biopython versions.
+biofrills `ff11246` declares `biopython>=1.86`, so the run with Biopython 1.83 installed biofrills without its dependencies; CladeCompare's own code needs no Biopython newer than 1.83.
 
 ## biofrills is a dependency, pinned to a git commit until 0.4.0
 
@@ -92,7 +91,7 @@ Weighted amino-acid frequencies of a single alignment differ by at most 2 units 
 `chisqprob` differs in 10 of 4,001 sampled values at 19 degrees of freedom, by at most 2 units in the last place; each difference traces to `math.exp`, which rounds differently on the reference's x86_64 Python 2.7 and on arm64 Python 3.
 The entropies and weights that scale the letters of a pair logo, which WebLogo computes (version 3.6 in the reference environment, 3.9 here), differ by at most 8 units in the last place, and the reference does not record the logos' contents.
 The `.out` file prints p-values to six significant digits, so differences of this size should change a printed value only where it lies on a rounding boundary.
-That expectation is not yet confirmed end to end: no `.out` file has been produced with the ported biofrills, because CladeCompare itself does not yet run on Python 3.
+On the reference cases none does: with `ff11246`, every `.out` file of the reference that does not call SciPy's `hypergeom` is reproduced exactly.
 Later biofrills releases can move numbers here, for instance through changes to consensus gap decisions or to frequency summation, so judge a biofrills upgrade against the reference outputs like any other change.
 
 biofrills implements `chisqprob` itself, adapted from Cephes to avoid a SciPy dependency, and SciPy removed its own `chisqprob` in 1.0, so `scipy.stats.chi2.sf` is the nearest SciPy function.
@@ -115,10 +114,8 @@ No test compares the program against it yet.
 
 ## Conventions
 
-- The code predates this project's current Python baseline; it is 2013-era
-  Python 2/3-straddling style. Modernize deliberately and in separate commits
-  from behaviour changes, so a numerical difference is never buried in a
-  reformat.
+- The code predates this project's current Python baseline; it is 2013-era style, ported to Python 3 but not otherwise modernized.
+  Modernize deliberately and in separate commits from behavior changes, so a numerical difference is never buried in a reformat.
 - Output files under `test/` are generated, gitignored, and should stay so.
   The files under `tests/data/py27/` are generated too but committed deliberately, as the reference; regenerate them with `tests/data/capture_py27.py` rather than editing them.
 - Maintainer planning for this repository lives in a local beads store that is excluded from git and is not present in a clone.

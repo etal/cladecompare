@@ -1,4 +1,4 @@
-"""Compare two alignments via CHAIN's ball-in-urn stats.
+r"""Compare two alignments via CHAIN's ball-in-urn stats.
 
 CHAIN formula:
 

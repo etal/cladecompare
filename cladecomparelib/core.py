@@ -406,10 +406,6 @@ def combine_alignments(fg_aln, bg_aln):
 
     full_aln = AlignIO.read(StringIO(output), 'fasta')
     full_aln = MultipleSeqAlignment(alnutils.remove_empty_cols(full_aln))
-    # Save a copy
-    # ENH: choose a reasonable name
-    AlignIO.write(full_aln, '_cc_combined.seq', 'fasta')
-    logging.info("Wrote _cc_combined.seq")
     return full_aln
 
 

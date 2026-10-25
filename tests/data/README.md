@@ -146,6 +146,7 @@ A port that fixes one of them differs from the reference by design, and the test
   The failing submissions also leave the uploads and whatever other temporary files the request had already created, because the exception ends the request before the cleanup that `stdout` records for the successful ones; `web.pair.hypg` fails before the output files are opened, so it leaves only its two uploads.
 - `single.hypg` cases record the fraction of the column that matches the consensus, not a hypergeometric probability.
 - `unequal.gtest` writes `_cc_combined.seq` into the working directory.
+  The code no longer writes that file, so this case differs from the reference by design: `_cc_combined.seq` is absent from the written files, and the log line `Wrote _cc_combined.seq` is gone.
 
 ## Interpreting a mismatch
 
@@ -161,7 +162,7 @@ A port that fixes one of them differs from the reference by design, and the test
 - **biofrills version.**
   The ported CladeCompare runs against the ported biofrills rather than `36684bb`.
   On the alignments that the biofrills section of `AGENTS.md` lists as measured, the values biofrills returns to CladeCompare are identical or differ by at most a few units in the last place.
-  End to end, with `ff11246`, every output file of every command-line case and the response of every successful web submission reproduce this reference, including `multi.gtest` and the cases that align with hmmalign and MUSCLE, under HMMER 3.0 and 3.4 alike, apart from the SciPy differences above, the deliberate change to `-s phospho` under "Recorded defects", and the differences listed under "Python 3, bottle and Biopython" below.
+  End to end, with `ff11246`, every output file of every command-line case and the response of every successful web submission reproduce this reference, including `multi.gtest` and the cases that align with hmmalign and MUSCLE, under HMMER 3.0 and 3.4 alike, apart from the SciPy differences above, the deliberate changes to `-s phospho` and `unequal.gtest` under "Recorded defects", and the differences listed under "Python 3, bottle and Biopython" below.
 - **Raw p-values.**
   The `.out` files hold unadjusted p-values, and their stars compare those raw values with alpha.
   The Benjamini-Hochberg procedure, limited to the 50 most significant sites, only selects the sites in the `.pttrn` file, which also name the pair logos and the PyMOL script.

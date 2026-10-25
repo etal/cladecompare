@@ -255,7 +255,8 @@ def call_quiet(*args):
     is not found, a RuntimeError naming it is raised as well.
     """
     try:
-        proc = subprocess.run(args, capture_output=True, text=True)
+        proc = subprocess.run(args, capture_output=True,
+                              encoding='utf-8', errors='replace')
     except FileNotFoundError as exc:
         raise RuntimeError("Subprocess command failed:\n$ %s\n\n%s\n"
                            "Is %s installed and on the PATH?"

@@ -55,6 +55,11 @@ finds MUSCLE 4 or later.
 .. _HMMER3: http://hmmer.org/
 .. _MAPGAPS: http://mapgaps.igs.umaryland.edu/
 
+The pixi_ environment described under Development below provides HMMER and
+MUSCLE 3.8.1551 from Bioconda, together with CladeCompare itself.
+
+.. _pixi: https://pixi.sh/
+
 
 Testing
 ~~~~~~~
@@ -70,8 +75,9 @@ your path::
 The program will run in several modes and generate output files. View the
 ``.html`` files in your web browser to see what happened. The targets depend
 only on the input files, so run ``make clean`` first to repeat the runs after
-changing the program. These runs check only that the program completes, not
-that its results are correct.
+changing the program. These runs check only that the program completes; the
+tests described under Development below compare its output with reference
+results.
 
 
 Usage
@@ -222,4 +228,43 @@ Statistical tests ("-s" options) for column comparison:
 
 .. _CHAIN: http://chain.igs.umaryland.edu/
 .. _INTREPID: http://bioinformatics.oxfordjournals.org/content/24/21/2445.full
+
+
+Development
+-----------
+
+Two development workflows are supported from the same ``pyproject.toml``, and
+both lock files are committed. Both install CladeCompare in editable mode with
+the tools in the ``dev`` dependency group, pytest and ruff; ruff has no project
+configuration yet, and no task runs it. Both also need a ``git`` executable,
+because BioFrills is installed from its repository until it is released on
+PyPI.
+
+uv_ takes the Python packages from PyPI, apart from BioFrills, at the versions
+recorded in ``uv.lock``::
+
+    uv sync
+    uv run pytest
+
+pixi_ takes Python and most Python packages from conda-forge, and also
+installs HMMER and MUSCLE 3.8.1551 from Bioconda, at the versions recorded in
+``pixi.lock``. The ``default`` environment uses the latest Python that
+conda-forge provides, and ``py312`` the oldest supported one::
+
+    pixi run test
+    pixi run -e py312 test
+    pixi run test-integration
+
+The tests marked ``integration`` run ``cladecompare`` and ``cladereport`` on
+the inputs in ``tests/data/inputs``, aligning them with ``hmmalign`` or
+``muscle``, compare the text files they write with the reference outputs in
+``tests/data/py27``, and check that the pair-logo PDFs embed the bundled font.
+Each is skipped unless the program it needs is on ``PATH``; ``pixi run
+test-integration`` runs them alone and fails instead of skipping when a
+program is missing.
+
+The reference outputs come from the Python 2 code base. On macOS, the
+``py27-oracle`` environment reproduces the environment that captured them,
+and ``pixi run -e py27-oracle capture`` regenerates them, as described in
+``tests/data/README.md``.
 

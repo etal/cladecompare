@@ -35,29 +35,24 @@ The current code does not need these particular releases; the external-aligner s
 ## Regenerating
 
 conda-forge publishes no Python 2.7 build for osx-arm64, but its osx-64 build runs under Rosetta, and bioconda has osx-64 builds of both tools.
-The versions below are those of the table above:
+The `py27-oracle` environment in `pyproject.toml` holds the versions of the table above, and pixi installs it as `pixi.lock` records it.
+It differs from the environment of the original capture in two respects: that environment installed WebLogo 3.6.0 from PyPI with pip, while pixi takes the same release from bioconda, because pixi resolves PyPI packages with uv, which cannot use Python 2.7; and it names setuptools explicitly, whose `pkg_resources` the capture uses to read the package versions and which the original environment already contained.
 
-```sh
-CONDA_SUBDIR=osx-64 conda create -p /tmp/cc-py27 --override-channels \
-    -c conda-forge -c bioconda \
-    python=2.7.15 biopython=1.76 numpy=1.16.5 scipy=1.2.1 reportlab=3.5.42 \
-    bottle=0.12.18 pillow=6.2.1 hmmer=3.0 muscle=3.8.1551
-/tmp/cc-py27/bin/pip install weblogo==3.6.0
-```
-
-The reference was captured on macOS only.
-On Linux, the same commands without `CONDA_SUBDIR` should give a native linux-64 environment, but that has not been tested; see also the font caveat under "Log format" below.
+The reference was captured on macOS only, and the environment is defined for osx-64 only.
 The capture extracts commits with `git archive`, so this repository must contain `e265b1f` and `44c81cc`, and the biofrills repository `36684bb`; a clone of depth 1 of either contains none of them.
 Then, with the biofrills repository beside this one (or named by `$BIOFRILLS_REPO`):
 
 ```sh
 python3 tests/data/make_inputs.py          # optional: rewrites inputs/
-/tmp/cc-py27/bin/python tests/data/capture_py27.py
+pixi run -e py27-oracle capture
 ```
+
+On the host of the original capture, this rewrites every file under `py27/` byte for byte, `versions.json` included.
 
 `make_inputs.py` needs Python 3.6 or later.
 It copies the test files from `test/`, derives the aligned FASTA inputs from them, and downloads two structures from the RCSB Protein Data Bank; rerunning it reproduces the committed files byte for byte unless the RCSB has since remediated those entries.
 `capture_py27.py` puts the interpreter's own `bin/` first on `PATH`, so that `hmmalign` and `muscle` come from the same environment, checks both tool versions, and then deletes and rewrites `py27/`.
+A capture that fails after that point leaves `py27/` deleted or incomplete; `git checkout -- tests/data/py27` restores the committed files, and `git clean -fd tests/data/py27` removes any that the capture had added.
 It passes `PYTHONHASHSEED` through to every command and records it in `versions.json`; the committed reference was captured with it unset.
 Two consecutive captures produce identical files, and captures with `PYTHONHASHSEED` set to 1, 2 and 3 differ from the committed reference only in that record.
 

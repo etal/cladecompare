@@ -48,6 +48,12 @@ cladeweb = "cladecomparelib.cladeweb:main"
 [project.urls]
 homepage = "https://github.com/etal/cladecompare"
 
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "ruff>=0.17.2",
+]
+
 # Named explicitly: automatic discovery would also declare cladecomparelib.data
 # a package.
 [tool.setuptools]
@@ -59,10 +65,81 @@ cladecomparelib = ["data/DejaVuSansMono-Bold.ttf", "data/LICENSE.DejaVu"]
 [tool.setuptools.dynamic]
 version = {attr = "cladecomparelib.__version__"}
 
-# biofrills comes from its repository at a pinned commit, which a lock file
-# then records; moving to a newer commit is a deliberate change of the pin,
+[tool.pytest.ini_options]
+minversion = "9.0.2"
+testpaths = ["tests"]
+markers = [
+    "integration: runs the external programs that CladeCompare drives",
+]
+
+# biofrills comes from its repository at a pinned commit, which the lock files
+# then record; moving to a newer commit is a deliberate change of the pin,
 # to be judged against the reference outputs in tests/data, and the pip
-# command in README.rst names the same commit. Installing needs a git
-# executable. Delete this table when biofrills 0.4.0 is on PyPI.
+# command in README.rst names the same commit. pixi reads this table too, so
+# it serves both workflows, and both need a git executable to install. Delete
+# it when biofrills 0.4.0 is on PyPI.
 [tool.uv.sources]
 biofrills = {git = "https://github.com/etal/biofrills.git", rev = "ff11246a93e14a35723e6f04a3952c88c0cbf29c"}
+
+[tool.pixi.workspace]
+channels = ["conda-forge", "bioconda"]
+platforms = ["osx-arm64", "linux-64", "osx-64"]
+
+# Version constraints live in [project] and [dependency-groups]. The Python
+# packages are named here only so that conda-forge supplies them rather than
+# PyPI; WebLogo has no conda entry, because no conda build reaches the floor
+# that biofrills sets, so it comes from PyPI. The programs are the reason for
+# this workspace: HMMER for --hmm and --pdb, and MUSCLE 3 for inputs of unequal
+# width, since MUSCLE 5 has no profile-profile mode.
+[tool.pixi.dependencies]
+biopython = "*"
+bottle = "*"
+reportlab = "*"
+scipy = "*"
+hmmer = "*"
+muscle = "3.8.*"
+
+[tool.pixi.pypi-dependencies]
+cladecompare = {path = ".", editable = true}
+
+[tool.pixi.feature.dev]
+# Keeps osx-64, which only py27-oracle needs, out of the Python 3 environments.
+platforms = ["osx-arm64", "linux-64"]
+
+[tool.pixi.feature.dev.dependencies]
+pytest = "*"
+ruff = "*"
+
+[tool.pixi.feature.dev.tasks]
+test = "pytest"
+test-integration = {cmd = "pytest -m integration", env = {CLADECOMPARE_REQUIRE_TOOLS = "1"}}
+
+# The oldest supported Python; keep in step with requires-python.
+[tool.pixi.feature.py312.dependencies]
+python = "3.12.*"
+
+# The environment that captured tests/data/py27; tests/data/README.md records
+# its versions and how it differs from the original capture environment.
+[tool.pixi.feature.py27-oracle]
+platforms = ["osx-64"]
+
+[tool.pixi.feature.py27-oracle.dependencies]
+python = "2.7.15.*"
+biopython = "1.76.*"
+numpy = "1.16.5.*"
+scipy = "1.2.1.*"
+reportlab = "3.5.42.*"
+bottle = "0.12.18.*"
+pillow = "6.2.1.*"
+weblogo = "3.6.0.*"
+hmmer = "3.0.*"
+muscle = "3.8.1551.*"
+setuptools = "*"
+
+[tool.pixi.feature.py27-oracle.tasks]
+capture = "python tests/data/capture_py27.py"
+
+[tool.pixi.environments]
+default = {features = ["dev"]}
+py312 = {features = ["dev", "py312"]}
+py27-oracle = {features = ["py27-oracle"], no-default-feature = true}

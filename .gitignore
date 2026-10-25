@@ -8,6 +8,9 @@ dist
 __pycache__/
 *.egg-info/
 .venv/
+.pixi/
+.pytest_cache/
+.ruff_cache/
 
 # Compiled Python and Cython files
 *.pyc

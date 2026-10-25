@@ -92,11 +92,11 @@ CladeCompare calls six names from four pure-Python [biofrills](https://github.co
 The latest release on PyPI, 0.3.1 from 2013, cannot be installed on a current Python, because its `setup.py` always builds a Cython extension that no longer compiles.
 The biofrills development branch has since removed that extension and been ported to Python 3: it builds as a pure-Python `py3-none-any` wheel for Python 3.12 and later, and all six names import from it on Python 3.12, 3.14 and 3.15.
 The dependency is therefore `biofrills[logo]`, where the `logo` extra supplies WebLogo, which `pairlogo` reaches through `logoutils`.
-Until 0.4.0 is published, `[tool.uv.sources]` takes biofrills from its GitHub repository at a pinned commit, starting from `ff11246`, the commit measured below, so that a lock file records exactly which biofrills a result came from; moving to a newer commit is a deliberate change of that pin.
+Until 0.4.0 is published, `[tool.uv.sources]` takes biofrills from its GitHub repository at a pinned commit, starting from `ff11246`, the commit measured below, so that `uv.lock` and `pixi.lock` record exactly which biofrills a result came from; moving to a newer commit is a deliberate change of that pin.
 A path source to a checkout beside this one was the alternative, but the lock then records only the path, and the checkout may hold unpushed or uncommitted changes.
 The pinned commit's version, `0.4.0.dev0`, sorts below `0.4` under PEP 440, so the floor is declared as `>=0.4.0.dev0`: with `>=0.4`, no installer that checks the floor could install the built wheel before 0.4.0 exists.
 Raise the floor to `0.4.0` with that release.
-uv installs the commit named in `[tool.uv.sources]` without checking it against the floor, and a lock file does not record the floor, so the floor does not check the pin.
+uv installs the commit named in `[tool.uv.sources]` without checking it against the floor, and `uv.lock` does not record the floor, so the floor does not check the pin.
 pip does not read that table; `README.rst` gives the pip route, which installs the pinned commit first.
 Vendoring the four modules was the alternative while the extension blocked installation, and it no longer offers anything.
 
@@ -113,17 +113,21 @@ Later biofrills releases can move numbers here, for instance through changes to 
 biofrills implements `chisqprob` itself, adapted from Cephes to avoid a SciPy dependency, and SciPy removed its own `chisqprob` in 1.0, so `scipy.stats.chi2.sf` is the nearest SciPy function.
 Do not substitute one for the other in passing: at the 19 degrees of freedom the G-test uses, they differ by up to 4.0e-8 relative, which reflects the convergence tolerance `MACHEP = 1e-7` in biofrills, and which can change the sixth significant digit of a printed p-value and the ranking that the Benjamini–Hochberg selection depends on.
 
-## Packaging
+## Packaging and the two development workflows
 
 `pyproject.toml` is the only build configuration, with setuptools as the backend.
 The floors of biopython, bottle, reportlab and scipy are the versions Ubuntu 26.04 ships; biopython's floor is also the one that biofrills `ff11246` declares, although CladeCompare's own code needs no Biopython newer than 1.83.
 The pair-logo font, DejaVu Sans Mono Bold 2.33, ships as package data in `cladecomparelib/data/` together with its license, which is the reason the license expression names `Bitstream-Vera`.
 `pairlogo` loads that copy unconditionally; it consults no system font directory and has no fallback font, so every installation draws the logos with the same font and line height.
 
+uv installs the Python packages from PyPI as `uv.lock` records them, apart from biofrills, which comes from GitHub.
+pixi installs them from conda-forge as `pixi.lock` records them, apart from biofrills, WebLogo and the three small packages that WebLogo brings in, which come from GitHub and PyPI, and adds HMMER 3.4 and MUSCLE 3.8.1551 from Bioconda; its `test-integration` task fails rather than skips when either program is missing.
+The `py27-oracle` pixi environment, for osx-64 only, holds the versions that captured `tests/data/py27/`; `tests/data/README.md` describes how it regenerates them.
+
 ## `test/` is a smoke harness; `tests/data/` holds the reference
 
 `cd test && make` runs the program in eight configurations — four statistics, paired and single-alignment — and writes `.out`, `.pttrn` and `.html` files for a human to look at.
-It calls the `cladecompare` and `cladereport` commands, so they must be on the PATH, as they are after installation.
+It calls the `cladecompare` and `cladereport` commands, so they must be on the PATH, as they are under `uv run` or `pixi run`.
 Its targets depend only on the input files, so `make clean` must precede a repeated run after the program changes.
 **There are no assertions.**
 A clean `make` means the program ran to completion, and says nothing about whether the numbers are right.
@@ -133,14 +137,14 @@ The fixtures are real alignments from Talevich, Mirza & Kannan (2011), *BMC
 Evolutionary Biology* 11:321.
 
 `tests/data/` is the committed counterpart: the reference outputs described above, covering the eight Makefile targets and further command-line and web cases.
-No test compares the program against it yet.
+`tests/test_integration.py` replays the command-line cases that run hmmalign or MUSCLE (`hmm.pair.gtest`, `hmm.single.gtest`, `pdb.1HCK.gtest` and `unequal.gtest`) with the installed commands, compares the text files they write with the reference, and checks that their pair-logo PDFs have the recorded names and embed the bundled font; no test yet covers the other cases.
 
 ## Conventions
 
 - The code predates this project's current Python baseline; it is 2013-era style, ported to Python 3 but not otherwise modernized.
   Modernize deliberately and in separate commits from behavior changes, so a numerical difference is never buried in a reformat.
 - Output files under `test/` are generated, gitignored, and should stay so.
-  The files under `tests/data/py27/` are generated too but committed deliberately, as the reference; regenerate them with `tests/data/capture_py27.py` rather than editing them.
+  The files under `tests/data/py27/` are generated too but committed deliberately, as the reference; regenerate them with `tests/data/capture_py27.py`, for instance through `pixi run -e py27-oracle capture`, rather than editing them.
 - Maintainer planning for this repository lives in a local beads store that is excluded from git and is not present in a clone.
   If you have `bd`, run `bd prime --mcp`, which renders each memory as a one-line summary because the full text printed by plain `bd prime` can exceed an agent's tool-output limits; `bd memories <keyword>` searches the full text, and `bd recall <key>` prints one memory in full.
   If you do not have `bd`, nothing here depends on it.

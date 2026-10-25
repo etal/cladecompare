@@ -72,22 +72,28 @@ A port nevertheless has a reference to be checked against.
 `tests/data/README.md` records the environment and how to regenerate it, the inputs, and the defects the reference preserves on purpose.
 A ported program should reproduce those outputs, or differ from them only by a documented, deliberate change; the statistics are exactly the kind of output where a wrong answer looks entirely plausible.
 
-## biofrills is not the blocker it appears to be
+## biofrills is a dependency, taken from a sibling checkout until 0.4.0
 
-Every statistics module imports [biofrills](https://github.com/etal/biofrills),
-last touched in 2013. It ships a Cython extension, `biofrills/cpairutils.pyx`,
-which fails to build on Python 3.12 and later — `PyCode_New`'s signature changed
-and thread-state fields it uses were removed — and because that repository's
-`setup.py` adds the extension to `ext_modules` unconditionally, `pip install
-biofrills` fails outright. The surface reading is that a Cython port blocks this
-project.
+CladeCompare calls six names from four pure-Python [biofrills](https://github.com/etal/biofrills) modules, in `core.py`, `shared.py`, `gtest.py` and `pairlogo.py`: `alnutils.sequence_weights`, `alnutils.aa_frequencies`, `alnutils.remove_empty_cols`, `consensus.consensus`, `logoutils.aln2logodata` and `stats.chisq.chisqprob`.
+The latest release on PyPI, 0.3.1 from 2013, cannot be installed on a current Python, because its `setup.py` always builds a Cython extension that no longer compiles.
+The biofrills development branch has since removed that extension and been ported to Python 3: it builds as a pure-Python `py3-none-any` wheel for Python 3.12 and later, and all six names import from it on Python 3.12, 3.14 and 3.15.
+The dependency to declare is therefore `biofrills[logo]>=0.4`, where the `logo` extra supplies WebLogo, which `pairlogo` reaches through `logoutils`.
+Until 0.4.0 is published, a development environment takes biofrills from a checkout beside this one, as `tests/data/capture_py27.py` already does for the reference.
+The checkout's version, `0.4.0.dev0`, sorts below `0.4` under PEP 440; uv nevertheless resolves the floor to the checkout when `[tool.uv.sources]` names it as a path source, while pip, which does not read that table, cannot satisfy the floor from the checkout.
+Vendoring the four modules was the alternative while the extension blocked installation, and it no longer offers anything.
 
-It does not. Measured: this project's entire biofrills surface is four
-pure-Python modules — `alnutils`, `consensus`, `logoutils`, and
-`stats.chisq.chisqprob` — and the extension is imported in exactly one place,
-`biofrills/pairutils.py`, inside a `try`/`except ImportError` guarding an
-optional speedup, in a module nothing here reaches. The requirement is "import
-four pure-Python modules", not "port Cython".
+Moving from the biofrills commit behind the reference (`36684bb`) to the ported one (`ff11246`, version `0.4.0.dev0`) leaves the values that biofrills returns to CladeCompare identical or within a few units in the last place.
+This was measured on the committed alignments as the program passes them to biofrills, with its weights and gap threshold, under Python 3.12, 3.14 and 3.15: the `scttlre-domain` and `cdc2-domain` pair in both its `.cma` and `.aln.fasta` forms after `clean_alignments`, and the single alignments `cdc2-domain` (both forms), `cdc2-a`, `cdc2-b` and `cdc2-trimmed`.
+Consensus sequences, sequence weights, the output of `remove_empty_cols`, the pair-logo letter counts and the combined amino-acid frequencies of a pair are identical.
+Weighted amino-acid frequencies of a single alignment differ by at most 2 units in the last place; the counts code is unchanged apart from `iteritems()` becoming `items()`, so the likely cause is the order in which the normalizing sum is accumulated, together with the compensated `sum()` of Python 3.12, though this was not isolated.
+`chisqprob` differs in 10 of 4,001 sampled values at 19 degrees of freedom, by at most 2 units in the last place; each difference traces to `math.exp`, which rounds differently on the reference's x86_64 Python 2.7 and on arm64 Python 3.
+The entropies and weights that scale the letters of a pair logo, which WebLogo computes (version 3.6 in the reference environment, 3.9 here), differ by at most 8 units in the last place, and the reference does not record the logos' contents.
+The `.out` file prints p-values to six significant digits, so differences of this size should change a printed value only where it lies on a rounding boundary.
+That expectation is not yet confirmed end to end: no `.out` file has been produced with the ported biofrills, because CladeCompare itself does not yet run on Python 3.
+Later biofrills releases can move numbers here, for instance through changes to consensus gap decisions or to frequency summation, so judge a biofrills upgrade against the reference outputs like any other change.
+
+biofrills implements `chisqprob` itself, adapted from Cephes to avoid a SciPy dependency, and SciPy removed its own `chisqprob` in 1.0, so `scipy.stats.chi2.sf` is the nearest SciPy function.
+Do not substitute one for the other in passing: at the 19 degrees of freedom the G-test uses, they differ by up to 4.0e-8 relative, which reflects the convergence tolerance `MACHEP = 1e-7` in biofrills, and which can change the sixth significant digit of a printed p-value and the ranking that the Benjamini–Hochberg selection depends on.
 
 ## `test/` is a smoke harness; `tests/data/` holds the reference
 

@@ -155,6 +155,11 @@ A port that fixes one of them differs from the reference by design, and the test
 - **Consensus ties.**
   The consensus residue of a tied column comes from Python 2 dictionary order in biofrills.
   Every case was also captured with `PYTHONHASHSEED` set to 1, 2 and 3, with identical outputs each time, so tie-breaking does not affect these inputs; a different consensus letter on other data may originate in biofrills' own tie-breaking rule rather than in CladeCompare.
+  The ported biofrills breaks ties by an explicit rule instead, and gives the same consensus as `36684bb` on the alignments that the biofrills section of `AGENTS.md` lists as measured.
+- **biofrills version.**
+  A ported CladeCompare runs against the ported biofrills rather than `36684bb`.
+  On the alignments that the biofrills section of `AGENTS.md` lists as measured, the values biofrills returns to CladeCompare are identical or differ by at most a few units in the last place.
+  Not compared: the pairs that `multi.gtest` forms, `scttlre-domain` as a single alignment, and the alignments that hmmalign and MUSCLE produce during a run.
 - **Raw p-values.**
   The `.out` files hold unadjusted p-values, and their stars compare those raw values with alpha.
   The Benjamini-Hochberg procedure, limited to the 50 most significant sites, only selects the sites in the `.pttrn` file, which also name the pair logos and the PyMOL script.

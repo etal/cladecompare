@@ -7,6 +7,8 @@ load the script in PyMOL and the pretty happens.
 
 import os.path
 
+from . import InputError
+
 # ---------------------------------------------------------
 # Mapping pattern to PDB sequence alignment
 
@@ -187,31 +189,38 @@ def pdbid_from_fname(fname, upper=False, default_chain=None):
         1abc_A.pdb
         1abc_chain_A.pdb (?)
 
-    will all return ('1ABC', None) or ('1ABC', 'A').
+    will all return ('1ABC', None) or ('1ABC', 'A'). Any other name raises
+    InputError.
     """
     fn = os.path.basename(fname)
     if fn.endswith(".ent"):
-        assert len(fn) == 11 and fn.startswith("pdb")
+        recognized = len(fn) == 11 and fn.startswith("pdb")
         pdbid = fn[3:-4]
         chnid = fn[3:-4].upper()
-    else:
-        assert fn.endswith(".pdb")
+    elif fn.endswith(".pdb"):
         if fn.startswith(("01_", "00_")):
             fn = fn[3:]
         pdbid = fn[:4]
         if len(fn) == 8:
-            assert "_" not in fn
+            recognized = "_" not in fn
             chnid = default_chain
         elif len(fn) == 9:
-            assert "_" not in fn
+            recognized = "_" not in fn
             chnid = fn[4].upper()
         elif len(fn) == 10:
-            assert fn[4] == "_"
+            recognized = fn[4] == "_"
             chnid = fn[5].upper()
         else:
-            assert "chain" in fn
+            recognized = "chain" in fn
             # TODO - where's the chain ID?
             chnid = default_chain
+    else:
+        recognized = False
+    if not recognized:
+        raise InputError(
+            "Cannot read a PDB ID from the file name %s; name the file as, "
+            "for example, 1abc.pdb, 1abcA.pdb, 1abc_A.pdb or pdb1abc.ent" % fname
+        )
     return (pdbid.upper() if upper else pdbid, chnid)
 
 

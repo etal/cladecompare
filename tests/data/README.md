@@ -137,6 +137,7 @@ A port that fixes one of them differs from the reference by design, and the test
 - `web.pair.hypg` returns status 500 with `KeyError`: the web application's strategy table lacks hypg.
   The form and the web application now take their strategies from the same registry as the command line, so this case differs from the reference by design: it returns status 200, and its report equals `cli/pair.hypg/pair.hypg.html`, with the same SciPy substitutions, apart from the title.
 - `web.pdb.1HCK.gtest` returns status 500 with `AssertionError` from `pmlscript.pdbid_from_fname`: the uploaded structure is saved under a temporary name without the `.pdb` suffix that the function asserts.
+  The function now raises `InputError` for a file name it cannot read, so that the check also runs under `python -O`, and this case fails with `InputError` instead, still with status 500.
 - Every paired web submission leaves files in the temporary directory (`leftover_temp_files`, between 2 and 17 per case), as does the failing `web.single.phospho`; the successful single-alignment submissions leave none.
   For the successful submissions, those files are exactly the pair-logo PDFs named in the log, which are written beside the temporary pattern file and never served.
   The failing submissions also leave the uploads and whatever other temporary files the request had already created, because the exception ends the request before the cleanup that `stdout` records for the successful ones; `web.pair.hypg` fails before the output files are opened, so it leaves only its two uploads.

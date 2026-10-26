@@ -269,6 +269,32 @@ def test_hypg_weighted(tmp_path):
     assert written == {case + suffix for suffix in [".out", ".pttrn", ".html"]}
 
 
+def test_input_error_prints_a_message_without_traceback(tmp_path):
+    _workdir, written, [result], _tmpdir = run_commands(
+        [["cladecompare.py", "cdc2-domain.aln.fasta", "cdc2-domain.aln.fasta"]],
+        tmp_path,
+    )
+    assert result.returncode == 1
+    assert result.stderr.endswith(
+        "cladecompare: error: Background set is a subset of the foreground. "
+        "To fix this, use a background containing sequences not in the "
+        "foreground.\n"
+    )
+    assert "Traceback" not in result.stderr
+    assert written == set()
+
+
+@pytest.mark.parametrize("alpha", ["1.5", "-0.1", "nan", "x"])
+def test_alpha_outside_0_1_is_a_usage_error(alpha, tmp_path):
+    _workdir, _written, [result], _tmpdir = run_commands(
+        [["cladecompare.py", "cdc2-a.aln.fasta", "cdc2-b.aln.fasta", "-a", alpha]],
+        tmp_path,
+    )
+    assert result.returncode == 2
+    assert "argument -a/--alpha" in result.stderr
+    assert "Traceback" not in result.stderr
+
+
 RUN_GAPS = '''\
 #!{python}
 """Stand-in for MAPGAPS run_gaps: run_gaps PROFILE FASTA.

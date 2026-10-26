@@ -5,6 +5,13 @@ import logging
 __version__ = "0.3.0.dev0"
 
 
+class InputError(ValueError):
+    """An input file or option that CladeCompare cannot use.
+
+    The cladecompare command prints the message without a traceback.
+    """
+
+
 def configure_logging(quiet=False):
     """Log to standard error for the command-line programs.
 

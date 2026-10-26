@@ -18,7 +18,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from biofrills import alnutils, consensus
 
-from . import gtest, hypg, jsd, pairlogo, phospho, pmlscript, urn
+from . import InputError, gtest, hypg, jsd, pairlogo, phospho, pmlscript, urn
 from .shared import combined_frequencies
 
 logger = logging.getLogger(__name__)
@@ -43,9 +43,9 @@ DEFAULT_STRATEGY = "gtest"
 
 def process_args(args):
     """Main."""
-    if args.mapgaps or args.hmm:
+    if (args.mapgaps or args.hmm) and args.format != "fasta":
         # run_gaps requires FASTA input
-        assert args.format == "fasta", "Input sequence format must be FASTA."
+        raise InputError("Sequences to align with a profile must be in FASTA format.")
 
     all_alns = []
     for alnfname in [args.foreground] + args.background:
@@ -378,7 +378,7 @@ def cma_records(cma_fname):
                 seq_line = next(lines, "").strip()
                 match = CMA_SEQ_LINE.match(seq_line)
                 if match is None:
-                    raise ValueError(
+                    raise InputError(
                         "Unparseable CMA sequence line for "
                         "record %s in %s: %s" % (acc, cma_fname, seq_line)
                     )
@@ -391,7 +391,7 @@ def cma_blocks(cma_fname):
 
     This removes inserts relative to the consensus sequence, and the flanking
     residues that some records carry around the aligned sequence. A sequence
-    line that does not have the expected shape raises ValueError.
+    line that does not have the expected shape raises InputError.
 
     Return a Biopython MultipleSeqAlignment.
     """
@@ -409,8 +409,6 @@ def cma_blocks(cma_fname):
 
 def read_aln(fname, format):
     """Read a sequence alignment."""
-    if format:
-        assert format.islower()
     if fname.endswith(".cma") or format == "cma":
         return cma_blocks(fname)
     else:
@@ -477,9 +475,9 @@ def clean_alignments(fg_aln, bg_aln):
     - Remove all-gap columns from the full alignment
     """
     if not len(fg_aln):
-        raise ValueError("Foreground set is empty")
+        raise InputError("Foreground set is empty")
     if not len(bg_aln):
-        raise ValueError("Background set is empty")
+        raise InputError("Background set is empty")
 
     # Remove FG seqs from BG -- by equal sequence IDs, here
     killme = []
@@ -497,7 +495,7 @@ def clean_alignments(fg_aln, bg_aln):
             del bg_aln._records[idx]
 
     if not len(bg_aln):
-        raise ValueError(
+        raise InputError(
             "Background set is a subset of the foreground. "
             "To fix this, use a background containing sequences "
             "not in the foreground."
@@ -524,6 +522,12 @@ def clean_alignments(fg_aln, bg_aln):
 
     fg_aln._records = purge_duplicates(fg_aln, "foreground")
     bg_aln._records = purge_duplicates(bg_aln, "background")
+    if not len(bg_aln):
+        raise InputError(
+            "Every background sequence is identical to a foreground sequence. "
+            "To fix this, use a background containing sequences "
+            "not in the foreground."
+        )
 
     # Ensure alignments are the same width
     if len(fg_aln[0]) != len(bg_aln[0]):

@@ -46,6 +46,11 @@ CASES = {
 # submissions that upload CDK.hmm.
 SPOOLED = {"web.hmm.pair.gtest", "web.pdb.1HCK.gtest"}
 
+# Recorded failures that now raise a different exception by design, and the
+# exception each raises: pmlscript reports a file name it cannot read with
+# InputError instead of an assertion.
+ERRORS = {"web.pdb.1HCK.gtest": "InputError"}
+
 # Recorded submissions with a test of their own below.
 OWN_TESTS = {"web.pair.hypg", "web.pair.phospho", "web.single.phospho"}
 
@@ -122,7 +127,7 @@ def test_reference_submission(case, tmp_path, monkeypatch, require):
     assert status == record["status"], errors
     if record["error"]:
         error = record["error"].strip().splitlines()[-1].split(":")[0]
-        assert error in errors
+        assert ERRORS.get(case, error) in errors
     else:
         assert response == (REFERENCE / case / "response.html").read_bytes()
     assert os.listdir(workdir) == record["written_files"] == []

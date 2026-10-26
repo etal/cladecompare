@@ -3,7 +3,7 @@
 import argparse
 import sys
 
-from cladecomparelib import configure_logging
+from cladecomparelib import InputError, configure_logging
 from cladecomparelib.core import DEFAULT_STRATEGY, STRATEGIES, process_args
 
 
@@ -65,8 +65,8 @@ See README or https://github.com/etal/cladecompare for full documentation.
         "-a",
         "--alpha",
         default=0.005,
-        type=float,
-        help="Significance threshold for pattern columns.",
+        type=alpha_value,
+        help="Significance threshold for pattern columns, between 0 and 1.",
     )
     AP.add_argument(
         "-s",
@@ -110,4 +110,18 @@ See README or https://github.com/etal/cladecompare for full documentation.
 
     args = AP.parse_args()
     configure_logging(args.quiet)
-    process_args(args)
+    try:
+        process_args(args)
+    except InputError as exc:
+        AP.exit(1, f"{AP.prog}: error: {exc}\n")
+
+
+def alpha_value(text):
+    """Parse a significance threshold, which must be between 0 and 1."""
+    try:
+        alpha = float(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"invalid number: {text!r}") from None
+    if not 0.0 <= alpha <= 1.0:
+        raise argparse.ArgumentTypeError(f"must be between 0 and 1: {text!r}")
+    return alpha

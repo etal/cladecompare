@@ -11,7 +11,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from scipy.stats import false_discovery_control
 
-from cladecomparelib import core
+from cladecomparelib import InputError, core
 
 INPUTS = Path(__file__).resolve().parent / "data" / "inputs"
 
@@ -63,9 +63,9 @@ def test_cma_inserts_kept_by_records_and_dropped_by_blocks(tmp_path):
 )
 def test_cma_malformed_sequence_line_names_record(tmp_path, text, record):
     fname = write_cma(tmp_path, text)
-    with pytest.raises(ValueError, match=rf"record {record}\b"):
+    with pytest.raises(InputError, match=rf"record {record}\b"):
         core.cma_records(fname)
-    with pytest.raises(ValueError, match=rf"record {record}\b"):
+    with pytest.raises(InputError, match=rf"record {record}\b"):
         core.cma_blocks(fname)
 
 
@@ -137,10 +137,13 @@ def test_clean_drops_columns_that_are_gaps_in_both_sets():
         ([], [("b", "ACDE")], "Foreground set is empty"),
         ([("a", "ACDE")], [], "Background set is empty"),
         ([("a", "ACDE"), ("b", "ACDF")], [("a", "ACDE")], "subset"),
+        # Identical under other IDs: the background is empty only after the
+        # duplicate sequences are purged.
+        ([("a", "ACDE"), ("b", "ACDF")], [("c", "ACDF"), ("d", "ACDE")], "identical"),
     ],
 )
 def test_clean_rejects_empty_sets(fg, bg, message):
-    with pytest.raises(ValueError, match=message):
+    with pytest.raises(InputError, match=message):
         core.clean_alignments(aln(*fg), aln(*bg))
 
 

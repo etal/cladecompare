@@ -446,21 +446,12 @@ def combine_alignments(fg_aln, bg_aln):
             "MUSCLE 3 release such as 3.8.1551, or give "
             "alignments of equal width." % match.groups()
         )
-    # This would be simpler with NamedTemporaryFile, but Windows doesn't allow
-    # multiple open file handles on the same file, so here we are.
-    afd, aseqfname = tempfile.mkstemp(text=True)
-    os.close(afd)
-    bfd, bseqfname = tempfile.mkstemp(text=True)
-    os.close(bfd)
-    try:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        aseqfname = os.path.join(tmpdir, "fg.fasta")
+        bseqfname = os.path.join(tmpdir, "bg.fasta")
         AlignIO.write(fg_aln, aseqfname, "fasta")
         AlignIO.write(bg_aln, bseqfname, "fasta")
         output = call_quiet("muscle", "-profile", "-in1", aseqfname, "-in2", bseqfname)
-    finally:
-        if os.path.exists(aseqfname):
-            os.remove(aseqfname)
-        if os.path.exists(bseqfname):
-            os.remove(bseqfname)
 
     full_aln = AlignIO.read(StringIO(output), "fasta")
     full_aln = MultipleSeqAlignment(alnutils.remove_empty_cols(full_aln))

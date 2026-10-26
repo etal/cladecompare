@@ -506,22 +506,27 @@ def clean_alignments(fg_aln, bg_aln):
             "not in the foreground."
         )
 
-    # Remove identical sequences from the FG and BG
-    def purge_duplicates(aln, seen=set()):
+    # Remove identical sequences from the FG, then from the BG. Both calls
+    # share one set, so a BG sequence identical to an FG sequence is removed
+    # from the BG even under a different ID.
+    seen = set()
+
+    def purge_duplicates(aln, label):
         out_recs = []
         for rec in aln:
-            if str(rec.seq) not in seen:
+            seq = str(rec.seq)
+            if seq not in seen:
                 out_recs.append(rec)
-                seen.add(str(rec.seq))
-        diff_fg = len(aln) - len(out_recs)
-        if diff_fg:
+                seen.add(seq)
+        n_purged = len(aln) - len(out_recs)
+        if n_purged:
             logging.warning(
-                "Purging %d identical sequences from the alignment", diff_fg
+                "Purging %d identical sequences from the %s", n_purged, label
             )
         return out_recs
 
-    fg_aln._records = purge_duplicates(fg_aln)
-    bg_aln._records = purge_duplicates(bg_aln)
+    fg_aln._records = purge_duplicates(fg_aln, "foreground")
+    bg_aln._records = purge_duplicates(bg_aln, "background")
 
     # Ensure alignments are the same width
     if len(fg_aln[0]) != len(bg_aln[0]):

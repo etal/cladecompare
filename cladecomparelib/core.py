@@ -77,7 +77,6 @@ def process_args(args):
         else:
             logger.error("PDB alignment requires a MAPGAPS or HMM profile.")
             # ENH - realign to fg, bg
-            # aln = read_aln(args.pdb, 'pdb-atom')
 
     description, module = STRATEGIES[args.strategy]
     logger.info("Using %s", description)
@@ -108,7 +107,6 @@ def process_args(args):
             pdb_data,
             args.pmlout,
         )
-        # args.pdb, pdb_rec, pdb_resnums, pdb_inserts)
     else:
         # Output fnames are based on fg filenames; ignore what's given
         if args.output or args.pattern:
@@ -140,8 +138,6 @@ def process_args(args):
                 pdb_data,
                 args.pmlout,
             )
-            # args.pdb,
-            # pdb_rec, pdb_resnums, pdb_inserts)
             logger.info("Wrote %s and %s", outfname, ptnfname)
 
 
@@ -197,7 +193,6 @@ def process_one(aln, module, do_weight):
     """Calculate a mapping of alignment column positions to "contrast"."""
     if do_weight:
         weights = alnutils.sequence_weights(aln, "none")
-        # if module != jsd else 'sum1')
     else:
         weights = [1 for i in range(len(aln))]
     aln_size = fsum(weights) if module != urn else len(aln)
@@ -419,7 +414,6 @@ def read_aln(fname, format):
         return cma_blocks(fname)
     else:
         aln = AlignIO.read(fname, format)
-        # Avoids trouble w/ cogent later on
         for rec in aln:
             rec.description = ""
         return aln
@@ -582,8 +576,6 @@ def top_hits(hits, alpha, N=50):
         N = m
     tophits = [(posn, faa, baa) for posn, faa, baa, pval in hit_quads]
     for k, ifbp in list(zip(range(m, 0, -1), reversed(hit_quads)))[-N:]:
-        # logging.info("BH: a=%s, m=%s, k=%s, p=%s, compare=%s",
-        #              alpha, m, k, get_pval(ifbp), alpha * k / m)
         if get_pval(ifbp) <= alpha * k / m:
             return tophits[:k]
     return []
@@ -635,7 +627,7 @@ def get_aln_offset(full, aln):
     return full.index(aln_trim)
 
 
-def aln_resnums_inserts(record, aln, offset):
+def aln_resnums_inserts(aln, offset):
     """Return two lists: residue numbers for model columns; inserts."""
     aln_resnums = []
     aln_inserts = []
@@ -682,7 +674,7 @@ def pdb_ref_resnums(aligned, seqs):
         + get_aln_offset(str(ref_record.seq), ref_aln)
         - 1
     )
-    resnums, inserts = aln_resnums_inserts(ref_record, ref_aln, offset)
+    resnums, inserts = aln_resnums_inserts(ref_aln, offset)
     return ref_record, resnums, inserts
 
 

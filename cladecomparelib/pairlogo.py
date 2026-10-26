@@ -11,7 +11,7 @@ from reportlab.pdfgen import canvas
 
 logger = logging.getLogger(__name__)
 
-UNIT = units.inch * 0.5  # = units.inch * 0.1
+UNIT = units.inch * 0.5
 WUNIT = 0.6 * UNIT  # NB: Seems to be the text width-to-height ratio
 
 # The font ships as package data. as_file gives reportlab a real file even
@@ -50,7 +50,7 @@ aacolors = dict(
 
 
 def make_pairlogos(fg_aln, bg_aln, tophits, name, N):
-    """ """
+    """Draw a pair logo for each run of pattern sites at most N columns apart."""
     # Group together nearby "pattern sites"
     clusters = []
     last_seen = None
@@ -70,7 +70,7 @@ def draw_pdf(name, fg_aln, bg_aln, sites, N):
     """Draw a PDF."""
     # Define regions for FG, BG logos
     left_wing = min(N, sites[0] - 1)
-    right_wing = N  # min(N, len(aln) - sites[-1])    # XXX TODO
+    right_wing = N
     aln_start, aln_end = sites[0] - 1 - left_wing, sites[-1] + right_wing
 
     # -- Initialize page --

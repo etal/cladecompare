@@ -74,19 +74,6 @@ FORM_HTML = """\
     <input type="file" name="profile" size=50 />
   </p>
 
-  <!--
-  <h2>Structure</h2>
-  <p>
-    PDB ID:
-    <input type="text" name="pdbid" />
-    <br />
-    or upload a
-    PDB file:
-    <br />
-    <input type="file" name="pdbfile" size=50 />
-  </p>
-  -->
-
   <p />
 
   <p><input type="submit" /></p>
@@ -164,8 +151,6 @@ def form_submit():
 
     # Optional HMM profile for alignment
     profile = bottle.request.files.profile
-    # Optional HMM profile for alignment
-    profile = bottle.request.files.profile
     if hasattr(profile, "file"):
         if not profile.filename.endswith(".hmm"):
             return "HMM profile file name must end in .hmm"
@@ -185,7 +170,7 @@ def form_submit():
     if hasattr(pdbfile, "file"):
         if not profname:
             return (
-                "Error: to generate a PyMOL script for a PDB file you must"
+                "Error: to generate a PyMOL script for a PDB file you must "
                 "also specify an HMM profile"
             )
         pdbfname = handle2temp(pdbfile.file)
@@ -195,13 +180,6 @@ def form_submit():
     else:
         pdbfname = ""
         pdb_data = None
-
-    # Mutually exclusive with pdbfname (above):
-    pdbid = bottle.request.forms.pdbid
-    if pdbid:
-        # If PDB ID: .pml should use "fetch" instead of "load"?
-        # Can get this info w/o dl'ing actual PDB file (e.g. via FASTA)?
-        pass
 
     _description, stat_module = core.STRATEGIES[bottle.request.forms.strategy]
     try:

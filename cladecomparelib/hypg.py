@@ -56,12 +56,7 @@ def compare_cols(
 
 def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
     "Column probability using the hypergeometric model."
-    # cons_count = col.count(cons_aa)
     cons_count = count_col(col, weights)[cons_aa]
     cons_count_i = int(ceil(cons_count))
-    p_j = int(ceil(aa_freqs[cons_aa] * aln_size))
-    size_i = int(ceil(aln_size))
     pvalue = float(cons_count_i) / len(col)
-    # pvalue = hypergeom.cdf(cons_count_i-1,size_i,
-    # max(cons_count_i,p_j), len(col))
     return pvalue

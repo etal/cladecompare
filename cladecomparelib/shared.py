@@ -32,11 +32,7 @@ def entropy(counts):
     """Entropy of a set of observations, in the information-theoretic sense."""
     scale = 1.0 / fsum(counts)
     probs = [c * scale for c in counts if c]
-    # try:
     return -fsum(p * log(p, 2) for p in probs)
-    # except ValueError:
-    #     print locals()
-    #     return 0.
 
 
 def combined_frequencies(fg_aln, fg_weights, bg_aln, bg_weights):

@@ -107,66 +107,15 @@ def make_inserts(inserts, pml_name, chain, color):
             yield mk_range(pml_name, start, end, chain, color)
 
 
-def make_residues(mapping, patterns, pml_name, chain, pale=False):
+def make_residues(mapping, patterns, pml_name, chain):
     """Build residues in PyMOL for the simple cases."""
-    # for color, posns in colorize(patterns, pale):
-    # for posn in posns:
     for posn in patterns:
         restype, resid = mapping[posn]
-        yield mk_residue(
-            pml_name,
-            resid,
-            restype,
-            chain,
-            mol=pml_name,
-            # color=color)
-            color="magenta",
-        )
+        yield mk_residue(pml_name, resid, restype, chain, mol=pml_name, color="magenta")
 
 
 # ---------------------------------------------------------
 # Helper functions
-
-
-def colorize(patterns, pale):
-    """Map patterns to color schemes.
-
-    Order of appearance of colors:
-        magenta 2
-        orange  3
-        yellow  4
-        green   5
-        cyan    1
-        blue    6
-    """
-    dark_colors = [
-        "lightmagenta",
-        "brightorange",
-        "tv_yellow",
-        "tv_green",
-        "cyan",
-        "marine",
-    ]
-    pale_colors = [
-        "lightpink",
-        "lightorange",
-        "paleyellow",
-        "palegreen",
-        "palecyan",
-        "lightblue",
-    ]
-    colorset = pale_colors if pale else dark_colors
-    # assert patterns, 'No pattern files given (*.pttrn, *.ptn)'
-    if not patterns:
-        return
-    if len(patterns) == 1:
-        # Usual scBPPS result
-        return [(colorset[4], patterns[0])]
-    if len(patterns) == len(colorset):
-        # Maxed-out mcBPPS result
-        return list(zip(colorset, patterns))
-    # Follow the spectrum but make sure the last category is shown in cyan
-    return list(zip(colorset, patterns[:-1])) + [(colorset[-2], patterns[-1])]
 
 
 def get_pml_name(pdb_fname, chain_id):

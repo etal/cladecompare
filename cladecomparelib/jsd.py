@@ -32,7 +32,6 @@ def compare_cols(
     # ENH: choose \pi weights according to size of each set (after weighting)?
     fg_counts = scale_counts(count_col(fg_col, fg_weights))
     bg_counts = scale_counts(count_col(bg_col, bg_weights, aa_freqs, pseudo_size))
-    # bg_counts = scale_counts(count_col(bg_col, bg_weights))
     mix = {}
     for aa in "ACDEFGHIKLMNPQRSTVWY":
         mix[aa] = 0.5 * fg_counts.get(aa, 0.0) + 0.5 * bg_counts.get(aa, 0)

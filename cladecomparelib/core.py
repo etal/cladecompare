@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import subprocess
+import sys
 import tempfile
 from copy import deepcopy
 from io import StringIO
@@ -88,7 +89,7 @@ def process_args(args):
             None,
             hits,
             args.alpha,
-            args.output,
+            args.output or sys.stdout,
             args.pattern,
             pdb_data,
             args.pmlout,
@@ -102,7 +103,7 @@ def process_args(args):
             bg_clean,
             hits,
             args.alpha,
-            args.output,
+            args.output or sys.stdout,
             args.pattern,
             pdb_data,
             args.pmlout,
@@ -110,6 +111,11 @@ def process_args(args):
         # args.pdb, pdb_rec, pdb_resnums, pdb_inserts)
     else:
         # Output fnames are based on fg filenames; ignore what's given
+        if args.output or args.pattern:
+            logger.warning(
+                "Comparing more than two alignments: ignoring -o and -p, and "
+                "writing <alignment>.out and <alignment>.pttrn for each alignment"
+            )
         outfnames_ptnfnames = [
             (basename(alnfname) + ".out", basename(alnfname) + ".pttrn")
             for alnfname in ([args.foreground] + args.background)

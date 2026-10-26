@@ -269,6 +269,28 @@ def test_hypg_weighted(tmp_path):
     assert written == {case + suffix for suffix in [".out", ".pttrn", ".html"]}
 
 
+def test_output_defaults_to_standard_output(tmp_path):
+    """Without -o, the table that pair.gtest wrote to a file goes to stdout."""
+    argv = load("pair.gtest")["commands"][0]["argv"]
+    _workdir, written, [result], _tmpdir = run_commands([argv[:-2]], tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == expected_text("pair.gtest", "pair.gtest.out").decode()
+    assert not any(name.endswith(".out") for name in written)
+
+
+def test_more_than_two_alignments_ignore_output_options(tmp_path):
+    """multi.gtest given -o and -p writes what it recorded, and says so."""
+    argv = load("multi.gtest")["commands"][0]["argv"]
+    _workdir, written, [result], _tmpdir = run_commands(
+        [argv + ["-o", "x.out", "-p", "x.pttrn"]], tmp_path
+    )
+    assert result.returncode == 0, result.stderr
+    assert "ignoring -o and -p" in result.stderr
+    assert written - {name for name in written if name.endswith(".pdf")} == set(
+        load("multi.gtest")["written_files"]
+    )
+
+
 def test_input_error_prints_a_message_without_traceback(tmp_path):
     _workdir, written, [result], _tmpdir = run_commands(
         [["cladecompare.py", "cdc2-domain.aln.fasta", "cdc2-domain.aln.fasta"]],

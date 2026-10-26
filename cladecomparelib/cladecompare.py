@@ -1,7 +1,6 @@
 """Compare protein sequence alignments to identify contrasting sites."""
 
 import argparse
-import sys
 
 from cladecomparelib import InputError, configure_logging
 from cladecomparelib.core import DEFAULT_STRATEGY, STRATEGIES, process_args
@@ -87,16 +86,17 @@ See README or https://github.com/etal/cladecompare for full documentation.
     AP.add_argument(
         "-o",
         "--output",
-        default=sys.stdout,
-        help="""Write per-column probabilities (standard output) to this
-            filename, for use with cladereport. (Single-foreground
-            comparison only.""",
+        help="""Write per-column probabilities to this filename, for use
+            with cladereport (default: standard output). Ignored when
+            comparing more than two alignments, which writes <alignment>.out
+            for each alignment.""",
     )
     AP.add_argument(
         "-p",
         "--pattern",
-        help="""Write an mcBPPS-style pattern file to this filename.
-            (Single-foreground comparison only.""",
+        help="""Write an mcBPPS-style pattern file to this filename. Ignored
+            when comparing more than two alignments, which writes
+            <alignment>.pttrn for each alignment.""",
     )
     AP.add_argument(
         "--pmlout", help="Write a PyMOL script to this filename (if --pdb given)."

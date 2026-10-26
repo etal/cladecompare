@@ -27,14 +27,11 @@ freedom (20 amino acids, 2 compared sets -> (20-1)x(2-1) = 19).
 
 """
 
-from __future__ import division
-
 import math
 
-from biofrills import consensus, alnutils
 from biofrills.stats.chisq import chisqprob
 
-from .shared import count_col, combined_frequencies
+from .shared import count_col
 
 
 def compare_cols(

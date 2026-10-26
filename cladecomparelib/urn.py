@@ -48,14 +48,12 @@ bar height increases by twofold, is given by
 """
 
 # ENH: Dirichlet mixture priors; Brown et al. 1993
-from __future__ import division
 
 from math import ceil
 
 from scipy.stats import binom
-from biofrills import consensus, alnutils
 
-from .shared import count_col, combined_frequencies
+from .shared import count_col
 
 
 def compare_cols(

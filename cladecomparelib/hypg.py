@@ -12,14 +12,11 @@ in the foreground.
 
 """
 
-from __future__ import division
-
 from math import ceil
 
 from scipy.stats import hypergeom
-from biofrills import consensus, alnutils
 
-from .shared import count_col, combined_frequencies
+from .shared import count_col
 
 
 def compare_cols(

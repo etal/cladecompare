@@ -5,8 +5,6 @@ the foreground consensus residue type.
 
 """
 
-from __future__ import division
-
 import logging
 import math
 

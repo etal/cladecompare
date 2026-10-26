@@ -10,9 +10,7 @@ See:
     https://en.wikipedia.org/wiki/Jensen%E2%80%93Shannon_divergence
 """
 
-from biofrills import consensus, alnutils
-
-from .shared import count_col, combined_frequencies, entropy, MAX_ENTROPY, scale_counts
+from .shared import MAX_ENTROPY, count_col, entropy, scale_counts
 
 
 def compare_cols(

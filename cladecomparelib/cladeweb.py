@@ -12,7 +12,6 @@ Output (POST):
 # ENH (in the report):
 #   - asterisks up top link to PDF pairlogos
 #   - below title, link to PyMOL script of PDB(s)
-from __future__ import print_function
 
 import logging
 import os
@@ -21,8 +20,7 @@ import webbrowser
 
 import bottle
 
-from cladecomparelib import core, pairlogo, pmlscript, urn, gtest, jsd, phospho, report
-
+from cladecomparelib import core, gtest, jsd, phospho, report, urn
 
 # ENH: include textarea as alternative to each file upload input
 # ENH: dropdown alpha (or textinput w/ JS validation)
@@ -84,7 +82,7 @@ FORM_HTML = """\
 
   <h2>Alignment profile</h2>
   <p>
-    HMM (.hmm) profile: 
+    HMM (.hmm) profile:
     <br />
     <input type="file" name="profile" size=50 />
   </p>
@@ -115,7 +113,7 @@ href="http://github.com/etal/cladecompare">http://github.com/etal/cladecompare</
 <p>If you use this software in a publication, please cite our paper that
 describes it:</p>
 
-<blockquote>Talevich, E. & Kannan, N. (2013) 
+<blockquote>Talevich, E. & Kannan, N. (2013)
 <a href="http://www.biomedcentral.com/1471-2148/13/117">Structural and
 evolutionary adaptation of rhoptry kinases and pseudokinases, a family of
 coccidian virulence factors</a>.

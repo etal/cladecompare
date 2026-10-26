@@ -7,7 +7,6 @@ load the script in PyMOL and the pretty happens.
 
 import os.path
 
-
 # ---------------------------------------------------------
 # Mapping pattern to PDB sequence alignment
 

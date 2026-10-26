@@ -1,10 +1,7 @@
 """Generate an HTML report summarizing CladeCompare output."""
 
-from __future__ import division
-
 import logging
 from math import log10
-
 
 html_page_tpl = """\
 <html>

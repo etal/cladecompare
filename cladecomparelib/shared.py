@@ -1,12 +1,9 @@
 """Numerical functions shared by multiple CladeCompare modules."""
 
-from __future__ import division
-
 import collections
-from math import log, fsum
+from math import fsum, log
 
 from biofrills import alnutils
-
 
 MAX_ENTROPY = log(20, 2)
 

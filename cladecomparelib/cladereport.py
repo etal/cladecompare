@@ -12,12 +12,10 @@ If given multiple files:
 
 """
 
-from __future__ import print_function
-
 import argparse
 import logging
 
-from cladecomparelib.report import do_single, do_multi, html_page_tpl
+from cladecomparelib.report import do_multi, do_single, html_page_tpl
 
 
 def main():

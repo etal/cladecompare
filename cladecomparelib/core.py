@@ -1,7 +1,5 @@
 """Core API shared by cladecompare and cladeweb for running the algorithms."""
 
-from __future__ import division
-
 import contextlib
 import logging
 import os
@@ -15,15 +13,13 @@ from os.path import basename
 
 from Bio import AlignIO, SeqIO
 from Bio.Align import MultipleSeqAlignment
+from Bio.File import as_handle
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from Bio.File import as_handle
-
 from biofrills import alnutils, consensus
 
-from . import pairlogo, pmlscript, urn, gtest, jsd, phospho, hypg
+from . import gtest, hypg, jsd, pairlogo, phospho, pmlscript, urn
 from .shared import combined_frequencies
-
 
 GAP_THRESH = 0.8
 PSEUDO_SIZE = 0.5

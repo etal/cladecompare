@@ -1,17 +1,13 @@
 """Generate a pair of logos with contrasting sites highlighted."""
 
-from __future__ import division
-
 import logging
 import math
 from importlib import resources
 
+from biofrills import logoutils
+from reportlab.lib import units
 from reportlab.pdfbase import pdfmetrics, ttfonts
 from reportlab.pdfgen import canvas
-from reportlab.lib import units
-
-from biofrills import logoutils
-
 
 UNIT = units.inch * 0.5  # = units.inch * 0.1
 WUNIT = 0.6 * UNIT  # NB: Seems to be the text width-to-height ratio

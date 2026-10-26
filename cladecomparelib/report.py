@@ -136,7 +136,9 @@ def table_multi(labels, rowcells, rowclasses, rowpvalues, pattern, positions):
     out = "<table>"
     if any(pattern):
         out += tr_plain("", pattern)
-    for label, cells, pvals in zip(labels, rowcells, rowclasses, rowpvalues):
+    for label, cells, pvals in zip(
+        labels, rowcells, rowclasses, rowpvalues, strict=True
+    ):
         out += tr_class(label, cells, pvals, rowclasses)
     out += tr_pos(positions)
     out += "</table>"
@@ -157,7 +159,7 @@ def tr_class(label, cells, pvalues, classes):
     out += "".join(
         [
             '<td class="%s" title="p=%s">%s</td>' % (cls, pval, txt)
-            for cls, pval, txt in zip(classes, pvalues, cells)
+            for cls, pval, txt in zip(classes, pvalues, cells, strict=True)
         ]
     )
     out += "\n</tr>"
@@ -188,8 +190,10 @@ def wrap_data(data, width=50):
 def do_single(fname, patternfname):
     """Build an HTML document for a single '.out' file and optional pattern."""
     sites = list(parse_out(fname))
-    fg_seq, bg_seq, posns, probs, _nstarses = zip(*sites)
-    classes = [p2class(fg, bg, p) for fg, bg, p in zip(fg_seq, bg_seq, probs)]
+    fg_seq, bg_seq, posns, probs, _nstarses = zip(*sites, strict=True)
+    classes = [
+        p2class(fg, bg, p) for fg, bg, p in zip(fg_seq, bg_seq, probs, strict=True)
+    ]
     posns = [str(p) if not p % 10 else "" for p in posns]
     pattern = [""] * len(posns)
     if patternfname:
@@ -198,7 +202,7 @@ def do_single(fname, patternfname):
     # wrap it up
     contents = ""
     chunked_data = map(wrap_data, [probs, classes, pattern, fg_seq, bg_seq, posns])
-    for layer in zip(*chunked_data):
+    for layer in zip(*chunked_data, strict=True):
         contents += table_single(*layer)
         contents += "<p />"
     return fname, contents
@@ -211,10 +215,13 @@ def do_multi(fnames, patternfname):
     rowpvalues = []
     for fname in fnames:
         sites = list(parse_out(fname))
-        fg_seq, bg_seq, posns, probs, _nstarses = zip(*sites)
+        fg_seq, bg_seq, posns, probs, _nstarses = zip(*sites, strict=True)
         rowcells.append(fg_seq)
         rowclasses.append(
-            [p2class(fg, bg, p) for fg, bg, p in zip(fg_seq, bg_seq, probs)]
+            [
+                p2class(fg, bg, p)
+                for fg, bg, p in zip(fg_seq, bg_seq, probs, strict=True)
+            ]
         )
         rowpvalues.append(probs)
     posns = [str(p) if not p % 10 else "" for p in posns]
@@ -227,15 +234,18 @@ def do_multi(fnames, patternfname):
     labels = [fn[: -len(".out")] if fn.endswith(".out") else fn for fn in fnames]
     chunked_posns = wrap_data(posns)
     chunked_pattern = wrap_data(pattern)
-    wrapped_row_cells = zip(*map(wrap_data, rowcells))
-    wrapped_row_classes = zip(*map(wrap_data, rowclasses))
-    wrapped_row_pvalues = zip(*map(wrap_data, rowpvalues))
+    # The .out files can differ in length; the shortest one sets the number of
+    # tables.
+    wrapped_row_cells = zip(*map(wrap_data, rowcells), strict=False)
+    wrapped_row_classes = zip(*map(wrap_data, rowclasses), strict=False)
+    wrapped_row_pvalues = zip(*map(wrap_data, rowpvalues), strict=False)
     for w_rowcells, w_rowclasses, w_rowpvalues, ptnrow, positions in zip(
         wrapped_row_cells,
         wrapped_row_classes,
         wrapped_row_pvalues,
         chunked_pattern,
         chunked_posns,
+        strict=False,
     ):
         contents += table_multi(
             labels, w_rowcells, w_rowclasses, w_rowpvalues, ptnrow, positions

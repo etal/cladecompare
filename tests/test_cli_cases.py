@@ -171,7 +171,7 @@ def check_case(case, tmp_path, path_prefix=None, commands=None):
     assert [r.returncode for r in results] == [s["returncode"] for s in steps], results[
         -1
     ].stderr
-    for result, step in zip(results, steps):
+    for result, step in zip(results, steps, strict=True):
         if step["returncode"]:
             error = step["stderr"].strip().splitlines()[-1].split(":")[0]
             assert error in result.stderr, result.stderr

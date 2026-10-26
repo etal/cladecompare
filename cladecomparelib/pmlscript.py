@@ -52,7 +52,9 @@ def build_multi(mapping, inserts, key_residues, pdbfnames, chains):
     chain by at least `threshold` Angstroms RMS.
     """
     # TODO - ensure Pymol's automatic struct colors aren't clobbered
-    pml_names = [get_pml_name(pfn, cid) for pfn, cid in zip(pdbfnames, chains)]
+    pml_names = [
+        get_pml_name(pfn, cid) for pfn, cid in zip(pdbfnames, chains, strict=True)
+    ]
     ref_pml_name, ref_chn = (pml_names[0], chains[0])
 
     outs = [
@@ -73,7 +75,7 @@ def build_multi(mapping, inserts, key_residues, pdbfnames, chains):
     if key_residues:
         # Side chains for the reference PDB
         outs.extend(make_residues(mapping, key_residues, ref_pml_name, ref_chn))
-    for eqv_pml_name, eqv_chn in zip(pml_names[1:], chains[1:]):
+    for eqv_pml_name, eqv_chn in zip(pml_names[1:], chains[1:], strict=True):
         outs.append(
             mk_struct(
                 eqv_pml_name,
@@ -215,12 +217,14 @@ def mk_intro_multi(pdbs, names=None, chains=None, description=None):
 hide all
 """ % {
         "description": description or names[0],
-        "load": "\n".join("load %s, %s" % (p, n) for p, n in zip(pdbs, names)),
+        "load": "\n".join(
+            "load %s, %s" % (p, n) for p, n in zip(pdbs, names, strict=True)
+        ),
         "align": (
             "\n".join(
                 "align (%s and chain %s), (%s and chain %s)"
                 % (oname, ochain, names[0], chains[0])
-                for oname, ochain in zip(names[1:], chains[1:])
+                for oname, ochain in zip(names[1:], chains[1:], strict=True)
             )
             if chains and len(chains) == len([c for c in chains if c])
             else "\n".join("cealign %s, %s" % (names[0], other) for other in names[1:])

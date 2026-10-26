@@ -15,7 +15,7 @@ residues that distinguish one subfamily from its relatives. It accompanies
 Talevich & Kannan (2013), *BMC Evolutionary Biology* 13:117,
 doi:10.1186/1471-2148-13-117, and is BSD 2-clause.
 
-Three console commands share one library of about 2,100 lines under `cladecomparelib/`, and each is the `main()` function of a module there that keeps the name of the script it replaced:
+Three console commands share one library of about 2,200 lines under `cladecomparelib/`, and each is the `main()` function of a module there that keeps the name of the script it replaced:
 
 | command | module | role |
 |---|---|---|
@@ -136,15 +136,19 @@ The example alignments are real alignments from Talevich, Mirza & Kannan (2011),
 `tests/test_cli_cases.py` replays every recorded command-line case that the current command line can run with the installed `cladecompare` and `cladereport` commands, in a scratch directory holding copies of `tests/data/inputs`; the two legacy phospho cases, whose `-nw` option no longer exists, serve as the expected output of the unweighted phospho cases.
 `tests/test_web.py` submits every recorded form to the cladeweb WSGI application.
 Each command or submission must give the recorded return code or status, each written file and successful response must equal the reference byte for byte, and every p-value written to a `.out` file must be finite and within [0, 1].
-Where the code departs from the reference by design, the test module declares the difference — a substituted value, a file no longer written, or a test of its own — and `tests/data/README.md` explains it.
-`tests/test_core.py`, `tests/test_strategies.py` and `tests/test_report.py` test the parsing, site-selection and statistics functions on small constructed inputs, against hand computations and, for the site selection, against `scipy.stats.false_discovery_control`.
+Where the code departs from the reference by design, the test module declares the difference — a substituted value, a file no longer written, a different exception, or a test of its own — and `tests/data/README.md` explains it.
+`tests/test_core.py`, `tests/test_strategies.py`, `tests/test_report.py` and `tests/test_pmlscript.py` test the parsing, site-selection and statistics functions on small constructed inputs, against hand computations and, for the site selection, against `scipy.stats.false_discovery_control`.
 A known defect that a test exposes is marked as a strict expected failure, so that fixing it fails the suite until the marker is removed.
 The cases that run hmmalign or MUSCLE, and a `--mapgaps` case that replaces MAPGAPS with a stand-in `run_gaps` built on hmmalign, are marked `integration` and are skipped unless the programs are on the PATH; `pixi run test-integration` runs them alone and fails instead of skipping.
 
 ## Conventions
 
-- The code predates this project's current Python baseline; it is 2013-era style, ported to Python 3 but not otherwise modernized.
+- The code predates this project's current Python baseline; it is 2013-era style, ported to Python 3 and formatted with `ruff format`, but not otherwise modernized.
   Modernize deliberately and in separate commits from behavior changes, so a numerical difference is never buried in a reformat.
+- `ruff check` and `ruff format --check` are clean (`pixi run lint`, `pixi run fmt`), and `[tool.ruff]` in `pyproject.toml` records why each ignored rule is ignored.
+  List a formatting-only commit in `.git-blame-ignore-revs`.
+  The trailing spaces inside the PyMOL templates of `pmlscript` are output that `1HCK.pdb.pml` records, so W291 is ignored there rather than fixed.
+  Every `zip()` states `strict=`: `True` where the operands are equal in length by construction, `False` only where truncation is the current behavior, with a comment saying why.
 - The files under `tests/data/py27/` are generated but committed deliberately, as the reference; regenerate them with `tests/data/capture_py27.py`, for instance through `pixi run -e py27-oracle capture`, rather than editing them.
 - Maintainer planning for this repository lives in a local beads store that is excluded from git and is not present in a clone.
   If you have `bd`, run `bd prime --mcp`, which renders each memory as a one-line summary because the full text printed by plain `bd prime` can exceed an agent's tool-output limits; `bd memories <keyword>` searches the full text, and `bd recall <key>` prints one memory in full.

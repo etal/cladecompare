@@ -54,7 +54,7 @@ def make_pairlogos(fg_aln, bg_aln, tophits, name, N):
     # Group together nearby "pattern sites"
     clusters = []
     last_seen = None
-    for posn, faa, baa in sorted(tophits, key=lambda pfb: pfb[0]):
+    for posn, _faa, _baa in sorted(tophits, key=lambda pfb: pfb[0]):
         # NB: posns are numbered from 1
         if last_seen and posn - last_seen <= N:
             clusters[-1].append(posn)
@@ -94,7 +94,7 @@ def draw_pdf(name, fg_aln, bg_aln, sites, N):
     # -- Draw site label(s) at bottom of yellow bar(s) --
     can.setFillColorRGB(0, 0, 0)
     can.setFont("Helvetica", 0.35 * UNIT)
-    for site, x_start in zip(sites, site_x_offsets):
+    for site, x_start in zip(sites, site_x_offsets, strict=True):
         can.drawCentredString((x_start + 0.5) * WUNIT, 0.5 * UNIT, str(site))
 
     # -- Save PDF --
@@ -108,7 +108,7 @@ def draw_logo(logodata, can, x, y):
     # Calculate character height and width for each col
     x_offset = 0.0
     # TODO - deal w/ Q hanging below line -- raise & rescale height
-    for posn, counts, entropy, weight in logodata:
+    for _posn, counts, entropy, weight in logodata:
         y_offset = 0.0
         for aa, frac in letter_scales(counts):
             can.saveState()

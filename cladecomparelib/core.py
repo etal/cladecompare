@@ -167,7 +167,13 @@ def process_pair(fg_aln, bg_aln, module, do_weight):
     )
 
     hits = []
-    for faa, baa, fg_col, bg_col in zip(fg_cons, bg_cons, zip(*fg_aln), zip(*bg_aln)):
+    for faa, baa, fg_col, bg_col in zip(
+        fg_cons,
+        bg_cons,
+        zip(*fg_aln, strict=True),
+        zip(*bg_aln, strict=True),
+        strict=True,
+    ):
         if faa == "-" or baa == "-":
             # Ignore indel columns -- there are better ways to look at these
             pvalue = 1.0
@@ -201,7 +207,7 @@ def process_one(aln, module, do_weight):
         aln, weights=weights, trim_ends=False, gap_threshold=GAP_THRESH
     )
     hits = []
-    for cons_aa, col in zip(cons, zip(*aln)):
+    for cons_aa, col in zip(cons, zip(*aln, strict=True), strict=True):
         if cons_aa == "-":
             # Ignore indel columns -- there are better ways to look at these
             pvalue = 1.0
@@ -244,7 +250,9 @@ def process_output(
                 pml_output = pdb_fname + ".pml"
         else:
             # Multi-PBD mode
-            pdb_fnames, pdb_recs, pdb_resnumses, pdb_insertses = zip(*pdb_data)
+            pdb_fnames, pdb_recs, pdb_resnumses, pdb_insertses = zip(
+                *pdb_data, strict=True
+            )
             script = pmlscript.build_multi(
                 pdb_resnumses,
                 pdb_insertses,
@@ -530,9 +538,13 @@ def clean_alignments(fg_aln, bg_aln):
 
     # Remove columns that are all gaps in both fg and bg (full_aln)
     seqstrs = [str(rec.seq) for rec in full_aln]
-    clean_cols = [col for col in zip(*seqstrs) if not all(c == "-" for c in col)]
-    clean_seqs = ["".join(row) for row in zip(*clean_cols)]
-    for rec, clean_seq in zip(full_aln, clean_seqs):
+    clean_cols = [
+        col for col in zip(*seqstrs, strict=True) if not all(c == "-" for c in col)
+    ]
+    clean_seqs = ["".join(row) for row in zip(*clean_cols, strict=True)]
+    # Where every column is a gap, clean_seqs is empty and the records keep
+    # their sequences.
+    for rec, clean_seq in zip(full_aln, clean_seqs, strict=False):
         rec.seq = Seq(clean_seq)
 
     # Split the full alignment back into FG and BG sets
@@ -559,14 +571,17 @@ def top_hits(hits, alpha, N=50):
         (i + 1, faa_baa_pval[0], faa_baa_pval[1], faa_baa_pval[2])
         for i, faa_baa_pval in enumerate(hits)
     ]
-    get_pval = lambda ifbp: ifbp[3]
+
+    def get_pval(ifbp):
+        return ifbp[3]
+
     # Benjamini-Hochberg multiple-testing FDR correction (BH step-up)
     hit_quads.sort(key=get_pval)
     m = len(hit_quads)  # Num. hypotheses tested
     if m < N:
         N = m
     tophits = [(posn, faa, baa) for posn, faa, baa, pval in hit_quads]
-    for k, ifbp in list(zip(range(m, 0, -1), reversed(hit_quads)))[-N:]:
+    for k, ifbp in list(zip(range(m, 0, -1), reversed(hit_quads), strict=True))[-N:]:
         if get_pval(ifbp) <= alpha * k / m:
             return tophits[:k]
     return []

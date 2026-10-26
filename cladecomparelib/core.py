@@ -1,4 +1,5 @@
 """Core API shared by cladecompare and cladeweb for running the algorithms."""
+
 from __future__ import division
 
 import contextlib
@@ -30,22 +31,20 @@ PSEUDO_SIZE = 0.5
 
 # ---- FLOW --------------------------------------------------------------
 
+
 def process_args(args):
     """Main."""
     if args.mapgaps or args.hmm:
         # run_gaps requires FASTA input
-        assert args.format == 'fasta', \
-                "Input sequence format must be FASTA."
+        assert args.format == "fasta", "Input sequence format must be FASTA."
 
     all_alns = []
     for alnfname in [args.foreground] + args.background:
         if args.hmm:
-            logging.info("Aligning %s with HMM profile %s",
-                         alnfname, args.hmm)
+            logging.info("Aligning %s with HMM profile %s", alnfname, args.hmm)
             aln = hmm_align_and_read(args.hmm, alnfname)
         elif args.mapgaps:
-            logging.info("Aligning %s with MAPGAPS profile %s",
-                         alnfname, args.mapgaps)
+            logging.info("Aligning %s with MAPGAPS profile %s", alnfname, args.mapgaps)
             aln = mapgaps_align_and_read(args.mapgaps, alnfname)
         else:
             aln = read_aln(alnfname, args.format)
@@ -55,16 +54,15 @@ def process_args(args):
     if args.pdb:
         if args.hmm:
             for pdbfname in args.pdb:
-                logging.info("Aligning %s with HMM profile %s",
-                                pdbfname, args.hmm)
+                logging.info("Aligning %s with HMM profile %s", pdbfname, args.hmm)
                 pdb_rec, pdb_resnums, pdb_inserts = pdb_hmm(args.hmm, pdbfname)
                 pdb_data.append((pdbfname, pdb_rec, pdb_resnums, pdb_inserts))
         elif args.mapgaps:
             for pdbfname in args.pdb:
-                logging.info("Aligning %s with MAPGAPS profile %s",
-                                pdbfname, args.mapgaps)
-                pdb_rec, pdb_resnums, pdb_inserts = pdb_mapgaps(args.mapgaps,
-                                                                pdbfname)
+                logging.info(
+                    "Aligning %s with MAPGAPS profile %s", pdbfname, args.mapgaps
+                )
+                pdb_rec, pdb_resnums, pdb_inserts = pdb_mapgaps(args.mapgaps, pdbfname)
                 pdb_data.append((pdbfname, pdb_rec, pdb_resnums, pdb_inserts))
         else:
             logging.error("PDB alignment requires a MAPGAPS or HMM profile.")
@@ -72,55 +70,79 @@ def process_args(args):
             # aln = read_aln(args.pdb, 'pdb-atom')
 
     # ENH - put strategies in a dict, look up here
-    if args.strategy == 'gtest':
+    if args.strategy == "gtest":
         logging.info("Using G-test of amino acid frequencies")
         module = gtest
-    elif args.strategy == 'urn':
+    elif args.strategy == "urn":
         logging.info("Using ball-in-urn statistical model")
         module = urn
-    elif args.strategy == 'jsd':
+    elif args.strategy == "jsd":
         logging.info("Using Jensen-Shannon divergence")
         module = jsd
-    elif args.strategy == 'phospho':
+    elif args.strategy == "phospho":
         logging.info("Using urn model for phosphorylatable residues")
         module = phospho
-    elif args.strategy == 'hypg':
+    elif args.strategy == "hypg":
         logging.info("Using hypergeometric model")
         module = hypg
     else:
         raise ValueError("Unknown strategy: %s" % args.strategy)
 
-
     if len(all_alns) == 1:
         aln, hits = process_one(all_alns[0], module, args.weight)
-        process_output(aln, None, hits, args.alpha, args.output, args.pattern,
-                       pdb_data, args.pmlout)
+        process_output(
+            aln,
+            None,
+            hits,
+            args.alpha,
+            args.output,
+            args.pattern,
+            pdb_data,
+            args.pmlout,
+        )
     elif len(all_alns) == 2:
-        fg_clean, bg_clean, hits = process_pair(all_alns[0], all_alns[1],
-                                                module, args.weight)
-        process_output(fg_clean, bg_clean, hits, args.alpha,
-                       args.output, args.pattern,
-                       pdb_data, args.pmlout)
-                       # args.pdb, pdb_rec, pdb_resnums, pdb_inserts)
+        fg_clean, bg_clean, hits = process_pair(
+            all_alns[0], all_alns[1], module, args.weight
+        )
+        process_output(
+            fg_clean,
+            bg_clean,
+            hits,
+            args.alpha,
+            args.output,
+            args.pattern,
+            pdb_data,
+            args.pmlout,
+        )
+        # args.pdb, pdb_rec, pdb_resnums, pdb_inserts)
     else:
         # Output fnames are based on fg filenames; ignore what's given
-        outfnames_ptnfnames = [(basename(alnfname) + '.out',
-                                basename(alnfname) + '.pttrn')
-                               for alnfname in ([args.foreground] +
-                                                args.background)]
+        outfnames_ptnfnames = [
+            (basename(alnfname) + ".out", basename(alnfname) + ".pttrn")
+            for alnfname in ([args.foreground] + args.background)
+        ]
         for idx, fg_aln in enumerate(all_alns):
             # Combine other alns into bg
-            _other_alns = all_alns[:idx] + all_alns[idx+1:]
+            _other_alns = all_alns[:idx] + all_alns[idx + 1 :]
             bg_aln = deepcopy(_other_alns[0])
             for otra in _other_alns[1:]:
                 bg_aln.extend(deepcopy(otra))
-            fg_clean, bg_clean, hits = process_pair(deepcopy(fg_aln), bg_aln,
-                                                    module, args.weight)
+            fg_clean, bg_clean, hits = process_pair(
+                deepcopy(fg_aln), bg_aln, module, args.weight
+            )
             outfname, ptnfname = outfnames_ptnfnames[idx]
-            process_output(fg_clean, bg_clean, hits, args.alpha,
-                           outfname, ptnfname, pdb_data, args.pmlout)
-                           # args.pdb,
-                           # pdb_rec, pdb_resnums, pdb_inserts)
+            process_output(
+                fg_clean,
+                bg_clean,
+                hits,
+                args.alpha,
+                outfname,
+                ptnfname,
+                pdb_data,
+                args.pmlout,
+            )
+            # args.pdb,
+            # pdb_rec, pdb_resnums, pdb_inserts)
             logging.info("Wrote %s and %s", outfname, ptnfname)
 
 
@@ -133,8 +155,8 @@ def process_pair(fg_aln, bg_aln, module, do_weight):
     """
     fg_aln, bg_aln = clean_alignments(fg_aln, bg_aln)
     if do_weight:
-        fg_weights = alnutils.sequence_weights(fg_aln, 'none')
-        bg_weights = alnutils.sequence_weights(bg_aln, 'none')
+        fg_weights = alnutils.sequence_weights(fg_aln, "none")
+        bg_weights = alnutils.sequence_weights(bg_aln, "none")
     else:
         fg_weights = [1 for i in range(len(fg_aln))]
         bg_weights = [1 for i in range(len(bg_aln))]
@@ -142,22 +164,31 @@ def process_pair(fg_aln, bg_aln, module, do_weight):
     bg_size = fsum(bg_weights)
     # Overall aa freqs for pseudocounts
     aa_freqs = combined_frequencies(fg_aln, fg_weights, bg_aln, bg_weights)
-    fg_cons = consensus.consensus(fg_aln, weights=fg_weights, trim_ends=False,
-                                  gap_threshold=GAP_THRESH)
-    bg_cons = consensus.consensus(bg_aln, weights=bg_weights, trim_ends=False,
-                                  gap_threshold=GAP_THRESH)
+    fg_cons = consensus.consensus(
+        fg_aln, weights=fg_weights, trim_ends=False, gap_threshold=GAP_THRESH
+    )
+    bg_cons = consensus.consensus(
+        bg_aln, weights=bg_weights, trim_ends=False, gap_threshold=GAP_THRESH
+    )
 
     hits = []
-    for faa, baa, fg_col, bg_col in zip(fg_cons, bg_cons,
-                                        zip(*fg_aln), zip(*bg_aln)):
-        if faa == '-' or baa == '-':
+    for faa, baa, fg_col, bg_col in zip(fg_cons, bg_cons, zip(*fg_aln), zip(*bg_aln)):
+        if faa == "-" or baa == "-":
             # Ignore indel columns -- there are better ways to look at these
-            pvalue = 1.
+            pvalue = 1.0
         else:
             pvalue = module.compare_cols(
-                fg_col, faa, fg_size, fg_weights,
-                bg_col, baa, bg_size, bg_weights,
-                aa_freqs, PSEUDO_SIZE)
+                fg_col,
+                faa,
+                fg_size,
+                fg_weights,
+                bg_col,
+                baa,
+                bg_size,
+                bg_weights,
+                aa_freqs,
+                PSEUDO_SIZE,
+            )
         hits.append((faa, baa, pvalue))
 
     return fg_aln, bg_aln, hits
@@ -166,85 +197,98 @@ def process_pair(fg_aln, bg_aln, module, do_weight):
 def process_one(aln, module, do_weight):
     """Calculate a mapping of alignment column positions to "contrast"."""
     if do_weight:
-        weights = alnutils.sequence_weights(aln, 'none')
-                                        # if module != jsd else 'sum1')
+        weights = alnutils.sequence_weights(aln, "none")
+        # if module != jsd else 'sum1')
     else:
         weights = [1 for i in range(len(aln))]
     aln_size = fsum(weights) if module != urn else len(aln)
-    aa_freqs = alnutils.aa_frequencies(aln, weights, gap_chars='-.X')
-    cons = consensus.consensus(aln, weights=weights, trim_ends=False,
-                               gap_threshold=GAP_THRESH)
+    aa_freqs = alnutils.aa_frequencies(aln, weights, gap_chars="-.X")
+    cons = consensus.consensus(
+        aln, weights=weights, trim_ends=False, gap_threshold=GAP_THRESH
+    )
     hits = []
     for cons_aa, col in zip(cons, zip(*aln)):
-        if cons_aa == '-':
+        if cons_aa == "-":
             # Ignore indel columns -- there are better ways to look at these
-            pvalue = 1.
+            pvalue = 1.0
         else:
-            pvalue = module.compare_one(col, cons_aa, aln_size, weights,
-                                        aa_freqs, PSEUDO_SIZE)
-        hits.append((cons_aa, '_', pvalue))
+            pvalue = module.compare_one(
+                col, cons_aa, aln_size, weights, aa_freqs, PSEUDO_SIZE
+            )
+        hits.append((cons_aa, "_", pvalue))
     return aln, hits
 
 
-def process_output(fg_aln, bg_aln, hits, alpha, output, pattern, pdb_data,
-                   pml_output=None):
+def process_output(
+    fg_aln, bg_aln, hits, alpha, output, pattern, pdb_data, pml_output=None
+):
     """Generate the output files from the processed data."""
-    with as_handle(output, 'w+') as outfile:
+    with as_handle(output, "w+") as outfile:
         write_pvalues(hits, outfile, alpha)
     tophits = top_hits(hits, alpha)
     if pattern:
-        with open(pattern, 'w+') as ptnfile:
+        with open(pattern, "w+") as ptnfile:
             write_mcbpps(tophits, ptnfile)
         # XXX hack: don't make pairlogo in single mode
         if bg_aln:
-            pairlogo.make_pairlogos(fg_aln, bg_aln, tophits,
-                                    pattern.rsplit('.', 1)[0],
-                                    10)
+            pairlogo.make_pairlogos(
+                fg_aln, bg_aln, tophits, pattern.rsplit(".", 1)[0], 10
+            )
     if pdb_data:
         patterns = [t[0] for t in tophits]
         if len(pdb_data) == 1:
             # Single-PBD mode
             pdb_fname, pdb_rec, pdb_resnums, pdb_inserts = pdb_data[0]
-            script = pmlscript.build_single(pdb_resnums, pdb_inserts,
-                                            patterns, pdb_fname,
-                                            pdb_rec.annotations['chain'])
+            script = pmlscript.build_single(
+                pdb_resnums,
+                pdb_inserts,
+                patterns,
+                pdb_fname,
+                pdb_rec.annotations["chain"],
+            )
             if not pml_output:
                 pml_output = pdb_fname + ".pml"
         else:
             # Multi-PBD mode
             pdb_fnames, pdb_recs, pdb_resnumses, pdb_insertses = zip(*pdb_data)
-            script = pmlscript.build_multi(pdb_resnumses, pdb_insertses,
-                                           patterns, pdb_fnames,
-                                           [r.annotations['chain']
-                                            for r in pdb_recs])
+            script = pmlscript.build_multi(
+                pdb_resnumses,
+                pdb_insertses,
+                patterns,
+                pdb_fnames,
+                [r.annotations["chain"] for r in pdb_recs],
+            )
             if not pml_output:
                 pml_output = pdb_fnames[0] + "-etc.pml"
-        with open(pml_output, 'w+') as pmlfile:
+        with open(pml_output, "w+") as pmlfile:
             pmlfile.write(script)
         logging.info("Wrote %s", pml_output)
 
 
 # --- Output ---
 
+
 def write_pvalues(hits, outfile, alpha):
     """Write p-values & "contrast" stars for each site. (It's noisy.)"""
     for idx, data in enumerate(hits):
         fg_char, bg_char, pvalue = data
         if not (0.0 <= pvalue <= 1.0):
-            logging.warning("Out-of-domain p-value at site %s: %s",
-                         idx, pvalue)
-        stars = ('*'*int(-log10(pvalue)) if 0 < pvalue < alpha else '')
-        outfile.write("%s (%s) %d : prob=%g\t%s\n"
-                      % (fg_char, bg_char, idx + 1, pvalue, stars))
+            logging.warning("Out-of-domain p-value at site %s: %s", idx, pvalue)
+        stars = "*" * int(-log10(pvalue)) if 0 < pvalue < alpha else ""
+        outfile.write(
+            "%s (%s) %d : prob=%g\t%s\n" % (fg_char, bg_char, idx + 1, pvalue, stars)
+        )
 
 
 def write_mcbpps(tophits, ptnfile):
     """Write a .pttrn file in the style of mcBPPS."""
-    ptnfile.write("1:" + ','.join([("%s%d" % (faa, posn))
-                                   for posn, faa, baa in tophits]))
+    ptnfile.write(
+        "1:" + ",".join([("%s%d" % (faa, posn)) for posn, faa, baa in tophits])
+    )
 
 
 # --- Input magic ---
+
 
 def call_quiet(*args):
     """Safely run a command and get stdout; print stderr if there's an error.
@@ -255,15 +299,19 @@ def call_quiet(*args):
     is not found, a RuntimeError naming it is raised as well.
     """
     try:
-        proc = subprocess.run(args, capture_output=True,
-                              encoding='utf-8', errors='replace')
+        proc = subprocess.run(
+            args, capture_output=True, encoding="utf-8", errors="replace"
+        )
     except FileNotFoundError as exc:
-        raise RuntimeError("Subprocess command failed:\n$ %s\n\n%s\n"
-                           "Is %s installed and on the PATH?"
-                           % (' '.join(args), exc, args[0])) from None
+        raise RuntimeError(
+            "Subprocess command failed:\n$ %s\n\n%s\n"
+            "Is %s installed and on the PATH?" % (" ".join(args), exc, args[0])
+        ) from None
     if proc.returncode != 0:
-        raise RuntimeError("Subprocess command failed:\n$ %s\n\n%s"
-                           % (' '.join(args), proc.stdout + proc.stderr))
+        raise RuntimeError(
+            "Subprocess command failed:\n$ %s\n\n%s"
+            % (" ".join(args), proc.stdout + proc.stderr)
+        )
     return proc.stdout
 
 
@@ -276,26 +324,34 @@ def hmmalign_a2m(hmm_profile, seq_fname):
     such columns and reject the --allcol option; HMMER 3.0 keeps them only
     with --allcol, so the option is given when hmmalign's help lists it.
     """
-    allcol = ['--allcol'] if '--allcol' in call_quiet('hmmalign', '-h') else []
-    return call_quiet('hmmalign', *allcol, '--trim', '--amino',
-                      '--outformat', 'a2m', hmm_profile, seq_fname)
+    allcol = ["--allcol"] if "--allcol" in call_quiet("hmmalign", "-h") else []
+    return call_quiet(
+        "hmmalign",
+        *allcol,
+        "--trim",
+        "--amino",
+        "--outformat",
+        "a2m",
+        hmm_profile,
+        seq_fname,
+    )
 
 
 def hmm_align_and_read(hmm_profile, fasta_fname):
     """Align a FASTA file with HMMER 3 and read the alignment."""
     out = hmmalign_a2m(hmm_profile, fasta_fname)
     # ENH: write to file, then parse incrementally
-    records = list(SeqIO.parse(StringIO(out), 'fasta'))
+    records = list(SeqIO.parse(StringIO(out), "fasta"))
     # Remove inserts, i.e. lowercase characters
     for rec in records:
-        rec.seq = Seq(''.join([c for c in str(rec.seq) if not c.islower()]))
+        rec.seq = Seq("".join([c for c in str(rec.seq) if not c.islower()]))
     return MultipleSeqAlignment(records)
 
 
 def mapgaps_align_and_read(mapgaps_profile, fasta_fname):
     """Align a FASTA file with MAPGAPS and read the CMA alignment."""
-    call_quiet('run_gaps', mapgaps_profile, fasta_fname)
-    aln = cma_blocks(fasta_fname + '_aln.cma')
+    call_quiet("run_gaps", mapgaps_profile, fasta_fname)
+    aln = cma_blocks(fasta_fname + "_aln.cma")
     return aln
 
 
@@ -306,8 +362,10 @@ def mapgaps_align_and_read(mapgaps_profile, fasta_fname):
 # The aligned part is taken verbatim, so that gap characters such as '.' pass
 # through as before; the flanks must be residues, so that other text around
 # the block is reported as an error.
-CMA_SEQ_LINE = re.compile(r'[A-Za-z-]*\{\([A-Za-z-]*\)(?P<aligned>[^()]*)'
-                          r'\([A-Za-z-]*\)\}[A-Za-z-]*\*\Z')
+CMA_SEQ_LINE = re.compile(
+    r"[A-Za-z-]*\{\([A-Za-z-]*\)(?P<aligned>[^()]*)"
+    r"\([A-Za-z-]*\)\}[A-Za-z-]*\*\Z"
+)
 
 
 def cma_records(cma_fname):
@@ -322,15 +380,16 @@ def cma_records(cma_fname):
     with open(cma_fname) as infile:
         lines = iter(infile)
         for line in lines:
-            if line.startswith('>'):
+            if line.startswith(">"):
                 acc = line.split(None, 1)[0][1:]
-                seq_line = next(lines, '').strip()
+                seq_line = next(lines, "").strip()
                 match = CMA_SEQ_LINE.match(seq_line)
                 if match is None:
-                    raise ValueError("Unparseable CMA sequence line for "
-                                     "record %s in %s: %s"
-                                     % (acc, cma_fname, seq_line))
-                records.append((acc, match.group('aligned')))
+                    raise ValueError(
+                        "Unparseable CMA sequence line for "
+                        "record %s in %s: %s" % (acc, cma_fname, seq_line)
+                    )
+                records.append((acc, match.group("aligned")))
     return records
 
 
@@ -344,28 +403,34 @@ def cma_blocks(cma_fname):
     Return a Biopython MultipleSeqAlignment.
     """
     return MultipleSeqAlignment(
-        [SeqRecord(Seq(''.join(c for c in aligned if not c.islower())),
-                   id=acc, description='')
-         for acc, aligned in cma_records(cma_fname)])
+        [
+            SeqRecord(
+                Seq("".join(c for c in aligned if not c.islower())),
+                id=acc,
+                description="",
+            )
+            for acc, aligned in cma_records(cma_fname)
+        ]
+    )
 
 
 def read_aln(fname, format):
     """Read a sequence alignment."""
     if format:
         assert format.islower()
-    if fname.endswith('.cma') or format == 'cma':
+    if fname.endswith(".cma") or format == "cma":
         return cma_blocks(fname)
     else:
         aln = AlignIO.read(fname, format)
         # Avoids trouble w/ cogent later on
         for rec in aln:
-            rec.description = ''
+            rec.description = ""
         return aln
 
 
 # The program name and version at the start of `muscle -version`, e.g.
 # "MUSCLE v3.8.1551 by Robert C. Edgar" or "muscle 5.3.osxarm64 []".
-MUSCLE_VERSION_LINE = re.compile(r'muscle +v?(\d+)\.(\d+)', re.IGNORECASE)
+MUSCLE_VERSION_LINE = re.compile(r"muscle +v?(\d+)\.(\d+)", re.IGNORECASE)
 
 
 def combine_alignments(fg_aln, bg_aln):
@@ -375,18 +440,21 @@ def combine_alignments(fg_aln, bg_aln):
     offers; a MUSCLE of version 4 or later raises RuntimeError. If the
     version cannot be read, a warning is logged and MUSCLE is run anyway.
     """
-    match = MUSCLE_VERSION_LINE.search(call_quiet('muscle', '-version'))
+    match = MUSCLE_VERSION_LINE.search(call_quiet("muscle", "-version"))
     if match is None:
-        logging.warning("Could not determine the version of MUSCLE; "
-                        "trying profile-profile alignment anyway")
+        logging.warning(
+            "Could not determine the version of MUSCLE; "
+            "trying profile-profile alignment anyway"
+        )
     elif int(match.group(1)) >= 4:
-        raise RuntimeError("Aligning alignments of different widths to each "
-                           "other requires MUSCLE 3, but the muscle on the "
-                           "PATH is version %s.%s, which has no "
-                           "profile-profile alignment mode. Install a "
-                           "MUSCLE 3 release such as 3.8.1551, or give "
-                           "alignments of equal width."
-                           % match.groups())
+        raise RuntimeError(
+            "Aligning alignments of different widths to each "
+            "other requires MUSCLE 3, but the muscle on the "
+            "PATH is version %s.%s, which has no "
+            "profile-profile alignment mode. Install a "
+            "MUSCLE 3 release such as 3.8.1551, or give "
+            "alignments of equal width." % match.groups()
+        )
     # This would be simpler with NamedTemporaryFile, but Windows doesn't allow
     # multiple open file handles on the same file, so here we are.
     afd, aseqfname = tempfile.mkstemp(text=True)
@@ -394,17 +462,16 @@ def combine_alignments(fg_aln, bg_aln):
     bfd, bseqfname = tempfile.mkstemp(text=True)
     os.close(bfd)
     try:
-        AlignIO.write(fg_aln, aseqfname, 'fasta')
-        AlignIO.write(bg_aln, bseqfname, 'fasta')
-        output = call_quiet('muscle', '-profile',
-                            '-in1', aseqfname, '-in2', bseqfname)
+        AlignIO.write(fg_aln, aseqfname, "fasta")
+        AlignIO.write(bg_aln, bseqfname, "fasta")
+        output = call_quiet("muscle", "-profile", "-in1", aseqfname, "-in2", bseqfname)
     finally:
         if os.path.exists(aseqfname):
             os.remove(aseqfname)
         if os.path.exists(bseqfname):
             os.remove(bseqfname)
 
-    full_aln = AlignIO.read(StringIO(output), 'fasta')
+    full_aln = AlignIO.read(StringIO(output), "fasta")
     full_aln = MultipleSeqAlignment(alnutils.remove_empty_cols(full_aln))
     return full_aln
 
@@ -425,21 +492,23 @@ def clean_alignments(fg_aln, bg_aln):
     killme = []
     for fg_seq in fg_aln:
         for idx, bg_seq in enumerate(bg_aln):
-            if fg_seq.id == bg_seq.id != 'consensus':
+            if fg_seq.id == bg_seq.id != "consensus":
                 if str(fg_seq.seq) != str(bg_seq.seq):
-                    logging.warning("Different sequences for %s in fg, bg",
-                            fg_seq.id)
+                    logging.warning("Different sequences for %s in fg, bg", fg_seq.id)
                 killme.append(idx)
     if killme:
-        logging.info("Removing %d duplicated sequence IDs from the background",
-                    len(killme))
+        logging.info(
+            "Removing %d duplicated sequence IDs from the background", len(killme)
+        )
         for idx in sorted(killme, reverse=True):
             del bg_aln._records[idx]
 
     if not len(bg_aln):
-        raise ValueError("Background set is a subset of the foreground. "
-                         "To fix this, use a background containing sequences "
-                         "not in the foreground.")
+        raise ValueError(
+            "Background set is a subset of the foreground. "
+            "To fix this, use a background containing sequences "
+            "not in the foreground."
+        )
 
     # Remove identical sequences from the FG and BG
     def purge_duplicates(aln, seen=set()):
@@ -450,8 +519,9 @@ def clean_alignments(fg_aln, bg_aln):
                 seen.add(str(rec.seq))
         diff_fg = len(aln) - len(out_recs)
         if diff_fg:
-            logging.warning("Purging %d identical sequences from the alignment",
-                    diff_fg)
+            logging.warning(
+                "Purging %d identical sequences from the alignment", diff_fg
+            )
         return out_recs
 
     fg_aln._records = purge_duplicates(fg_aln)
@@ -467,9 +537,8 @@ def clean_alignments(fg_aln, bg_aln):
 
     # Remove columns that are all gaps in both fg and bg (full_aln)
     seqstrs = [str(rec.seq) for rec in full_aln]
-    clean_cols = [col for col in zip(*seqstrs)
-                  if not all(c == '-' for c in col)]
-    clean_seqs = [''.join(row) for row in zip(*clean_cols)]
+    clean_cols = [col for col in zip(*seqstrs) if not all(c == "-" for c in col)]
+    clean_seqs = ["".join(row) for row in zip(*clean_cols)]
     for rec, clean_seq in zip(full_aln, clean_seqs):
         rec.seq = Seq(clean_seq)
 
@@ -493,8 +562,10 @@ def top_hits(hits, alpha, N=50):
     Return a list of triplets, sorted by significance:
         (position, fg_aa, bg_aa)
     """
-    hit_quads = [(i+1, faa_baa_pval[0], faa_baa_pval[1], faa_baa_pval[2])
-                 for i, faa_baa_pval in enumerate(hits)]
+    hit_quads = [
+        (i + 1, faa_baa_pval[0], faa_baa_pval[1], faa_baa_pval[2])
+        for i, faa_baa_pval in enumerate(hits)
+    ]
     get_pval = lambda ifbp: ifbp[3]
     # Benjamini-Hochberg multiple-testing FDR correction (BH step-up)
     hit_quads.sort(key=get_pval)
@@ -510,8 +581,8 @@ def top_hits(hits, alpha, N=50):
     return []
 
 
-
 # --- PDB alignment magic ---
+
 
 @contextlib.contextmanager
 def read_pdb_seq(pdb_fname):
@@ -523,10 +594,10 @@ def read_pdb_seq(pdb_fname):
     Context manager: on exit, the directory is removed together with any files
     that an aligner wrote beside the FASTA file.
     """
-    pdbseqs = list(SeqIO.parse(pdb_fname, 'pdb-atom'))
+    pdbseqs = list(SeqIO.parse(pdb_fname, "pdb-atom"))
     with tempfile.TemporaryDirectory() as tmpdir:
-        pdbseqfname = os.path.join(tmpdir, 'pdbseq')
-        SeqIO.write(pdbseqs, pdbseqfname, 'fasta')
+        pdbseqfname = os.path.join(tmpdir, "pdbseq")
+        SeqIO.write(pdbseqs, pdbseqfname, "fasta")
         yield pdbseqfname, pdbseqs
 
 
@@ -535,8 +606,9 @@ def choose_best_aligned(aligned):
 
     Returns a tuple: (sequence ID, sequence string)
     """
+
     def aligned_len(seq):
-        return sum(c.isupper() for c in seq.replace('X', ''))
+        return sum(c.isupper() for c in seq.replace("X", ""))
 
     if not aligned:
         raise RuntimeError("No PDB sequences were aligned by the profile!")
@@ -549,9 +621,9 @@ def choose_best_aligned(aligned):
 
 
 def get_aln_offset(full, aln):
-    aln_trim = aln.replace('-', '').replace('.', '').upper()
-    if 'X' in aln_trim:
-        aln_trim = aln_trim[:aln_trim.index('X')]
+    aln_trim = aln.replace("-", "").replace(".", "").upper()
+    if "X" in aln_trim:
+        aln_trim = aln_trim[: aln_trim.index("X")]
     return full.index(aln_trim)
 
 
@@ -578,9 +650,9 @@ def aln_resnums_inserts(record, aln, offset):
         if c.isupper():
             # Match position
             aln_resnums.append((c, offset + i - del_len + 1))
-        elif c == '-':
+        elif c == "-":
             # Deletion position
-            aln_resnums.append(('-', None))
+            aln_resnums.append(("-", None))
             del_len += 1
         else:
             raise ValueError("Unexpected character '%s'" % c)
@@ -597,9 +669,11 @@ def pdb_ref_resnums(aligned, seqs):
     ref_id, ref_aln = choose_best_aligned(aligned)
     ref_record = SeqIO.to_dict(seqs)[ref_id]
     # Calculate aligned residue numbers & insert ranges
-    offset = (ref_record.annotations['start']
-              + get_aln_offset(str(ref_record.seq), ref_aln)
-              - 1)
+    offset = (
+        ref_record.annotations["start"]
+        + get_aln_offset(str(ref_record.seq), ref_aln)
+        - 1
+    )
     resnums, inserts = aln_resnums_inserts(ref_record, ref_aln, offset)
     return ref_record, resnums, inserts
 
@@ -611,8 +685,9 @@ def pdb_hmm(hmm_profile, pdb_fname):
     """
     with read_pdb_seq(pdb_fname) as (seqfname, seqs):
         out = hmmalign_a2m(hmm_profile, seqfname)
-    aligned = dict((rec.id, str(rec.seq))
-                   for rec in SeqIO.parse(StringIO(out), 'fasta'))
+    aligned = dict(
+        (rec.id, str(rec.seq)) for rec in SeqIO.parse(StringIO(out), "fasta")
+    )
     return pdb_ref_resnums(aligned, seqs)
 
 
@@ -622,7 +697,6 @@ def pdb_mapgaps(mapgaps_profile, pdb_fname):
     Returns a tuple as pdb_ref_resnums does.
     """
     with read_pdb_seq(pdb_fname) as (seqfname, seqs):
-        call_quiet('run_gaps', mapgaps_profile, seqfname)
-        aligned = dict(cma_records(seqfname + '_aln.cma'))
+        call_quiet("run_gaps", mapgaps_profile, seqfname)
+        aligned = dict(cma_records(seqfname + "_aln.cma"))
     return pdb_ref_resnums(aligned, seqs)
-

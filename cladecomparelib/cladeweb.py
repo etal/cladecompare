@@ -6,6 +6,7 @@ Output (POST):
     CladeReport (heat map) of submission.
 
 """
+
 # TODO:
 #   - take boolean do_weight as a form option (checkbox?)
 # ENH (in the report):
@@ -20,8 +21,7 @@ import webbrowser
 
 import bottle
 
-from cladecomparelib import (core, pairlogo, pmlscript, urn, gtest, jsd,
-                             phospho, report)
+from cladecomparelib import core, pairlogo, pmlscript, urn, gtest, jsd, phospho, report
 
 
 # ENH: include textarea as alternative to each file upload input
@@ -129,7 +129,8 @@ coccidian virulence factors</a>.
 
 # --- Routes ---
 
-@bottle.get('/cladecompare')
+
+@bottle.get("/cladecompare")
 def form():
     return FORM_HTML
 
@@ -137,30 +138,32 @@ def form():
 # TODO - routes for downloading .pml, .pdf -- use static_file
 
 
-@bottle.post('/cladecompare')
+@bottle.post("/cladecompare")
 def form_submit():
     # ENH: pick a unique, informative name -- e.g. date or hostname
     name = bottle.request.forms.name
 
     seqfile1 = bottle.request.files.seqfile1
-    if not hasattr(seqfile1, 'file'):
+    if not hasattr(seqfile1, "file"):
         return "Error: You need to specify at least one sequence file."
-    seq1fname = handle2temp(seqfile1.file,
-                            suffix=('.cma' if seqfile1.filename.endswith('.cma')
-                                    else '.seq'))
+    seq1fname = handle2temp(
+        seqfile1.file, suffix=(".cma" if seqfile1.filename.endswith(".cma") else ".seq")
+    )
 
     # Optional second sequence set -- if missing, do single mode
     seqfile2 = bottle.request.files.seqfile2
-    if hasattr(seqfile2, 'file'):
-        seq2fname = handle2temp(seqfile2.file,
-                                suffix=('.cma' if
-                                        seqfile2.filename.endswith('.cma') else
-                                        '.seq'))
+    if hasattr(seqfile2, "file"):
+        seq2fname = handle2temp(
+            seqfile2.file,
+            suffix=(".cma" if seqfile2.filename.endswith(".cma") else ".seq"),
+        )
         if not name:
-            name = "%s-vs-%s" % (seqfile1.filename.rsplit('.', 1)[0],
-                                 seqfile2.filename.rsplit('.', 1)[0])
+            name = "%s-vs-%s" % (
+                seqfile1.filename.rsplit(".", 1)[0],
+                seqfile2.filename.rsplit(".", 1)[0],
+            )
     else:
-        seq2fname = ''
+        seq2fname = ""
         if not name:
             name = seqfile1.filename
 
@@ -168,33 +171,34 @@ def form_submit():
     profile = bottle.request.files.profile
     # Optional HMM profile for alignment
     profile = bottle.request.files.profile
-    if hasattr(profile, 'file'):
-        if not profile.filename.endswith('.hmm'):
+    if hasattr(profile, "file"):
+        if not profile.filename.endswith(".hmm"):
             return "HMM profile file name must end in .hmm"
-        profname = handle2temp(profile.file, suffix='.hmm')
+        profname = handle2temp(profile.file, suffix=".hmm")
         logging.info("Aligning %s with profile %s", seq1fname, profname)
         fg_aln = core.hmm_align_and_read(profname, seq1fname)
         if seq2fname:
             logging.info("Aligning %s with profile %s", seq2fname, profname)
             bg_aln = core.hmm_align_and_read(profname, seq2fname)
     else:
-        profname = ''
-        fg_aln = core.read_aln(seq1fname, 'fasta')
+        profname = ""
+        fg_aln = core.read_aln(seq1fname, "fasta")
         if seq2fname:
-            bg_aln = core.read_aln(seq2fname, 'fasta')
+            bg_aln = core.read_aln(seq2fname, "fasta")
 
     pdbfile = bottle.request.files.pdbfile
-    if hasattr(pdbfile, 'file'):
+    if hasattr(pdbfile, "file"):
         if not profname:
-            return ("Error: to generate a PyMOL script for a PDB file you must"
-                    "also specify an HMM profile")
+            return (
+                "Error: to generate a PyMOL script for a PDB file you must"
+                "also specify an HMM profile"
+            )
         pdbfname = handle2temp(pdbfile.file)
         logging.info("Aligning %s with profile %s", pdbfile.filename, profname)
-        pdb_rec, pdb_resnums, pdb_inserts = core.pdb_hmm(profname,
-                                                         pdbfname)
+        pdb_rec, pdb_resnums, pdb_inserts = core.pdb_hmm(profname, pdbfname)
         pdb_data = [(pdbfname, pdb_rec, pdb_resnums, pdb_inserts)]
     else:
-        pdbfname = ''
+        pdbfname = ""
         pdb_data = None
 
     # Mutually exclusive with pdbfname (above):
@@ -204,8 +208,12 @@ def form_submit():
         # Can get this info w/o dl'ing actual PDB file (e.g. via FASTA)?
         pass
 
-    stat_module = dict(gtest=gtest, urn=urn, jsd=jsd, phospho=phospho,
-                      )[bottle.request.forms.strategy]
+    stat_module = dict(
+        gtest=gtest,
+        urn=urn,
+        jsd=jsd,
+        phospho=phospho,
+    )[bottle.request.forms.strategy]
     try:
         alpha = float(bottle.request.forms.alpha)
         if not 0.0 <= alpha <= 1.0:
@@ -213,26 +221,23 @@ def form_submit():
     except ValueError:
         return "Error: alpha must be a number between 0 and 1"
 
-    _fdo, tmp_output = tempfile.mkstemp(suffix='.out')
+    _fdo, tmp_output = tempfile.mkstemp(suffix=".out")
     os.close(_fdo)
-    _fdp, tmp_pattern = tempfile.mkstemp(suffix='.pttrn')
+    _fdp, tmp_pattern = tempfile.mkstemp(suffix=".pttrn")
     os.close(_fdp)
 
     # Run the algorithms...
 
     if seq2fname:
         # Pair mode
-        fg_clean, bg_clean, hits = core.process_pair(fg_aln, bg_aln,
-                                                     stat_module, False)
-        core.process_output(fg_clean, bg_clean, hits, alpha,
-                            tmp_output, tmp_pattern,
-                            pdb_data)
+        fg_clean, bg_clean, hits = core.process_pair(fg_aln, bg_aln, stat_module, False)
+        core.process_output(
+            fg_clean, bg_clean, hits, alpha, tmp_output, tmp_pattern, pdb_data
+        )
     else:
         # Single mode
         aln, hits = core.process_one(fg_aln, stat_module, False)
-        core.process_output(aln, None, hits, alpha,
-                            tmp_output, tmp_pattern,
-                            pdb_data)
+        core.process_output(aln, None, hits, alpha, tmp_output, tmp_pattern, pdb_data)
 
     # Get the HTML report data
     contents = report.do_single(tmp_output, tmp_pattern)[1]
@@ -248,7 +253,8 @@ def form_submit():
 
 # --- Helpers ---
 
-def handle2temp(handle, suffix=''):
+
+def handle2temp(handle, suffix=""):
     """Write file handle contents to a temporary file, return tempfile name."""
     _fd, fname = tempfile.mkstemp(suffix=suffix)
     os.write(_fd, handle.read())
@@ -268,8 +274,10 @@ def cleanup(fname):
 
 # --- Run ---
 
+
 def main():
-    logging.basicConfig(level=logging.INFO,
-                        format="%(module)s [@%(lineno)s]: %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(module)s [@%(lineno)s]: %(message)s"
+    )
     webbrowser.open("http://localhost:8080/cladecompare")
-    bottle.run(host='localhost', port=8080)
+    bottle.run(host="localhost", port=8080)

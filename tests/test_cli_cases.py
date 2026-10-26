@@ -66,9 +66,11 @@ CASES = {
 # arithmetic agrees with the later values. Each (reference, current, count)
 # replaces a p-value printed at `count` sites, in the .out and .html files.
 SUBSTITUTIONS = {
-    "pair.hypg": [("6.8898e-10", "6.88977e-10", 5),
-                  ("5.74155e-11", "5.74147e-11", 5),
-                  ("2.12435e-09", "2.12434e-09", 3)],
+    "pair.hypg": [
+        ("6.8898e-10", "6.88977e-10", 5),
+        ("5.74155e-11", "5.74147e-11", 5),
+        ("2.12435e-09", "2.12434e-09", 3),
+    ],
 }
 
 # The reference case unequal.gtest also wrote this file, which the code no
@@ -77,8 +79,13 @@ NOT_WRITTEN = {"_cc_combined.seq"}
 
 # Recorded cases with a test of their own below, and the legacy cases, which
 # those tests use as their expected output.
-OWN_TESTS = {"pair.hypg.w", "pair.phospho", "pair.phospho.w",
-             "single.phospho", "single.phospho.w"}
+OWN_TESTS = {
+    "pair.hypg.w",
+    "pair.phospho",
+    "pair.phospho.w",
+    "single.phospho",
+    "single.phospho.w",
+}
 LEGACY = {"legacy.pair.phospho.nw", "legacy.single.phospho.nw"}
 
 
@@ -93,8 +100,9 @@ def command(script):
     A record names the script as, for example, ``cladecompare.py``.
     """
     path = Path(sys.executable).with_name(script.removesuffix(".py"))
-    assert path.exists(), \
+    assert path.exists(), (
         f"{path.name} is not installed; run 'uv sync' or 'pixi install'"
+    )
     return str(path)
 
 
@@ -114,9 +122,14 @@ def run_commands(commands, tmp_path, path_prefix=None):
         env["PATH"] = str(path_prefix) + os.pathsep + env["PATH"]
     results = []
     for argv in commands:
-        result = subprocess.run([command(argv[0]), *argv[1:]], cwd=workdir,
-                                env=env, capture_output=True, text=True,
-                                check=False)
+        result = subprocess.run(
+            [command(argv[0]), *argv[1:]],
+            cwd=workdir,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
         results.append(result)
         if result.returncode:
             break
@@ -126,10 +139,8 @@ def run_commands(commands, tmp_path, path_prefix=None):
 
 def assert_valid_pvalues(path):
     """Every p-value in a .out file is finite and within [0, 1]."""
-    pvalues = [prob for _fg, _bg, _posn, prob, _stars
-               in report.parse_out(path)]
-    invalid = [p for p in pvalues
-               if not (math.isfinite(p) and 0.0 <= p <= 1.0)]
+    pvalues = [prob for _fg, _bg, _posn, prob, _stars in report.parse_out(path)]
+    invalid = [p for p in pvalues if not (math.isfinite(p) and 0.0 <= p <= 1.0)]
     assert pvalues and not invalid, f"{path.name}: {invalid[:5]}"
 
 
@@ -154,10 +165,12 @@ def check_case(case, tmp_path, path_prefix=None, commands=None):
     record = load(case)
     steps = record["commands"]
     workdir, written, results, tmpdir = run_commands(
-        commands or [step["argv"] for step in steps], tmp_path, path_prefix)
+        commands or [step["argv"] for step in steps], tmp_path, path_prefix
+    )
 
-    assert ([r.returncode for r in results]
-            == [s["returncode"] for s in steps]), results[-1].stderr
+    assert [r.returncode for r in results] == [s["returncode"] for s in steps], results[
+        -1
+    ].stderr
     for result, step in zip(results, steps):
         if step["returncode"]:
             error = step["stderr"].strip().splitlines()[-1].split(":")[0]
@@ -175,9 +188,13 @@ def check_case(case, tmp_path, path_prefix=None, commands=None):
     assert len(leftovers) == record["leftover_temp_files"], leftovers
 
 
-@pytest.mark.parametrize("case", [
-    pytest.param(case, marks=[pytest.mark.integration] if programs else [])
-    for case, programs in sorted(CASES.items())])
+@pytest.mark.parametrize(
+    "case",
+    [
+        pytest.param(case, marks=[pytest.mark.integration] if programs else [])
+        for case, programs in sorted(CASES.items())
+    ],
+)
 def test_reference_case(case, tmp_path, require):
     require(*CASES[case])
     check_case(case, tmp_path)
@@ -199,15 +216,20 @@ def test_phospho_matches_legacy(mode, tmp_path):
     case = mode + ".phospho"
     record = load(case)
     workdir, written, results, _tmpdir = run_commands(
-        [step["argv"] for step in record["commands"]], tmp_path)
+        [step["argv"] for step in record["commands"]], tmp_path
+    )
     assert [r.returncode for r in results] == [0]
     legacy = f"legacy.{mode}.phospho.nw"
     expected = load(legacy)["pdfs"]
-    assert_pdfs(workdir, {name for name in written if name.endswith(".pdf")},
-                [name.replace(legacy, case) for name in expected])
+    assert_pdfs(
+        workdir,
+        {name for name in written if name.endswith(".pdf")},
+        [name.replace(legacy, case) for name in expected],
+    )
     for suffix in [".out", ".pttrn"]:
-        assert ((workdir / (case + suffix)).read_bytes()
-                == (REFERENCE / legacy / (legacy + suffix)).read_bytes())
+        assert (workdir / (case + suffix)).read_bytes() == (
+            REFERENCE / legacy / (legacy + suffix)
+        ).read_bytes()
     assert_valid_pvalues(workdir / (case + ".out"))
 
 
@@ -220,7 +242,8 @@ def test_phospho_weighted_completes(mode, tmp_path):
     """
     case = mode + ".phospho.w"
     workdir, _written, results, _tmpdir = run_commands(
-        [step["argv"] for step in load(case)["commands"]], tmp_path)
+        [step["argv"] for step in load(case)["commands"]], tmp_path
+    )
     assert [r.returncode for r in results] == [0]
     assert_valid_pvalues(workdir / (case + ".out"))
 
@@ -238,7 +261,8 @@ def test_hypg_weighted(tmp_path):
     """
     case = "pair.hypg.w"
     workdir, written, results, _tmpdir = run_commands(
-        [step["argv"] for step in load(case)["commands"]], tmp_path)
+        [step["argv"] for step in load(case)["commands"]], tmp_path
+    )
     assert [r.returncode for r in results] == [0, 0], results[-1].stderr
     assert_valid_pvalues(workdir / (case + ".out"))
     assert (workdir / (case + ".pttrn")).read_text() == "1:"
@@ -286,5 +310,5 @@ def test_mapgaps_matches_hmm_alignment(tmp_path, require):
     case = "pdb.1HCK.gtest"
     commands = [step["argv"] for step in load(case)["commands"]]
     hmm = commands[0].index("--hmm")
-    commands[0][hmm:hmm + 2] = ["--mapgaps", "CDK"]
+    commands[0][hmm : hmm + 2] = ["--mapgaps", "CDK"]
     check_case(case, tmp_path, path_prefix=bindir, commands=commands)

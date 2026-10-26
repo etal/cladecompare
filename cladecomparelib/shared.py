@@ -1,4 +1,5 @@
 """Numerical functions shared by multiple CladeCompare modules."""
+
 from __future__ import division
 
 import collections
@@ -20,7 +21,7 @@ def count_col(col, weights, pseudo=None, pseudo_size=1.0):
     """
     counts = collections.defaultdict(float)
     for char, wt in zip(col, weights):
-        if char in '-.X':
+        if char in "-.X":
             continue
         counts[char] += wt
     if pseudo:
@@ -46,11 +47,13 @@ def combined_frequencies(fg_aln, fg_weights, bg_aln, bg_weights):
 
     Returns a dict of characters and their overall frequencies.
     """
-    freqs = alnutils.aa_frequencies(list(fg_aln) + list(bg_aln),
-                                    fg_weights + bg_weights,
-                                    gap_chars='-.X')
-    assert abs(fsum(freqs.values()) - 1.0) < 1e-6, \
-            "Freqs sum to %s:\n%s" % (fsum(freqs.values()), freqs)
+    freqs = alnutils.aa_frequencies(
+        list(fg_aln) + list(bg_aln), fg_weights + bg_weights, gap_chars="-.X"
+    )
+    assert abs(fsum(freqs.values()) - 1.0) < 1e-6, "Freqs sum to %s:\n%s" % (
+        fsum(freqs.values()),
+        freqs,
+    )
     return freqs
 
 
@@ -58,4 +61,3 @@ def scale_counts(counts):
     """Scale a dict of keys-to-integer counts so values sum to 1."""
     scale = 1.0 / fsum(counts.values())
     return dict((key, cnt * scale) for key, cnt in counts.items())
-

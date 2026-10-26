@@ -1,4 +1,5 @@
 """Generate an HTML report summarizing CladeCompare output."""
+
 from __future__ import division
 
 import logging
@@ -58,8 +59,8 @@ def parse_out(fname):
             fg_aa = tokens[0]
             bg_aa = tokens[1][1]
             posn = int(tokens[2])
-            prob = float(tokens[4].split('=')[1])
-            nstars = (len(tokens[5]) if len(tokens) == 6 else 0)
+            prob = float(tokens[4].split("=")[1])
+            nstars = len(tokens[5]) if len(tokens) == 6 else 0
             yield (fg_aa, bg_aa, posn, prob, nstars)
 
 
@@ -67,14 +68,13 @@ def parse_pattern(fname):
     with open(fname) as infile:
         # NB: only reading the first pattern, ignoring any others
         line = infile.readline()
-        _idx, site_ln = map(str.strip, line.split(':'))
+        _idx, site_ln = map(str.strip, line.split(":"))
         if not site_ln:
             logging.warning("Empty pattern file: %s", fname)
             return []
-        sites = site_ln.split(',')
+        sites = site_ln.split(",")
         # Convert to number...
-        posns = sorted(int(''.join(filter(str.isdigit, site)))
-                       for site in sites)
+        posns = sorted(int("".join(filter(str.isdigit, site))) for site in sites)
         return list(posns)
 
 
@@ -89,27 +89,35 @@ def p2class(fg, bg, pval):
     Foreground deletions -> gray, inserts -> gold.
 
     """
-    if fg == '-':
-        return 'del'
-    if bg == '-':
-        return 'ins'
+    if fg == "-":
+        return "del"
+    if bg == "-":
+        return "ins"
     try:
         nlp = -log10(pval)
     except ValueError:
         # pval is 0, but let log10 decide that
-        return 'r9'
-    if nlp < 0.00001:  return 'b5'
-    if nlp < 0.0005:  return 'b4'
-    if nlp <= 0.005: return 'b3'
-    if nlp <= 0.05: return 'b2'
-    if nlp <= 0.3: return 'b1'
-    if nlp <= 1.0: return 'wt'
-    if nlp >= 9.0: return 'r9'
+        return "r9"
+    if nlp < 0.00001:
+        return "b5"
+    if nlp < 0.0005:
+        return "b4"
+    if nlp <= 0.005:
+        return "b3"
+    if nlp <= 0.05:
+        return "b2"
+    if nlp <= 0.3:
+        return "b1"
+    if nlp <= 1.0:
+        return "wt"
+    if nlp >= 9.0:
+        return "r9"
     # r1, r2, ..., r8
-    return 'r%d' % int((nlp+1)/2)
+    return "r%d" % int((nlp + 1) / 2)
 
 
 # Formatting
+
 
 def table_single(pvalues, classes, pattern, foreground, background, positions):
     assert len(foreground) == len(background) == len(positions)
@@ -139,7 +147,7 @@ def table_multi(labels, rowcells, rowclasses, rowpvalues, pattern, positions):
 def tr_plain(label, cells):
     out = "<tr>\n"
     out += '<td class="label">%s</td>' % label
-    out += ''.join(['<td>%s</td>' % c for c in cells])
+    out += "".join(["<td>%s</td>" % c for c in cells])
     out += "\n</tr>"
     return out
 
@@ -147,20 +155,25 @@ def tr_plain(label, cells):
 def tr_class(label, cells, pvalues, classes):
     out = "<tr>\n"
     out += '<td class="label">%s</td>' % label
-    out += ''.join(['<td class="%s" title="p=%s">%s</td>' % (cls, pval, txt)
-                    for cls, pval, txt in zip(classes, pvalues, cells)])
+    out += "".join(
+        [
+            '<td class="%s" title="p=%s">%s</td>' % (cls, pval, txt)
+            for cls, pval, txt in zip(classes, pvalues, cells)
+        ]
+    )
     out += "\n</tr>"
     return out
 
 
 def tr_pos(cells):
     out = "<tr class='pos'>\n<td></td>\n"
-    out += ''.join(['<td>%s</td>' % c for c in cells])
+    out += "".join(["<td>%s</td>" % c for c in cells])
     out += "\n</tr>"
     return out
 
 
 # Logic
+
 
 def wrap_data(data, width=50):
     """list of atoms -> list of lists, chunked at width"""
@@ -178,15 +191,14 @@ def do_single(fname, patternfname):
     sites = list(parse_out(fname))
     fg_seq, bg_seq, posns, probs, _nstarses = zip(*sites)
     classes = [p2class(fg, bg, p) for fg, bg, p in zip(fg_seq, bg_seq, probs)]
-    posns = [str(p) if not p % 10 else '' for p in posns]
-    pattern = [''] * len(posns)
+    posns = [str(p) if not p % 10 else "" for p in posns]
+    pattern = [""] * len(posns)
     if patternfname:
         for posn in parse_pattern(patternfname):
-            pattern[posn-1] = '*'
+            pattern[posn - 1] = "*"
     # wrap it up
-    contents = ''
-    chunked_data = map(wrap_data,
-                       [probs, classes, pattern, fg_seq, bg_seq, posns])
+    contents = ""
+    chunked_data = map(wrap_data, [probs, classes, pattern, fg_seq, bg_seq, posns])
     for layer in zip(*chunked_data):
         contents += table_single(*layer)
         contents += "<p />"
@@ -195,35 +207,39 @@ def do_single(fname, patternfname):
 
 def do_multi(fnames, patternfname):
     """Build an HTML document combining multiple '.out' files."""
-    rowcells = []   # dim = #fnames x #cols
+    rowcells = []  # dim = #fnames x #cols
     rowclasses = []
     rowpvalues = []
     for fname in fnames:
         sites = list(parse_out(fname))
         fg_seq, bg_seq, posns, probs, _nstarses = zip(*sites)
         rowcells.append(fg_seq)
-        rowclasses.append([p2class(fg, bg, p)
-                           for fg, bg, p in zip(fg_seq, bg_seq, probs)])
+        rowclasses.append(
+            [p2class(fg, bg, p) for fg, bg, p in zip(fg_seq, bg_seq, probs)]
+        )
         rowpvalues.append(probs)
-    posns = [str(p) if not p % 10 else '' for p in posns]
-    pattern = [''] * len(posns)
+    posns = [str(p) if not p % 10 else "" for p in posns]
+    pattern = [""] * len(posns)
     if patternfname:
         for posn in parse_pattern(patternfname):
-            pattern[posn-1] = '*'
+            pattern[posn - 1] = "*"
     # wrap it up
-    contents = ''
-    labels = [fn[:-len('.out')] if fn.endswith('.out') else fn
-              for fn in fnames]
+    contents = ""
+    labels = [fn[: -len(".out")] if fn.endswith(".out") else fn for fn in fnames]
     chunked_posns = wrap_data(posns)
     chunked_pattern = wrap_data(pattern)
     wrapped_row_cells = zip(*map(wrap_data, rowcells))
     wrapped_row_classes = zip(*map(wrap_data, rowclasses))
     wrapped_row_pvalues = zip(*map(wrap_data, rowpvalues))
     for w_rowcells, w_rowclasses, w_rowpvalues, ptnrow, positions in zip(
-        wrapped_row_cells, wrapped_row_classes, wrapped_row_pvalues,
-        chunked_pattern, chunked_posns):
-        contents += table_multi(labels, w_rowcells, w_rowclasses, w_rowpvalues,
-                                ptnrow, positions)
+        wrapped_row_cells,
+        wrapped_row_classes,
+        wrapped_row_pvalues,
+        chunked_pattern,
+        chunked_posns,
+    ):
+        contents += table_multi(
+            labels, w_rowcells, w_rowclasses, w_rowpvalues, ptnrow, positions
+        )
         contents += "<p />"
-    return ', '.join(fnames), contents
-
+    return ", ".join(fnames), contents

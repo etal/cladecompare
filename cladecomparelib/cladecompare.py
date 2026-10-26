@@ -8,8 +8,9 @@ from cladecomparelib.core import process_args
 
 
 def main():
-    AP = argparse.ArgumentParser(description=__doc__,
-                                 epilog="""Examples:
+    AP = argparse.ArgumentParser(
+        description=__doc__,
+        epilog="""Examples:
 
 # Basic
 cladecompare fg.seq bg.seq > fg-v-bg.out
@@ -26,65 +27,96 @@ cladecompare fg.fasta bg.fasta -s urn --mapgaps /share/data/PK \\
 cladecompare fg.fasta bg.fasta --hmm Pkinase.hmm --pdb 1ATP.pdb
 
 See README or https://github.com/etal/cladecompare for full documentation.
-""", formatter_class=argparse.RawDescriptionHelpFormatter)
+""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     # Input
-    AP.add_argument('foreground',
-            help="Foreground sequence (alignment) file.")
-    AP.add_argument('background',
-            nargs='*',
-            help="""Background sequence (alignment) file, or additional
-            foreground alignments for each-vs-all comparisons.""")
-    AP.add_argument('-f', '--format',
-            default='fasta',
-            help="Input alignment format (default: fasta).")
-    AP.add_argument('--hmm',
-            help="""Align the foreground and background sequences with this
-            HMMER 3 profile.""")
-    AP.add_argument('--mapgaps',
-            help="""Align the foreground and background sequences with this
-            MAPGAPS profile.""")
-    AP.add_argument('--pdb',
-            action='append',
-            help="""3D structure coordinates in Protein Data Bank format.""")
+    AP.add_argument("foreground", help="Foreground sequence (alignment) file.")
+    AP.add_argument(
+        "background",
+        nargs="*",
+        help="""Background sequence (alignment) file, or additional
+            foreground alignments for each-vs-all comparisons.""",
+    )
+    AP.add_argument(
+        "-f",
+        "--format",
+        default="fasta",
+        help="Input alignment format (default: fasta).",
+    )
+    AP.add_argument(
+        "--hmm",
+        help="""Align the foreground and background sequences with this
+            HMMER 3 profile.""",
+    )
+    AP.add_argument(
+        "--mapgaps",
+        help="""Align the foreground and background sequences with this
+            MAPGAPS profile.""",
+    )
+    AP.add_argument(
+        "--pdb",
+        action="append",
+        help="""3D structure coordinates in Protein Data Bank format.""",
+    )
     # Options
     # add_argument_group?
-    AP.add_argument('-a', '--alpha',
-            default=0.005, type=float,
-            help="Significance threshold for pattern columns.")
-    AP.add_argument('-s', '--strategy',
-            default='gtest',
-            choices=('gtest', 'urn', 'phospho', 'jsd', 'hypg'),
-            help="""Strategy used to compare alignments:
+    AP.add_argument(
+        "-a",
+        "--alpha",
+        default=0.005,
+        type=float,
+        help="Significance threshold for pattern columns.",
+    )
+    AP.add_argument(
+        "-s",
+        "--strategy",
+        default="gtest",
+        choices=("gtest", "urn", "phospho", "jsd", "hypg"),
+        help="""Strategy used to compare alignments:
             'gtest' = G-test of all character frequencies;
             'urn' = ball-in-urn model of consensus residue conservation;
             'phospho' = urn model for phosphorylatable residues (S/T/Y);
             'jsd' = Jensen-Shannon divergence.
             'hypg' = hypergeometric distribution
-            """)
-    AP.add_argument('-w', '--weight',
-            action='store_true',
-            help="""Enable sequence weighting for statistical tests.""")
+            """,
+    )
+    AP.add_argument(
+        "-w",
+        "--weight",
+        action="store_true",
+        help="""Enable sequence weighting for statistical tests.""",
+    )
     # Output
-    AP.add_argument('-o', '--output',
-            default=sys.stdout,
-            help="""Write per-column probabilities (standard output) to this
+    AP.add_argument(
+        "-o",
+        "--output",
+        default=sys.stdout,
+        help="""Write per-column probabilities (standard output) to this
             filename, for use with cladereport. (Single-foreground
-            comparison only.""")
-    AP.add_argument('-p', '--pattern',
-            help="""Write an mcBPPS-style pattern file to this filename.
-            (Single-foreground comparison only.""")
-    AP.add_argument('--pmlout',
-            help="Write a PyMOL script to this filename (if --pdb given).")
-    AP.add_argument('-q', '--quiet',
-            action='store_true',
-            help="Don't print status messages, only warnings and errors.")
+            comparison only.""",
+    )
+    AP.add_argument(
+        "-p",
+        "--pattern",
+        help="""Write an mcBPPS-style pattern file to this filename.
+            (Single-foreground comparison only.""",
+    )
+    AP.add_argument(
+        "--pmlout", help="Write a PyMOL script to this filename (if --pdb given)."
+    )
+    AP.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="Don't print status messages, only warnings and errors.",
+    )
 
     args = AP.parse_args()
     if args.quiet:
-        logging.basicConfig(level=logging.WARNING,
-                format="%(module)s: %(message)s")
+        logging.basicConfig(level=logging.WARNING, format="%(module)s: %(message)s")
     else:
-        logging.basicConfig(level=logging.INFO,
-                format="%(module)s [@%(lineno)s]: %(message)s")
+        logging.basicConfig(
+            level=logging.INFO, format="%(module)s [@%(lineno)s]: %(message)s"
+        )
     process_args(args)
-

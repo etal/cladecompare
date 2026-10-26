@@ -55,13 +55,18 @@ BOUNDARY = "cladecompare-test-boundary"
 def multipart(fields, files):
     parts = []
     for name, value in fields:
-        parts.append(f'--{BOUNDARY}\r\nContent-Disposition: form-data; '
-                     f'name="{name}"\r\n\r\n{value}\r\n'.encode())
+        parts.append(
+            f"--{BOUNDARY}\r\nContent-Disposition: form-data; "
+            f'name="{name}"\r\n\r\n{value}\r\n'.encode()
+        )
     for name, fname in files:
-        parts.append(f'--{BOUNDARY}\r\nContent-Disposition: form-data; '
-                     f'name="{name}"; filename="{fname}"\r\n'
-                     'Content-Type: application/octet-stream\r\n\r\n'.encode()
-                     + (DATA / "inputs" / fname).read_bytes() + b"\r\n")
+        parts.append(
+            f"--{BOUNDARY}\r\nContent-Disposition: form-data; "
+            f'name="{name}"; filename="{fname}"\r\n'
+            "Content-Type: application/octet-stream\r\n\r\n".encode()
+            + (DATA / "inputs" / fname).read_bytes()
+            + b"\r\n"
+        )
     return b"".join(parts) + f"--{BOUNDARY}--\r\n".encode()
 
 
@@ -79,17 +84,22 @@ def submit(record, tmp_path, monkeypatch):
     errors = io.StringIO()
     environ = {}
     wsgiref.util.setup_testing_defaults(environ)
-    environ.update({
-        "REQUEST_METHOD": "POST",
-        "PATH_INFO": "/cladecompare",
-        "CONTENT_TYPE": "multipart/form-data; boundary=" + BOUNDARY,
-        "CONTENT_LENGTH": str(len(body)),
-        "wsgi.input": io.BytesIO(body),
-        "wsgi.errors": errors,
-    })
+    environ.update(
+        {
+            "REQUEST_METHOD": "POST",
+            "PATH_INFO": "/cladecompare",
+            "CONTENT_TYPE": "multipart/form-data; boundary=" + BOUNDARY,
+            "CONTENT_LENGTH": str(len(body)),
+            "wsgi.input": io.BytesIO(body),
+            "wsgi.errors": errors,
+        }
+    )
     status = []
-    response = b"".join(bottle.default_app()(
-        environ, lambda stat, headers, exc_info=None: status.append(stat)))
+    response = b"".join(
+        bottle.default_app()(
+            environ, lambda stat, headers, exc_info=None: status.append(stat)
+        )
+    )
     return workdir, tmpdir, status[0], response, errors.getvalue()
 
 
@@ -98,14 +108,17 @@ def load(case):
     return json.loads(text)
 
 
-@pytest.mark.parametrize("case", [
-    pytest.param(case, marks=[pytest.mark.integration] if programs else [])
-    for case, programs in sorted(CASES.items())])
+@pytest.mark.parametrize(
+    "case",
+    [
+        pytest.param(case, marks=[pytest.mark.integration] if programs else [])
+        for case, programs in sorted(CASES.items())
+    ],
+)
 def test_reference_submission(case, tmp_path, monkeypatch, require):
     require(*CASES[case])
     record = load(case)
-    workdir, tmpdir, status, response, errors = submit(record, tmp_path,
-                                                       monkeypatch)
+    workdir, tmpdir, status, response, errors = submit(record, tmp_path, monkeypatch)
     assert status == record["status"], errors
     if record["error"]:
         error = record["error"].strip().splitlines()[-1].split(":")[0]
@@ -127,7 +140,8 @@ def test_every_recorded_submission_is_tested():
 def test_phospho_submission_completes(mode, tmp_path, monkeypatch):
     """phospho, which the reference records failing with TypeError, runs."""
     workdir, _tmpdir, status, response, errors = submit(
-        load(f"web.{mode}.phospho"), tmp_path, monkeypatch)
+        load(f"web.{mode}.phospho"), tmp_path, monkeypatch
+    )
     assert status == "200 OK", errors
     assert b"<table>" in response
     assert os.listdir(workdir) == []

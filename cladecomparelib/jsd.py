@@ -12,13 +12,21 @@ See:
 
 from biofrills import consensus, alnutils
 
-from .shared import (count_col, combined_frequencies, entropy, MAX_ENTROPY, 
-                     scale_counts)
+from .shared import count_col, combined_frequencies, entropy, MAX_ENTROPY, scale_counts
 
 
-def compare_cols(fg_col, fg_cons, fg_size, fg_weights,
-                 bg_col, bg_cons, bg_size, bg_weights,
-                 aa_freqs, pseudo_size):
+def compare_cols(
+    fg_col,
+    fg_cons,
+    fg_size,
+    fg_weights,
+    bg_col,
+    bg_cons,
+    bg_size,
+    bg_weights,
+    aa_freqs,
+    pseudo_size,
+):
     """1 - Jensen-Shannon divergence between the column.
 
     JSD(P,Q) = H(0.5*P + 0.5*Q) - (0.5*H(P) + 0.5*H(Q))
@@ -28,11 +36,12 @@ def compare_cols(fg_col, fg_cons, fg_size, fg_weights,
     bg_counts = scale_counts(count_col(bg_col, bg_weights, aa_freqs, pseudo_size))
     # bg_counts = scale_counts(count_col(bg_col, bg_weights))
     mix = {}
-    for aa in 'ACDEFGHIKLMNPQRSTVWY':
-        mix[aa] = 0.5*fg_counts.get(aa, 0.) + 0.5*bg_counts.get(aa, 0)
-    jsd = entropy(mix.values()) - 0.5*(entropy(fg_counts.values()) +
-                                        entropy(bg_counts.values()))
-    return (1 - jsd)**2
+    for aa in "ACDEFGHIKLMNPQRSTVWY":
+        mix[aa] = 0.5 * fg_counts.get(aa, 0.0) + 0.5 * bg_counts.get(aa, 0)
+    jsd = entropy(mix.values()) - 0.5 * (
+        entropy(fg_counts.values()) + entropy(bg_counts.values())
+    )
+    return (1 - jsd) ** 2
 
 
 def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
@@ -40,9 +49,7 @@ def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
     # XXX use equal freqs or aa_freqs as background?
     counts = scale_counts(count_col(col, weights))
     mix = {}
-    for aa in 'ACDEFGHIKLMNPQRSTVWY':
-        mix[aa] = 0.5*counts.get(aa, 0.) + 0.5*0.05
-    jsd = entropy(mix.values()) - 0.5*(entropy(counts.values()) +
-                                        MAX_ENTROPY)
-    return (1 - jsd)**2
-
+    for aa in "ACDEFGHIKLMNPQRSTVWY":
+        mix[aa] = 0.5 * counts.get(aa, 0.0) + 0.5 * 0.05
+    jsd = entropy(mix.values()) - 0.5 * (entropy(counts.values()) + MAX_ENTROPY)
+    return (1 - jsd) ** 2

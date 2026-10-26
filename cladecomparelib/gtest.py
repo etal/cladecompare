@@ -26,6 +26,7 @@ The test statistic G follows the chi-squared distribution with 19 degrees of
 freedom (20 amino acids, 2 compared sets -> (20-1)x(2-1) = 19).
 
 """
+
 from __future__ import division
 
 import math
@@ -36,20 +37,28 @@ from biofrills.stats.chisq import chisqprob
 from .shared import count_col, combined_frequencies
 
 
-def compare_cols(fg_col, fg_cons, fg_size, fg_weights,
-                 bg_col, bg_cons, bg_size, bg_weights,
-                 aa_freqs, pseudo_size):
+def compare_cols(
+    fg_col,
+    fg_cons,
+    fg_size,
+    fg_weights,
+    bg_col,
+    bg_cons,
+    bg_size,
+    bg_weights,
+    aa_freqs,
+    pseudo_size,
+):
     """Compare amino acid frequencies between aligned columns via G-test."""
     # Calculate the "expected" aa frequencies
     bg_counts = count_col(bg_col, bg_weights, aa_freqs, pseudo_size)
     expected = {}
-    for aa in 'ACDEFGHIKLMNPQRSTVWY':
-            # Scale to same size as foreground
-        expected[aa] = fg_size * (bg_counts[aa] / (bg_size + pseudo_size)) 
+    for aa in "ACDEFGHIKLMNPQRSTVWY":
+        # Scale to same size as foreground
+        expected[aa] = fg_size * (bg_counts[aa] / (bg_size + pseudo_size))
     # Calculate the G-value of observed vs. expected
     observed = count_col(fg_col, fg_weights)
-    G = 2 * sum(obsv * math.log(obsv / expected[aa])
-                for aa, obsv in observed.items())
+    G = 2 * sum(obsv * math.log(obsv / expected[aa]) for aa, obsv in observed.items())
     # 4. Calculate the Chi-squared p-value of G
     pvalue = chisqprob(G, 19)
     return pvalue
@@ -58,8 +67,8 @@ def compare_cols(fg_col, fg_cons, fg_size, fg_weights,
 def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
     """Compare column amino acid frequencies to overall via G-test."""
     observed = count_col(col, weights, aa_freqs, pseudo_size)
-    G = 2 * sum(obsv * math.log(obsv / aa_freqs.get(aa, 0.0))
-                for aa, obsv in observed.items())
+    G = 2 * sum(
+        obsv * math.log(obsv / aa_freqs.get(aa, 0.0)) for aa, obsv in observed.items()
+    )
     pvalue = chisqprob(G, 19)
     return pvalue
-

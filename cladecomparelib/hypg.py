@@ -1,16 +1,17 @@
 """Hypergeometric Distribution
 
-    Gendankenexperiment:
-    
-        Foreground and background sequence sets are pre-defined.
+Gendankenexperiment:
 
-        Given N foreground sequences and M-N background sequences,
-    we randomly select N sequences from M.  We consider the consensus
-    residue in the foreground as being type I and ask what is the probability
-    of observing at least as many type I sequences in our selection as we see
-    in the foreground. 
+    Foreground and background sequence sets are pre-defined.
+
+    Given N foreground sequences and M-N background sequences,
+we randomly select N sequences from M.  We consider the consensus
+residue in the foreground as being type I and ask what is the probability
+of observing at least as many type I sequences in our selection as we see
+in the foreground.
 
 """
+
 from __future__ import division
 
 from math import ceil
@@ -21,9 +22,18 @@ from biofrills import consensus, alnutils
 from .shared import count_col, combined_frequencies
 
 
-def compare_cols(fg_col, fg_cons, fg_size, fg_weights,
-                 bg_col, bg_cons, bg_size, bg_weights,
-                 aa_freqs, pseudo_size):
+def compare_cols(
+    fg_col,
+    fg_cons,
+    fg_size,
+    fg_weights,
+    bg_col,
+    bg_cons,
+    bg_size,
+    bg_weights,
+    aa_freqs,
+    pseudo_size,
+):
     "Compare alignments using the hypergeometric model"
     # Number of consensus-type residues in the foreground column
     fg_cons_count = count_col(fg_col, fg_weights)[fg_cons]
@@ -43,8 +53,7 @@ def compare_cols(fg_col, fg_cons, fg_size, fg_weights,
     bg_size_i = int(ceil(bg_size))
     # Probability of fg col conservation vs. the combined/main set: the upper
     # tail P(X >= k), computed directly, since 1 - cdf cancels for small tails
-    pvalue = hypergeom.sf(fg_cons_count_i - 1, fg_size_i + bg_size_i,
-                          p_j_i, fg_size_i)
+    pvalue = hypergeom.sf(fg_cons_count_i - 1, fg_size_i + bg_size_i, p_j_i, fg_size_i)
     return pvalue
 
 
@@ -53,10 +62,9 @@ def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
     # cons_count = col.count(cons_aa)
     cons_count = count_col(col, weights)[cons_aa]
     cons_count_i = int(ceil(cons_count))
-    p_j = int(ceil(aa_freqs[cons_aa]*aln_size))
+    p_j = int(ceil(aa_freqs[cons_aa] * aln_size))
     size_i = int(ceil(aln_size))
     pvalue = float(cons_count_i) / len(col)
-    #pvalue = hypergeom.cdf(cons_count_i-1,size_i,
-                        #max(cons_count_i,p_j), len(col))
+    # pvalue = hypergeom.cdf(cons_count_i-1,size_i,
+    # max(cons_count_i,p_j), len(col))
     return pvalue
-

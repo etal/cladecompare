@@ -9,9 +9,15 @@ from cladecomparelib import core, report
 
 
 def test_parse_out_reads_what_write_pvalues_writes(tmp_path):
-    hits = [("A", "C", 0.5), ("D", "-", 0.003), ("-", "E", 1.0),
-            ("F", "G", 2.6e-74), ("H", "I", 0.0), ("K", "L", 0.001),
-            ("M", "N", 0.005)]
+    hits = [
+        ("A", "C", 0.5),
+        ("D", "-", 0.003),
+        ("-", "E", 1.0),
+        ("F", "G", 2.6e-74),
+        ("H", "I", 0.0),
+        ("K", "L", 0.001),
+        ("M", "N", 0.005),
+    ]
     buf = io.StringIO()
     core.write_pvalues(hits, buf, 0.005)
     path = tmp_path / "test.out"
@@ -35,21 +41,24 @@ def test_parse_out_reads_nan(tmp_path):
     assert math.isnan(prob) and nstars == 0
 
 
-@pytest.mark.parametrize("pval, css", [
-    (1.0, "b5"),
-    (0.9999, "b4"),
-    (0.99, "b3"),
-    (0.9, "b2"),
-    (0.6, "b1"),
-    (0.1, "wt"),
-    (0.05, "r1"),
-    (1e-3, "r2"),
-    (1e-6, "r3"),
-    (1e-8, "r4"),
-    (1e-9, "r9"),
-    (2.6e-74, "r9"),
-    (0.0, "r9"),
-])
+@pytest.mark.parametrize(
+    "pval, css",
+    [
+        (1.0, "b5"),
+        (0.9999, "b4"),
+        (0.99, "b3"),
+        (0.9, "b2"),
+        (0.6, "b1"),
+        (0.1, "wt"),
+        (0.05, "r1"),
+        (1e-3, "r2"),
+        (1e-6, "r3"),
+        (1e-8, "r4"),
+        (1e-9, "r9"),
+        (2.6e-74, "r9"),
+        (0.0, "r9"),
+    ],
+)
 def test_p2class_scale(pval, css):
     assert report.p2class("A", "C", pval) == css
 

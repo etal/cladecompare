@@ -9,7 +9,7 @@ import os.path
 
 
 # ---------------------------------------------------------
-# Mapping pattern to PDB sequence alignment 
+# Mapping pattern to PDB sequence alignment
 
 # The builders below take a mapping of alignment columns to PDB residue
 # numbers and a list of insert ranges, both computed by
@@ -19,21 +19,28 @@ import os.path
 # ---------------------------------------------------------
 # Script builders
 
+
 def build_single(mapping, inserts, patterns, pdbfname, chain):
     """Build a PyMOL script showing a single structure with selected residues."""
     pml_name = get_pml_name(pdbfname, chain)
-    outs = [mk_intro_one(pdbfname, pml_name, chain),
-            HR,
-            mk_struct(pml_name, 'MainStruct_'+pml_name, chain=chain,
-                      color='smudge', transparency=0.3),
-            HR]
+    outs = [
+        mk_intro_one(pdbfname, pml_name, chain),
+        HR,
+        mk_struct(
+            pml_name,
+            "MainStruct_" + pml_name,
+            chain=chain,
+            color="smudge",
+            transparency=0.3,
+        ),
+        HR,
+    ]
     if inserts:
-        outs.extend(make_inserts(inserts, 'MainStruct_'+pml_name,
-                                 chain, 'gray50'))
+        outs.extend(make_inserts(inserts, "MainStruct_" + pml_name, chain, "gray50"))
     if patterns:
         outs.extend(make_residues(mapping, patterns, pml_name, chain))
     outs.append(mk_outro())
-    return '\n'.join(outs)
+    return "\n".join(outs)
 
 
 def build_multi(mapping, inserts, key_residues, pdbfnames, chains):
@@ -47,35 +54,46 @@ def build_multi(mapping, inserts, key_residues, pdbfnames, chains):
     pml_names = [get_pml_name(pfn, cid) for pfn, cid in zip(pdbfnames, chains)]
     ref_pml_name, ref_chn = (pml_names[0], chains[0])
 
-    outs = [mk_intro_multi(pdbfnames, pml_names, chains),
-            HR,
-            mk_struct(ref_pml_name, 'RefStruct_'+ref_pml_name,
-                      chain=ref_chn, color='smudge', transparency=0.7)]
+    outs = [
+        mk_intro_multi(pdbfnames, pml_names, chains),
+        HR,
+        mk_struct(
+            ref_pml_name,
+            "RefStruct_" + ref_pml_name,
+            chain=ref_chn,
+            color="smudge",
+            transparency=0.7,
+        ),
+    ]
     if inserts:
-        outs.extend(make_inserts(inserts, 
-                                 'RefStruct_'+ref_pml_name, ref_chn,
-                                 'gray70'))
+        outs.extend(
+            make_inserts(inserts, "RefStruct_" + ref_pml_name, ref_chn, "gray70")
+        )
     if key_residues:
         # Side chains for the reference PDB
         outs.extend(make_residues(mapping, key_residues, ref_pml_name, ref_chn))
     for eqv_pml_name, eqv_chn in zip(pml_names[1:], chains[1:]):
-        outs.append(mk_struct(eqv_pml_name, 'EqvStruct_'+eqv_pml_name,
-                              chain=eqv_chn, color='slate',
-                              transparency=0.7))
+        outs.append(
+            mk_struct(
+                eqv_pml_name,
+                "EqvStruct_" + eqv_pml_name,
+                chain=eqv_chn,
+                color="slate",
+                transparency=0.7,
+            )
+        )
         # Side chains for the other PDBs
         if inserts:
-            outs.extend(make_inserts(inserts, 
-                                     'EqvStruct_'+eqv_pml_name, eqv_chn,
-                                     'marine'))
+            outs.extend(
+                make_inserts(inserts, "EqvStruct_" + eqv_pml_name, eqv_chn, "marine")
+            )
         if key_residues:
             # Generate PyMOL script lines
-            outs.extend(make_residues(mapping, key_residues,
-                                      eqv_pml_name,
-                                      eqv_chn))
+            outs.extend(make_residues(mapping, key_residues, eqv_pml_name, eqv_chn))
 
     outs.extend([HR, mk_outro()])
 
-    return '\n'.join(outs)      # just the script
+    return "\n".join(outs)  # just the script
 
 
 def make_inserts(inserts, pml_name, chain, color):
@@ -91,17 +109,23 @@ def make_inserts(inserts, pml_name, chain, color):
 def make_residues(mapping, patterns, pml_name, chain, pale=False):
     """Build residues in PyMOL for the simple cases."""
     # for color, posns in colorize(patterns, pale):
-        # for posn in posns:
+    # for posn in posns:
     for posn in patterns:
         restype, resid = mapping[posn]
-        yield mk_residue(pml_name, resid, restype, chain, mol=pml_name,
-                         # color=color)
-                         color='magenta')
-
+        yield mk_residue(
+            pml_name,
+            resid,
+            restype,
+            chain,
+            mol=pml_name,
+            # color=color)
+            color="magenta",
+        )
 
 
 # ---------------------------------------------------------
 # Helper functions
+
 
 def colorize(patterns, pale):
     """Map patterns to color schemes.
@@ -114,10 +138,22 @@ def colorize(patterns, pale):
         cyan    1
         blue    6
     """
-    dark_colors = ['lightmagenta', 'brightorange', 'tv_yellow',
-                   'tv_green', 'cyan', 'marine']
-    pale_colors = ['lightpink', 'lightorange', 'paleyellow',
-                   'palegreen', 'palecyan', 'lightblue']
+    dark_colors = [
+        "lightmagenta",
+        "brightorange",
+        "tv_yellow",
+        "tv_green",
+        "cyan",
+        "marine",
+    ]
+    pale_colors = [
+        "lightpink",
+        "lightorange",
+        "paleyellow",
+        "palegreen",
+        "palecyan",
+        "lightblue",
+    ]
     colorset = pale_colors if pale else dark_colors
     # assert patterns, 'No pattern files given (*.pttrn, *.ptn)'
     if not patterns:
@@ -155,36 +191,35 @@ def pdbid_from_fname(fname, upper=False, default_chain=None):
     will all return ('1ABC', None) or ('1ABC', 'A').
     """
     fn = os.path.basename(fname)
-    if fn.endswith('.ent'):
-        assert len(fn) == 11 and fn.startswith('pdb')
+    if fn.endswith(".ent"):
+        assert len(fn) == 11 and fn.startswith("pdb")
         pdbid = fn[3:-4]
         chnid = fn[3:-4].upper()
     else:
-        assert fn.endswith('.pdb')
-        if fn.startswith(('01_', '00_')):
+        assert fn.endswith(".pdb")
+        if fn.startswith(("01_", "00_")):
             fn = fn[3:]
         pdbid = fn[:4]
         if len(fn) == 8:
-            assert '_' not in fn
+            assert "_" not in fn
             chnid = default_chain
         elif len(fn) == 9:
-            assert '_' not in fn
+            assert "_" not in fn
             chnid = fn[4].upper()
         elif len(fn) == 10:
-            assert fn[4] == '_'
+            assert fn[4] == "_"
             chnid = fn[5].upper()
         else:
-            assert 'chain' in fn
+            assert "chain" in fn
             # TODO - where's the chain ID?
             chnid = default_chain
     return (pdbid.upper() if upper else pdbid, chnid)
 
 
-
 # ---------------------------------------------------------
-# Script templates 
+# Script templates
 
-HR = '\n# %s\n' % ('-' * 70)
+HR = "\n# %s\n" % ("-" * 70)
 
 
 def mk_intro_one(pdb, name=None, description=None):
@@ -196,10 +231,10 @@ def mk_intro_one(pdb, name=None, description=None):
 load %(pdb)s, %(name)s
 hide all
 """ % {
-        'pdb': pdb,
-        'name': name or pdbid_from_fname(pdb)[0],
-        'description': description or name or pdbid_from_fname(pdb)[0],
-        }
+        "pdb": pdb,
+        "name": name or pdbid_from_fname(pdb)[0],
+        "description": description or name or pdbid_from_fname(pdb)[0],
+    }
 
 
 def mk_intro_multi(pdbs, names=None, chains=None, description=None):
@@ -213,7 +248,8 @@ def mk_intro_multi(pdbs, names=None, chains=None, description=None):
     if not len(pdbs) == len(names):
         raise ValueError(
             "Number of PDB filenames (%s) and object names (%s) don't match!"
-            % (len(pdbs), len(names)))
+            % (len(pdbs), len(names))
+        )
     return """\
 # PyMOL script -- %(description)s
 
@@ -221,21 +257,29 @@ def mk_intro_multi(pdbs, names=None, chains=None, description=None):
 %(align)s
 hide all
 """ % {
-    'description': description or names[0],
-    'load':     '\n'.join("load %s, %s" % (p, n)
-                          for p, n in zip(pdbs, names)),
-    'align':    ('\n'.join("align (%s and chain %s), (%s and chain %s)"
-                           % (oname, ochain, names[0], chains[0])
-                           for oname, ochain in zip(names[1:], chains[1:]))
-                 if chains and len(chains) == len([c for c in chains if c])
-                 else '\n'.join("cealign %s, %s" % (names[0], other)
-                                for other in names[1:]))
-} 
+        "description": description or names[0],
+        "load": "\n".join("load %s, %s" % (p, n) for p, n in zip(pdbs, names)),
+        "align": (
+            "\n".join(
+                "align (%s and chain %s), (%s and chain %s)"
+                % (oname, ochain, names[0], chains[0])
+                for oname, ochain in zip(names[1:], chains[1:])
+            )
+            if chains and len(chains) == len([c for c in chains if c])
+            else "\n".join("cealign %s, %s" % (names[0], other) for other in names[1:])
+        ),
+    }
 
 
-def mk_struct(name, label, resn=None, chain=None,
-              color='white', style='cartoon',
-              transparency=None):
+def mk_struct(
+    name,
+    label,
+    resn=None,
+    chain=None,
+    color="white",
+    style="cartoon",
+    transparency=None,
+):
     """Generate the PyMol code to display a structure."""
     return """
 create %(label)s, %(name)s %(chain)s %(resn)s
@@ -243,33 +287,36 @@ show %(style)s, %(label)s
 color %(color)s, %(label)s 
 %(transparency)s
 """ % {
-        'label':    label,  # ENH: make optional
-        'name':     name,
-        'resn':     ("and resn %s" % resn) if resn else '',
-        'chain':    ("and chain %s" % chain) if chain else '',
-        'color':    color,
-        'style':    style,
-        'transparency': ("set %s_transparency=%s, %s\n" %
-                    (style.rstrip('s'), transparency, label) 
-                    if transparency is not None else ''),
-        }
+        "label": label,  # ENH: make optional
+        "name": name,
+        "resn": ("and resn %s" % resn) if resn else "",
+        "chain": ("and chain %s" % chain) if chain else "",
+        "color": color,
+        "style": style,
+        "transparency": (
+            "set %s_transparency=%s, %s\n" % (style.rstrip("s"), transparency, label)
+            if transparency is not None
+            else ""
+        ),
+    }
 
 
-def mk_range(name, startnum,  endnum, chain=None, color='gray70'):
+def mk_range(name, startnum, endnum, chain=None, color="gray70"):
     """Generate the PyMol code to display a colorized region."""
     return """
 color %(color)s, %(name)s and resi %(snum)s-%(enum)s %(chain)s 
 """ % {
-        'name':     name,
-        'snum':     startnum,
-        'enum':     endnum,
-        'chain':    ('and chain %s' % chain) if chain else '',
-        'color':    color,
-        }
+        "name": name,
+        "snum": startnum,
+        "enum": endnum,
+        "chain": ("and chain %s" % chain) if chain else "",
+        "color": color,
+    }
 
 
-def mk_residue(name, num,  restype='X', chain=None, label=None, mol='',
-               color='magenta', style=None):
+def mk_residue(
+    name, num, restype="X", chain=None, label=None, mol="", color="magenta", style=None
+):
     """Generate the PyMol code to display a residue."""
     return """
 create %(label)s, %(name)s and resi %(num)s %(chain)s and not (name %(bbone)s)
@@ -277,21 +324,20 @@ show %(style)s, %(label)s
 color %(color)s, %(label)s
 util.cnc %(label)s
 """ % {
-        'label':    label or ("%s%s-%s" % (restype, num, mol)),
-        'name':     name,
-        'chain':    ('and chain %s' % chain) if chain else '',
-        'bbone':    "c,n,o" if restype != 'P' else "c,o",
-        'num':      num,
-        'color':    color,
-        'style':    style or ('sticks' if restype != 'G' else 'spheres'),
-        }
+        "label": label or ("%s%s-%s" % (restype, num, mol)),
+        "name": name,
+        "chain": ("and chain %s" % chain) if chain else "",
+        "bbone": "c,n,o" if restype != "P" else "c,o",
+        "num": num,
+        "color": color,
+        "style": style or ("sticks" if restype != "G" else "spheres"),
+    }
 
 
-def mk_outro(background='black'):
+def mk_outro(background="black"):
     """Generate the finishing code for a PyMol script."""
     return """
 # Viewing options
 bg_color black
 reset
 """
-

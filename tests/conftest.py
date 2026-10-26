@@ -14,6 +14,7 @@ def require():
     non-empty, as ``pixi run test-integration`` sets it, a missing program
     fails the test instead of skipping it.
     """
+
     def require(*programs):
         missing = [name for name in programs if shutil.which(name) is None]
         if missing:
@@ -21,4 +22,5 @@ def require():
             if os.environ.get("CLADECOMPARE_REQUIRE_TOOLS"):
                 pytest.fail(reason)
             pytest.skip(reason)
+
     return require

@@ -254,3 +254,8 @@ The reference outputs come from the Python 2 code base. On macOS, the
 and ``pixi run -e py27-oracle capture`` regenerates them, as described in
 ``tests/data/README.md``.
 
+Code is formatted with ``ruff format``, and the formatting-only commits are
+listed in ``.git-blame-ignore-revs``. To skip them in ``git blame``::
+
+    git config blame.ignoreRevsFile .git-blame-ignore-revs
+

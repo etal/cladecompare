@@ -20,6 +20,7 @@ from pathlib import Path
 
 import bottle
 import pytest
+from test_cli_cases import expected_text
 
 import cladecomparelib.cladeweb  # noqa: F401  (registers the routes)
 
@@ -31,7 +32,6 @@ CASES = {
     "web.hmm.pair.gtest": ["hmmalign"],
     "web.pair-cma.gtest": [],
     "web.pair.gtest": [],
-    "web.pair.hypg": [],
     "web.pair.jsd": [],
     "web.pair.urn": [],
     "web.pdb.1HCK.gtest": ["hmmalign"],
@@ -47,7 +47,7 @@ CASES = {
 SPOOLED = {"web.hmm.pair.gtest", "web.pdb.1HCK.gtest"}
 
 # Recorded submissions with a test of their own below.
-OWN_TESTS = {"web.pair.phospho", "web.single.phospho"}
+OWN_TESTS = {"web.pair.hypg", "web.pair.phospho", "web.single.phospho"}
 
 BOUNDARY = "cladecompare-test-boundary"
 
@@ -144,4 +144,21 @@ def test_phospho_submission_completes(mode, tmp_path, monkeypatch):
     )
     assert status == "200 OK", errors
     assert b"<table>" in response
+    assert os.listdir(workdir) == []
+
+
+def test_hypg_submission_matches_the_command_line(tmp_path, monkeypatch):
+    """hypg, which the reference records failing with KeyError, runs.
+
+    The form now offers every strategy that the command line accepts. The
+    report equals the one that the recorded command-line case pair.hypg
+    wrote from the same alignments in CMA form, apart from the title.
+    """
+    workdir, _tmpdir, status, response, errors = submit(
+        load("web.pair.hypg"), tmp_path, monkeypatch
+    )
+    assert status == "200 OK", errors
+    expected = expected_text("pair.hypg", "pair.hypg.html")
+    assert expected.count(b"pair.hypg.out") == 2
+    assert response == expected.replace(b"pair.hypg.out", b"web-pair-hypg")
     assert os.listdir(workdir) == []

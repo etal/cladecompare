@@ -117,7 +117,7 @@ The remaining cases:
 
 Each web case submits the cladeweb form to its WSGI application in the capture process, with the fields and uploads recorded in `run.json`.
 `run.json` also records the response status, the traceback the application logged (`error`), its log output in the format `cladeweb.py` configures when run as a server (`log`), what it printed to standard output (`stdout`, one line per temporary file it removed), the files written to the working directory (`written_files`, empty in every captured case), and the number of files left in the temporary directory (`leftover_temp_files`); `response.html` holds the response body.
-The form offers gtest, urn, jsd and phospho; `web.pair.hypg` submits the one strategy the command line accepts and the form does not offer.
+The form offered gtest, urn, jsd and phospho; `web.pair.hypg` submits the one strategy the command line accepted and the form did not offer.
 
 ### Normalization
 
@@ -135,6 +135,7 @@ A port that fixes one of them differs from the reference by design, and the test
 - `pdb.1FIN-AB-CA.gtest` fails with `KeyError` in `choose_best_aligned`, which indexes the aligned chains with a (key, value) pair whenever more than one chain aligns to the profile, so every multi-chain structure fails.
 - `multi.gtest` writes its three `.out` and `.pttrn` pairs, but `cladereport.py` on more than one `.out` file fails with `ValueError` in `report.table_multi`.
 - `web.pair.hypg` returns status 500 with `KeyError`: the web application's strategy table lacks hypg.
+  The form and the web application now take their strategies from the same registry as the command line, so this case differs from the reference by design: it returns status 200, and its report equals `cli/pair.hypg/pair.hypg.html`, with the same SciPy substitutions, apart from the title.
 - `web.pdb.1HCK.gtest` returns status 500 with `AssertionError` from `pmlscript.pdbid_from_fname`: the uploaded structure is saved under a temporary name without the `.pdb` suffix that the function asserts.
 - Every paired web submission leaves files in the temporary directory (`leftover_temp_files`, between 2 and 17 per case), as does the failing `web.single.phospho`; the successful single-alignment submissions leave none.
   For the successful submissions, those files are exactly the pair-logo PDFs named in the log, which are written beside the temporary pattern file and never served.
@@ -174,7 +175,7 @@ A port that fixes one of them differs from the reference by design, and the test
   On a host that has the font at that system path, the legacy standard error would differ from this reference; at `e265b1f` a font is always found, at least the bundled copy, so the current cases do not depend on the host in this way.
   The current code ships the same font file as package data and always loads that copy, with no system path and no fallback.
 - **Python 3, bottle and Biopython.**
-  Under Python 3, tracebacks carry Python 3's own formatting and exception text; `web.pair.hypg`, for instance, logs `KeyError: 'hypg'` where this reference has `KeyError: u'hypg'`.
+  Under Python 3, tracebacks carry Python 3's own formatting and exception text; `web.pair.hypg`, for instance, logged `KeyError: 'hypg'` under Python 3, before the form offered hypg, where this reference has `KeyError: u'hypg'`.
   bottle 0.13 words its error page slightly differently from 0.12 (`font-family: sans-serif` for `sans`), which changes the response body of the failing web cases.
   bottle 0.13 also spools a request body or upload larger than 100 KiB to a named temporary file, which remains in the temporary directory while the request is still referenced, so `leftover_temp_files` is larger by one for the request and one for each such upload (`CDK.hmm`, `1HCK.pdb`) when counted inside the capture process; bottle 0.12.25 gives the recorded counts.
   Biopython 1.83 and 1.88 warn about the `END` record of `1FIN-AB-CA.pdb` (`PDBConstructionWarning`), which adds two lines to the standard error of `pdb.1FIN-AB-CA.gtest`.

@@ -35,9 +35,10 @@ The module names matter: the log format prints `%(module)s`, and the web referen
 - `hypg` — hypergeometric
 - `phospho` — Ser/Thr/Tyr phosphorylation sites specifically
 
-A strategy is not registered in one place.
-Adding a sixth means writing the module under `cladecomparelib/` and then listing it in four more places: the `if`/`elif` chain in `process_args` in `cladecomparelib/core.py` (with that file's module import), the `choices` tuple and help text of `-s` in `cladecomparelib/cladecompare.py`, the `stat_module` table in `form_submit` in `cladecomparelib/cladeweb.py` (with that file's module import), and a radio button in that file's `FORM_HTML`.
-`hypg` shows the cost of missing one: it reached `core.py` and the command line but never the web application, whose form does not offer it and whose strategy table raises `KeyError` on a request that names it.
+`STRATEGIES` in `cladecomparelib/core.py` registers each strategy once, mapping its name to a one-line description and its module, and `DEFAULT_STRATEGY` names the default.
+The `-s` choices and help text, the radio buttons of the cladeweb form, the module that `process_args` and the web application run, and the log line that names the strategy all come from it, so adding a sixth means writing the module under `cladecomparelib/` and adding one entry, with that file's module import.
+Before the registry, the strategies were listed in four places, and `hypg` reached the command line but never the web form.
+One rule remains outside the registry: `process_pair` and `process_one` give `urn` the number of sequences as its sample size, where every other strategy gets the sum of the sequence weights.
 
 ## `.out` p-values are raw; Benjamini–Hochberg only selects the pattern
 

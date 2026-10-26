@@ -4,7 +4,7 @@ import argparse
 import sys
 
 from cladecomparelib import configure_logging
-from cladecomparelib.core import process_args
+from cladecomparelib.core import DEFAULT_STRATEGY, STRATEGIES, process_args
 
 
 def main():
@@ -71,15 +71,11 @@ See README or https://github.com/etal/cladecompare for full documentation.
     AP.add_argument(
         "-s",
         "--strategy",
-        default="gtest",
-        choices=("gtest", "urn", "phospho", "jsd", "hypg"),
-        help="""Strategy used to compare alignments:
-            'gtest' = G-test of all character frequencies;
-            'urn' = ball-in-urn model of consensus residue conservation;
-            'phospho' = urn model for phosphorylatable residues (S/T/Y);
-            'jsd' = Jensen-Shannon divergence.
-            'hypg' = hypergeometric distribution
-            """,
+        default=DEFAULT_STRATEGY,
+        choices=STRATEGIES,
+        help="Strategy used to compare alignments: "
+        + "; ".join(f"'{name}' = {desc}" for name, (desc, _) in STRATEGIES.items())
+        + ".",
     )
     AP.add_argument(
         "-w",

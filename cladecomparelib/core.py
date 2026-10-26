@@ -26,6 +26,17 @@ logger = logging.getLogger(__name__)
 GAP_THRESH = 0.8
 PSEUDO_SIZE = 0.5
 
+# The contrast statistics, by the name that -s and the web form give, each
+# with the description that the help text, the web form and the log show.
+STRATEGIES = {
+    "gtest": ("G-test of amino acid frequencies", gtest),
+    "urn": ("ball-in-urn model of consensus residue conservation", urn),
+    "phospho": ("urn model for phosphorylatable residues (S/T/Y)", phospho),
+    "jsd": ("Jensen-Shannon divergence", jsd),
+    "hypg": ("hypergeometric model", hypg),
+}
+DEFAULT_STRATEGY = "gtest"
+
 
 # ---- FLOW --------------------------------------------------------------
 
@@ -67,24 +78,8 @@ def process_args(args):
             # ENH - realign to fg, bg
             # aln = read_aln(args.pdb, 'pdb-atom')
 
-    # ENH - put strategies in a dict, look up here
-    if args.strategy == "gtest":
-        logger.info("Using G-test of amino acid frequencies")
-        module = gtest
-    elif args.strategy == "urn":
-        logger.info("Using ball-in-urn statistical model")
-        module = urn
-    elif args.strategy == "jsd":
-        logger.info("Using Jensen-Shannon divergence")
-        module = jsd
-    elif args.strategy == "phospho":
-        logger.info("Using urn model for phosphorylatable residues")
-        module = phospho
-    elif args.strategy == "hypg":
-        logger.info("Using hypergeometric model")
-        module = hypg
-    else:
-        raise ValueError("Unknown strategy: %s" % args.strategy)
+    description, module = STRATEGIES[args.strategy]
+    logger.info("Using %s", description)
 
     if len(all_alns) == 1:
         aln, hits = process_one(all_alns[0], module, args.weight)

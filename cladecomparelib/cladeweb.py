@@ -20,9 +20,18 @@ import webbrowser
 
 import bottle
 
-from cladecomparelib import configure_logging, core, gtest, jsd, phospho, report, urn
+from cladecomparelib import configure_logging, core, report
 
 logger = logging.getLogger(__name__)
+
+STRATEGY_RADIO = """\
+  <p>
+    <label>
+      <input type="radio" name="strategy" value="%(name)s"%(checked)s />
+      %(label)s
+    </label>
+  </p>
+"""
 
 # ENH: include textarea as alternative to each file upload input
 # ENH: dropdown alpha (or textinput w/ JS validation)
@@ -51,31 +60,7 @@ FORM_HTML = """\
   </p>
 
   <h2>Statistical strategy</h2>
-  <p>
-    <label>
-      <input type="radio" name="strategy" value="gtest" checked="checked" />
-      G-test (goodness-of-fit)
-    </label>
-  </p>
-  <p>
-    <label>
-      <input type="radio" name="strategy" value="urn" />
-      Ball-in-urn model (binomial)
-    </label>
-  </p>
-  <p>
-    <label>
-      <input type="radio" name="strategy" value="jsd" />
-      Jensen-Shannon divergence
-    </label>
-  </p>
-  <p>
-    <label>
-      <input type="radio" name="strategy" value="phospho" />
-      Phosphorylation site conservation
-    </label>
-  </p>
-
+%(strategies)s
   <p>
     Significance cutoff (alpha):
     <input type="text" name="alpha" value="0.005" />
@@ -124,7 +109,17 @@ coccidian virulence factors</a>.
 
 </body>
 </html>
-"""
+""" % {
+    "strategies": "".join(
+        STRATEGY_RADIO
+        % {
+            "name": name,
+            "checked": ' checked="checked"' if name == core.DEFAULT_STRATEGY else "",
+            "label": description[0].upper() + description[1:],
+        }
+        for name, (description, _module) in core.STRATEGIES.items()
+    )
+}
 
 
 # --- Routes ---
@@ -208,12 +203,7 @@ def form_submit():
         # Can get this info w/o dl'ing actual PDB file (e.g. via FASTA)?
         pass
 
-    stat_module = dict(
-        gtest=gtest,
-        urn=urn,
-        jsd=jsd,
-        phospho=phospho,
-    )[bottle.request.forms.strategy]
+    _description, stat_module = core.STRATEGIES[bottle.request.forms.strategy]
     try:
         alpha = float(bottle.request.forms.alpha)
         if not 0.0 <= alpha <= 1.0:

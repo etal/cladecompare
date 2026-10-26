@@ -21,6 +21,8 @@ from biofrills import alnutils, consensus
 from . import gtest, hypg, jsd, pairlogo, phospho, pmlscript, urn
 from .shared import combined_frequencies
 
+logger = logging.getLogger(__name__)
+
 GAP_THRESH = 0.8
 PSEUDO_SIZE = 0.5
 
@@ -37,10 +39,10 @@ def process_args(args):
     all_alns = []
     for alnfname in [args.foreground] + args.background:
         if args.hmm:
-            logging.info("Aligning %s with HMM profile %s", alnfname, args.hmm)
+            logger.info("Aligning %s with HMM profile %s", alnfname, args.hmm)
             aln = hmm_align_and_read(args.hmm, alnfname)
         elif args.mapgaps:
-            logging.info("Aligning %s with MAPGAPS profile %s", alnfname, args.mapgaps)
+            logger.info("Aligning %s with MAPGAPS profile %s", alnfname, args.mapgaps)
             aln = mapgaps_align_and_read(args.mapgaps, alnfname)
         else:
             aln = read_aln(alnfname, args.format)
@@ -50,36 +52,36 @@ def process_args(args):
     if args.pdb:
         if args.hmm:
             for pdbfname in args.pdb:
-                logging.info("Aligning %s with HMM profile %s", pdbfname, args.hmm)
+                logger.info("Aligning %s with HMM profile %s", pdbfname, args.hmm)
                 pdb_rec, pdb_resnums, pdb_inserts = pdb_hmm(args.hmm, pdbfname)
                 pdb_data.append((pdbfname, pdb_rec, pdb_resnums, pdb_inserts))
         elif args.mapgaps:
             for pdbfname in args.pdb:
-                logging.info(
+                logger.info(
                     "Aligning %s with MAPGAPS profile %s", pdbfname, args.mapgaps
                 )
                 pdb_rec, pdb_resnums, pdb_inserts = pdb_mapgaps(args.mapgaps, pdbfname)
                 pdb_data.append((pdbfname, pdb_rec, pdb_resnums, pdb_inserts))
         else:
-            logging.error("PDB alignment requires a MAPGAPS or HMM profile.")
+            logger.error("PDB alignment requires a MAPGAPS or HMM profile.")
             # ENH - realign to fg, bg
             # aln = read_aln(args.pdb, 'pdb-atom')
 
     # ENH - put strategies in a dict, look up here
     if args.strategy == "gtest":
-        logging.info("Using G-test of amino acid frequencies")
+        logger.info("Using G-test of amino acid frequencies")
         module = gtest
     elif args.strategy == "urn":
-        logging.info("Using ball-in-urn statistical model")
+        logger.info("Using ball-in-urn statistical model")
         module = urn
     elif args.strategy == "jsd":
-        logging.info("Using Jensen-Shannon divergence")
+        logger.info("Using Jensen-Shannon divergence")
         module = jsd
     elif args.strategy == "phospho":
-        logging.info("Using urn model for phosphorylatable residues")
+        logger.info("Using urn model for phosphorylatable residues")
         module = phospho
     elif args.strategy == "hypg":
-        logging.info("Using hypergeometric model")
+        logger.info("Using hypergeometric model")
         module = hypg
     else:
         raise ValueError("Unknown strategy: %s" % args.strategy)
@@ -139,7 +141,7 @@ def process_args(args):
             )
             # args.pdb,
             # pdb_rec, pdb_resnums, pdb_inserts)
-            logging.info("Wrote %s and %s", outfname, ptnfname)
+            logger.info("Wrote %s and %s", outfname, ptnfname)
 
 
 def process_pair(fg_aln, bg_aln, module, do_weight):
@@ -258,7 +260,7 @@ def process_output(
                 pml_output = pdb_fnames[0] + "-etc.pml"
         with open(pml_output, "w+") as pmlfile:
             pmlfile.write(script)
-        logging.info("Wrote %s", pml_output)
+        logger.info("Wrote %s", pml_output)
 
 
 # --- Output ---
@@ -269,7 +271,7 @@ def write_pvalues(hits, outfile, alpha):
     for idx, data in enumerate(hits):
         fg_char, bg_char, pvalue = data
         if not (0.0 <= pvalue <= 1.0):
-            logging.warning("Out-of-domain p-value at site %s: %s", idx, pvalue)
+            logger.warning("Out-of-domain p-value at site %s: %s", idx, pvalue)
         stars = "*" * int(-log10(pvalue)) if 0 < pvalue < alpha else ""
         outfile.write(
             "%s (%s) %d : prob=%g\t%s\n" % (fg_char, bg_char, idx + 1, pvalue, stars)
@@ -438,7 +440,7 @@ def combine_alignments(fg_aln, bg_aln):
     """
     match = MUSCLE_VERSION_LINE.search(call_quiet("muscle", "-version"))
     if match is None:
-        logging.warning(
+        logger.warning(
             "Could not determine the version of MUSCLE; "
             "trying profile-profile alignment anyway"
         )
@@ -490,10 +492,10 @@ def clean_alignments(fg_aln, bg_aln):
         for idx, bg_seq in enumerate(bg_aln):
             if fg_seq.id == bg_seq.id != "consensus":
                 if str(fg_seq.seq) != str(bg_seq.seq):
-                    logging.warning("Different sequences for %s in fg, bg", fg_seq.id)
+                    logger.warning("Different sequences for %s in fg, bg", fg_seq.id)
                 killme.append(idx)
     if killme:
-        logging.info(
+        logger.info(
             "Removing %d duplicated sequence IDs from the background", len(killme)
         )
         for idx in sorted(killme, reverse=True):
@@ -520,7 +522,7 @@ def clean_alignments(fg_aln, bg_aln):
                 seen.add(seq)
         n_purged = len(aln) - len(out_recs)
         if n_purged:
-            logging.warning(
+            logger.warning(
                 "Purging %d identical sequences from the %s", n_purged, label
             )
         return out_recs
@@ -530,7 +532,7 @@ def clean_alignments(fg_aln, bg_aln):
 
     # Ensure alignments are the same width
     if len(fg_aln[0]) != len(bg_aln[0]):
-        logging.warning("Alignments are not of equal width; fixing with MUSCLE.")
+        logger.warning("Alignments are not of equal width; fixing with MUSCLE.")
         full_aln = combine_alignments(fg_aln, bg_aln)
     else:
         full_aln = deepcopy(fg_aln)

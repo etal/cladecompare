@@ -1,9 +1,9 @@
 """Compare protein sequence alignments to identify contrasting sites."""
 
 import argparse
-import logging
 import sys
 
+from cladecomparelib import configure_logging
 from cladecomparelib.core import process_args
 
 
@@ -113,10 +113,5 @@ See README or https://github.com/etal/cladecompare for full documentation.
     )
 
     args = AP.parse_args()
-    if args.quiet:
-        logging.basicConfig(level=logging.WARNING, format="%(module)s: %(message)s")
-    else:
-        logging.basicConfig(
-            level=logging.INFO, format="%(module)s [@%(lineno)s]: %(message)s"
-        )
+    configure_logging(args.quiet)
     process_args(args)

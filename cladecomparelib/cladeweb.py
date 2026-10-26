@@ -20,7 +20,9 @@ import webbrowser
 
 import bottle
 
-from cladecomparelib import core, gtest, jsd, phospho, report, urn
+from cladecomparelib import configure_logging, core, gtest, jsd, phospho, report, urn
+
+logger = logging.getLogger(__name__)
 
 # ENH: include textarea as alternative to each file upload input
 # ENH: dropdown alpha (or textinput w/ JS validation)
@@ -173,10 +175,10 @@ def form_submit():
         if not profile.filename.endswith(".hmm"):
             return "HMM profile file name must end in .hmm"
         profname = handle2temp(profile.file, suffix=".hmm")
-        logging.info("Aligning %s with profile %s", seq1fname, profname)
+        logger.info("Aligning %s with profile %s", seq1fname, profname)
         fg_aln = core.hmm_align_and_read(profname, seq1fname)
         if seq2fname:
-            logging.info("Aligning %s with profile %s", seq2fname, profname)
+            logger.info("Aligning %s with profile %s", seq2fname, profname)
             bg_aln = core.hmm_align_and_read(profname, seq2fname)
     else:
         profname = ""
@@ -192,7 +194,7 @@ def form_submit():
                 "also specify an HMM profile"
             )
         pdbfname = handle2temp(pdbfile.file)
-        logging.info("Aligning %s with profile %s", pdbfile.filename, profname)
+        logger.info("Aligning %s with profile %s", pdbfile.filename, profname)
         pdb_rec, pdb_resnums, pdb_inserts = core.pdb_hmm(profname, pdbfname)
         pdb_data = [(pdbfname, pdb_rec, pdb_resnums, pdb_inserts)]
     else:
@@ -274,8 +276,6 @@ def cleanup(fname):
 
 
 def main():
-    logging.basicConfig(
-        level=logging.INFO, format="%(module)s [@%(lineno)s]: %(message)s"
-    )
+    configure_logging()
     webbrowser.open("http://localhost:8080/cladecompare")
     bottle.run(host="localhost", port=8080)

@@ -9,6 +9,8 @@ from reportlab.lib import units
 from reportlab.pdfbase import pdfmetrics, ttfonts
 from reportlab.pdfgen import canvas
 
+logger = logging.getLogger(__name__)
+
 UNIT = units.inch * 0.5  # = units.inch * 0.1
 WUNIT = 0.6 * UNIT  # NB: Seems to be the text width-to-height ratio
 
@@ -98,7 +100,7 @@ def draw_pdf(name, fg_aln, bg_aln, sites, N):
     # -- Save PDF --
     can.showPage()
     can.save()
-    logging.info("Wrote %s", pdfname)
+    logger.info("Wrote %s", pdfname)
 
 
 def draw_logo(logodata, can, x, y):

@@ -12,6 +12,8 @@ from scipy.stats import binom
 
 from .shared import count_col
 
+logger = logging.getLogger(__name__)
+
 
 def compare_cols(
     fg_col,
@@ -44,7 +46,7 @@ def compare_cols(
     # NB: Some tweaks for pseudocounts
     pvalue = binom.pmf(range(fg_tot_i, fg_size_i + 2), fg_size_i + 1, p_j).sum()
     if pvalue == 1.0:
-        logging.info(
+        logger.info(
             "Meaningless p-value: p_j=%s, fg=%s vs. bg=%s", p_j, fg_tot, bg_counts
         )
 

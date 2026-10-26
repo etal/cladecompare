@@ -13,15 +13,13 @@ If given multiple files:
 """
 
 import argparse
-import logging
 
+from cladecomparelib import configure_logging
 from cladecomparelib.report import do_multi, do_single, html_page_tpl
 
 
 def main():
-    logging.basicConfig(
-        level=logging.INFO, format="%(module)s [@%(lineno)s]: %(message)s"
-    )
+    configure_logging()
 
     AP = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter

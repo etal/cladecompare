@@ -3,6 +3,8 @@
 import logging
 from math import log10
 
+logger = logging.getLogger(__name__)
+
 html_page_tpl = """\
 <html>
   <head>
@@ -67,7 +69,7 @@ def parse_pattern(fname):
         line = infile.readline()
         _idx, site_ln = map(str.strip, line.split(":"))
         if not site_ln:
-            logging.warning("Empty pattern file: %s", fname)
+            logger.warning("Empty pattern file: %s", fname)
             return []
         sites = site_ln.split(",")
         # Convert to number...

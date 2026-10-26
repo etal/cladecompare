@@ -216,16 +216,17 @@ Development
 
 Two development workflows are supported from the same ``pyproject.toml``, and
 both lock files are committed. Both install CladeCompare in editable mode with
-the tools in the ``dev`` dependency group, pytest and ruff; ruff has no project
-configuration yet, and no task runs it. Both also need a ``git`` executable,
-because BioFrills is installed from its repository until it is released on
-PyPI.
+the tools in the ``dev`` dependency group, pytest and ruff. Both also need a
+``git`` executable, because BioFrills is installed from its repository until
+it is released on PyPI.
 
 uv_ takes the Python packages from PyPI, apart from BioFrills, at the versions
 recorded in ``uv.lock``::
 
     uv sync
     uv run pytest
+    uv run ruff check
+    uv run ruff format
 
 pixi_ takes Python and most Python packages from conda-forge, and also
 installs HMMER and MUSCLE 3.8.1551 from Bioconda, at the versions recorded in
@@ -235,6 +236,8 @@ conda-forge provides, and ``py312`` the oldest supported one::
     pixi run test
     pixi run -e py312 test
     pixi run test-integration
+    pixi run lint            # ruff check
+    pixi run fmt             # ruff format
 
 The tests run ``cladecompare``, ``cladereport`` and the ``cladeweb``
 application on the inputs in ``tests/data/inputs`` and compare what they

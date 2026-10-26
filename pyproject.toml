@@ -72,6 +72,26 @@ markers = [
     "integration: runs the external programs that CladeCompare drives",
 ]
 
+[tool.ruff]
+# tests/data/capture_py27.py is the Python 2.7 script that captured the
+# reference outputs, and runs in the py27-oracle environment; the pyupgrade
+# rules would rewrite it into code that Python 2 cannot run. .pixi holds the
+# pixi environments, including a Python 2.7 standard library, and is otherwise
+# excluded only through .gitignore.
+extend-exclude = [".pixi", "tests/data/capture_py27.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "LOG", "G"]
+# The dict-keyed templates of pmlscript do not convert to f-strings, so the
+# UP031 fix would leave a mix of str.format and f-strings, in strings whose
+# output tests/data/py27 records.
+ignore = ["UP031"]
+
+[tool.ruff.lint.per-file-ignores]
+# Two PyMOL templates end lines in a space that the recorded 1HCK.pdb.pml
+# contains; ruff format removes trailing whitespace outside strings.
+"cladecomparelib/pmlscript.py" = ["W291"]
+
 # biofrills comes from its repository at a pinned commit, which the lock files
 # then record; moving to a newer commit is a deliberate change of the pin,
 # to be judged against the reference outputs in tests/data, and the pip
@@ -113,6 +133,8 @@ ruff = "*"
 [tool.pixi.feature.dev.tasks]
 test = "pytest"
 test-integration = {cmd = "pytest -m integration", env = {CLADECOMPARE_REQUIRE_TOOLS = "1"}}
+lint = "ruff check"
+fmt = "ruff format"
 
 # The oldest supported Python; keep in step with requires-python.
 [tool.pixi.feature.py312.dependencies]

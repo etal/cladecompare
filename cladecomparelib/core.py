@@ -377,7 +377,7 @@ def cma_records(cma_fname):
     Return a list of (ID, aligned sequence) pairs. The aligned sequence is
     taken verbatim, with lowercase inserts, and without the flanking residues
     that some records carry around it. A sequence line that does not have the
-    expected shape raises ValueError.
+    expected shape raises InputError.
     """
     records = []
     with open(cma_fname) as infile:

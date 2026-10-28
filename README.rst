@@ -101,7 +101,8 @@ The program prints the following information for each column in the alignment(s)
 - p-value indicating the significance of the contrast in amino acid frequencies
 - an ASCII bar chart indicating contrast, based on the p-value: one asterisk
   per order of magnitude, shown only where the p-value is below the
-  significance threshold alpha (the ``-a`` option, default 0.005).
+  significance threshold alpha (the ``-a`` option, between 0 and 1, default
+  0.005).
 
 These per-column p-values are not adjusted for multiple testing, so with
 hundreds of columns some may fall below alpha by chance. The multiple-testing
@@ -182,10 +183,12 @@ foreground and the rest treated as the background for evaluation::
     cladecompare subfam1.seq subfam2.seq subfam3.seq ...
 
 This multi-mode generates and names the "\*.out" files according to the
-corresponding sequence file names. You can visualize these all together::
+corresponding sequence file names; the ``-o`` and ``-p`` options are ignored,
+and ``cladecompare`` warns if either is given. You can visualize these all
+together::
 
     # Visualize each subfamily's contrasts together
-    cladereport subfam2.out subfam2.out subfam3.out ... > somefamily.html
+    cladereport subfam1.out subfam2.out subfam3.out ... > somefamily.html
 
 
 Strategies
@@ -206,6 +209,12 @@ Statistical tests ("-s" options) for column comparison:
     their combined frequency in the FG and BG columns together.
 :jsd:
     Jensen-Shannon divergence of column compositions, a la INTREPID_.
+:hypg:
+    Hypergeometric model: the probability of drawing at least as many
+    sequences of the FG consensus amino acid type as the FG column holds,
+    when as many sequences as the FG holds are drawn from the FG and BG
+    together. With a single alignment, the fraction of the column that
+    matches the consensus, which is not a p-value.
 
 .. _CHAIN: http://chain.igs.umaryland.edu/
 .. _INTREPID: http://bioinformatics.oxfordjournals.org/content/24/21/2445.full

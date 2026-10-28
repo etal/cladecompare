@@ -82,14 +82,16 @@ extend-exclude = [".pixi", "tests/data/capture_py27.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "LOG", "G"]
-# The dict-keyed templates of pmlscript do not convert to f-strings, so the
-# UP031 fix would leave a mix of str.format and f-strings, in strings whose
-# output tests/data/py27 records.
+# The code base uses percent formatting throughout and is not otherwise
+# modernized. The dict-keyed templates of pmlscript do not convert to
+# f-strings, so the UP031 fix would leave a mix of str.format and f-strings,
+# in strings whose output tests/data/py27 records.
 ignore = ["UP031"]
 
 [tool.ruff.lint.per-file-ignores]
 # Two PyMOL templates end lines in a space that the recorded 1HCK.pdb.pml
-# contains; ruff format removes trailing whitespace outside strings.
+# contains. ruff format leaves whitespace inside strings alone, so W291 is the
+# only rule that reports it.
 "cladecomparelib/pmlscript.py" = ["W291"]
 
 # biofrills comes from its repository at a pinned commit, which the lock files

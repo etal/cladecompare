@@ -55,7 +55,11 @@ def compare_cols(
 
 
 def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
-    "Column probability using the hypergeometric model."
+    """The fraction of the column that matches the consensus residue.
+
+    A single alignment gives no second set to draw from, so this is not a
+    hypergeometric probability, and not a p-value.
+    """
     cons_count = count_col(col, weights)[cons_aa]
     cons_count_i = int(ceil(cons_count))
     pvalue = float(cons_count_i) / len(col)

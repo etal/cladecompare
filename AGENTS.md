@@ -36,7 +36,7 @@ The module names matter: the log format prints `%(module)s`, and the web referen
 - `phospho` — Ser/Thr/Tyr phosphorylation sites specifically
 
 `STRATEGIES` in `cladecomparelib/core.py` registers each strategy once, mapping its name to a one-line description and its module, and `DEFAULT_STRATEGY` names the default.
-The `-s` choices and help text, the radio buttons of the cladeweb form, the module that `process_args` and the web application run, and the log line that names the strategy all come from it, so adding a sixth means writing the module under `cladecomparelib/` and adding one entry, with that file's module import.
+The `-s` choices and help text, the radio buttons of the cladeweb form, the module that `process_args` and the web application run, and the log line that names the strategy all come from it, so adding a sixth means writing the module under `cladecomparelib/` and adding one entry to `STRATEGIES`, together with the module's import in `core.py`.
 Before the registry, the strategies were listed in four places, and `hypg` reached the command line but never the web form.
 One rule remains outside the registry: `process_pair` and `process_one` give `urn` the number of sequences as its sample size, where every other strategy gets the sum of the sequence weights.
 
@@ -66,13 +66,14 @@ The port removed `Bio.Alphabet` and `Bio._py3k`, which Biopython dropped in 1.78
 `tests/data/README.md` records the environment and how to regenerate it, the inputs, the defects the reference preserves on purpose, and how to read a mismatch.
 A change should reproduce those outputs, or differ from them only by a documented, deliberate change; the statistics are exactly the kind of output where a wrong answer looks entirely plausible.
 
-With HMMER 3.0 or 3.4 and MUSCLE 3.8.1551, under Python 3.12 with the ported biofrills, the ported code reproduces the `.out`, `.pttrn`, `.html` and PyMOL files of every command-line case and the response of every successful web submission byte for byte, both with Biopython 1.83, SciPy 1.11.4 and bottle 0.12.25 and with Biopython 1.88, SciPy 1.18.1 and bottle 0.13.4, apart from the differences below, which come from SciPy, from the later fixes to phospho and hypg, from the removal of `_cc_combined.seq`, or from the form of logs and tracebacks.
+With HMMER 3.0 or 3.4 and MUSCLE 3.8.1551, under Python 3.12 with the ported biofrills, the ported code reproduces the `.out`, `.pttrn`, `.html` and PyMOL files of every command-line case and the response of every successful web submission byte for byte, both with Biopython 1.83, SciPy 1.11.4 and bottle 0.12.25 and with Biopython 1.88, SciPy 1.18.1 and bottle 0.13.4, apart from the differences below, which come from SciPy, from the later fixes to phospho and hypg, from the removal of `_cc_combined.seq`, from later changes to two failing web cases, or from the form of logs and tracebacks.
 Under both SciPy versions, 13 small p-values of `pair.hypg` differ from the reference in the sixth significant digit; the values from both newer releases agree with exact rational arithmetic, and the reference values, computed with SciPy 1.2.1, do not.
 hypg now computes the tail with `hypergeom.sf`, which stays accurate for small tails, rather than as `1 - hypergeom.cdf`; on these inputs the two forms print the same values.
 `pair.hypg.w` differs throughout: SciPy 1.11.4 and later return `nan` for the non-integral count of successes that weights produce, and hypg now rounds that count up, as it rounds the other counts; with SciPy 1.18.1 its p-values are finite and its pattern is empty.
 The `-s phospho` cases now complete where the reference records a failure, because of the earlier fix to the phospho sample size, and their unweighted outputs equal the legacy reference cases.
 `unequal.gtest` no longer writes `_cc_combined.seq` into the working directory, nor logs that it did.
-Standard error and logs differ in the line numbers that the log format prints, and tracebacks take Python 3's own form; `tests/data/README.md` lists these and the few differences that come from the bottle and Biopython versions.
+`web.pair.hypg` returns status 200 with the report that the command line writes for the same alignments, where the reference records status 500, because the web form now takes its strategies from the same registry as the command line; `web.pdb.1HCK.gtest` still returns status 500, with `InputError` in place of `AssertionError`.
+Standard error and logs differ in the line numbers that the log format prints, in the wording of the duplicate-sequence message and of the strategy line for `urn` and `phospho`, and tracebacks take Python 3's own form; `tests/data/README.md` lists these and the few differences that come from the bottle and Biopython versions.
 biofrills `ff11246` declares `biopython>=1.86`, so the run with Biopython 1.83 installed biofrills without its dependencies; CladeCompare's own code needs no Biopython newer than 1.83.
 
 ## External aligners: any HMMER 3, and MUSCLE 3 only
@@ -145,10 +146,14 @@ The cases that run hmmalign or MUSCLE, and a `--mapgaps` case that replaces MAPG
 
 - The code predates this project's current Python baseline; it is 2013-era style, ported to Python 3 and formatted with `ruff format`, but not otherwise modernized.
   Modernize deliberately and in separate commits from behavior changes, so a numerical difference is never buried in a reformat.
-- `ruff check` and `ruff format --check` are clean (`pixi run lint`, `pixi run fmt`), and `[tool.ruff]` in `pyproject.toml` records why each ignored rule is ignored.
-  List a formatting-only commit in `.git-blame-ignore-revs`.
-  The trailing spaces inside the PyMOL templates of `pmlscript` are output that `1HCK.pdb.pml` records, so W291 is ignored there rather than fixed.
-  Every `zip()` states `strict=`: `True` where the operands are equal in length by construction, `False` only where truncation is the current behavior, with a comment saying why.
+- `ruff check` and `ruff format --check` are clean; `pixi run lint` runs the first, and `pixi run fmt` applies the formatting.
+  `[tool.ruff]` in `pyproject.toml` records why each ignored rule is ignored.
+- List a formatting-only commit in `.git-blame-ignore-revs`.
+- The trailing spaces inside the PyMOL templates of `pmlscript` are output that `1HCK.pdb.pml` records, so W291 is ignored there rather than fixed.
+- Every `zip()` states `strict=`: `True` where the operands are equal in length by construction, `False` only where truncation is the current behavior, with a comment saying why.
+- Input that CladeCompare cannot use raises `InputError`, a subclass of `ValueError` defined in `cladecomparelib/__init__.py`.
+  Only `cladecompare.main` catches it, printing the message and exiting with status 1; `cladeweb` and `cladereport` let it propagate, and a missing program or MUSCLE 4 or later still raises `RuntimeError` with a traceback.
+- Every module that logs uses `logger = logging.getLogger(__name__)`, and the three commands configure logging through `configure_logging` in `cladecomparelib/__init__.py`.
 - The files under `tests/data/py27/` are generated but committed deliberately, as the reference; regenerate them with `tests/data/capture_py27.py`, for instance through `pixi run -e py27-oracle capture`, rather than editing them.
 - Maintainer planning for this repository lives in a local beads store that is excluded from git and is not present in a clone.
   If you have `bd`, run `bd prime --mcp`, which renders each memory as a one-line summary because the full text printed by plain `bd prime` can exceed an agent's tool-output limits; `bd memories <keyword>` searches the full text, and `bd recall <key>` prints one memory in full.

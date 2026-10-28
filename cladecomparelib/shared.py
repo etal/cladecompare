@@ -14,7 +14,7 @@ def count_col(col, weights, pseudo=None, pseudo_size=1.0):
     weights:
         Sequence weight coefficients. List output of alnutils.sequence_weights.
     pseudo:
-        Chacter pseudocounts. Dict output of combined_frequencies.
+        Character pseudocounts. Dict output of combined_frequencies.
     """
     counts = collections.defaultdict(float)
     for char, wt in zip(col, weights, strict=True):

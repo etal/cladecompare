@@ -156,6 +156,3 @@ The cases that run hmmalign or MUSCLE, and a `--mapgaps` case that replaces MAPG
   Only `cladecompare.main` catches it, printing the message and exiting with status 1; `cladeweb` and `cladereport` let it propagate, and a missing program or MUSCLE 4 or later still raises `RuntimeError` with a traceback.
 - Every module that logs uses `logger = logging.getLogger(__name__)`, and the three commands configure logging through `configure_logging` in `cladecomparelib/__init__.py`.
 - The files under `tests/data/py27/` are generated but committed deliberately, as the reference; regenerate them with `tests/data/capture_py27.py`, for instance through `pixi run -e py27-oracle capture`, rather than editing them.
-- Maintainer planning for this repository lives in a local beads store that is excluded from git and is not present in a clone.
-  If you have `bd`, run `bd prime --mcp`, which renders each memory as a one-line summary because the full text printed by plain `bd prime` can exceed an agent's tool-output limits; `bd memories <keyword>` searches the full text, and `bd recall <key>` prints one memory in full.
-  If you do not have `bd`, nothing here depends on it.

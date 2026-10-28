@@ -39,6 +39,18 @@ STRATEGIES = {
 DEFAULT_STRATEGY = "gtest"
 
 
+def parse_alpha(text):
+    """Parse a significance threshold, which must be between 0 and 1.
+
+    Text that is not a number raises ValueError, and a number outside the
+    range raises InputError, which is also a ValueError.
+    """
+    value = float(text)
+    if not 0.0 <= value <= 1.0:
+        raise InputError(f"must be between 0 and 1: {text!r}")
+    return value
+
+
 # ---- FLOW --------------------------------------------------------------
 
 

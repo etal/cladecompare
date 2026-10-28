@@ -199,9 +199,7 @@ def compare_submission(tmpdir):
 
     _description, stat_module = core.STRATEGIES[bottle.request.forms.strategy]
     try:
-        alpha = float(bottle.request.forms.alpha)
-        if not 0.0 <= alpha <= 1.0:
-            raise ValueError
+        alpha = core.parse_alpha(bottle.request.forms.alpha)
     except ValueError:
         return "Error: alpha must be a number between 0 and 1"
     do_weight = bool(bottle.request.forms.weight)

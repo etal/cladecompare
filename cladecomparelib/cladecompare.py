@@ -3,7 +3,12 @@
 import argparse
 
 from cladecomparelib import InputError, configure_logging
-from cladecomparelib.core import DEFAULT_STRATEGY, STRATEGIES, process_args
+from cladecomparelib.core import (
+    DEFAULT_STRATEGY,
+    STRATEGIES,
+    parse_alpha,
+    process_args,
+)
 
 
 def main():
@@ -117,12 +122,12 @@ See README or https://github.com/etal/cladecompare for full documentation.
 
 
 def alpha(text):
-    """Parse a significance threshold, which must be between 0 and 1.
+    """Parse the -a value with core.parse_alpha.
 
     argparse reports the ValueError of a non-numeric value as an invalid
-    alpha value.
+    alpha value, and the message of an ArgumentTypeError unchanged.
     """
-    value = float(text)
-    if not 0.0 <= value <= 1.0:
-        raise argparse.ArgumentTypeError(f"must be between 0 and 1: {text!r}")
-    return value
+    try:
+        return parse_alpha(text)
+    except InputError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from None

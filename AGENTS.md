@@ -153,6 +153,7 @@ The cases that run hmmalign or MUSCLE, and a `--mapgaps` case that replaces MAPG
 - The trailing spaces inside the PyMOL templates of `pmlscript` are output that `1HCK.pdb.pml` records, so W291 is ignored there rather than fixed.
 - Every `zip()` states `strict=`: `True` where the operands are equal in length by construction, `False` only where truncation is the current behavior, with a comment saying why.
 - Input that CladeCompare cannot use raises `InputError`, a subclass of `ValueError` defined in `cladecomparelib/__init__.py`.
-  Only `cladecompare.main` catches it, printing the message and exiting with status 1; `cladeweb` and `cladereport` let it propagate, and a missing program or MUSCLE 4 or later still raises `RuntimeError` with a traceback.
+  `cladecompare.main` catches it, printing the message and exiting with status 1, and two parsers of the significance threshold catch the `InputError` of `core.parse_alpha`: the `-a` parser of `cladecompare` turns it into an argparse usage error, and `cladeweb` returns its own error message.
+  Otherwise `cladeweb` and `cladereport` let it propagate, and a missing program or MUSCLE 4 or later still raises `RuntimeError` with a traceback.
 - Every module that logs uses `logger = logging.getLogger(__name__)`, and the three commands configure logging through `configure_logging` in `cladecomparelib/__init__.py`.
 - The files under `tests/data/py27/` are generated but committed deliberately, as the reference; regenerate them with `tests/data/capture_py27.py`, for instance through `pixi run -e py27-oracle capture`, rather than editing them.

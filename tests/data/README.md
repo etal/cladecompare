@@ -141,6 +141,9 @@ A port that fixes one of them differs from the reference by design, and the test
 - Every paired web submission leaves files in the temporary directory (`leftover_temp_files`, between 2 and 17 per case), as does `web.single.phospho`, which fails in the reference; the successful single-alignment submissions leave none.
   For the successful submissions, those files are exactly the pair-logo PDFs named in the log, which are written beside the temporary pattern file and never served.
   The failing submissions also leave the uploads and whatever other temporary files the request had already created, because the exception ends the request before the cleanup that `stdout` records for the successful ones; in the reference, `web.pair.hypg` fails before the output files are opened, so it leaves only its two uploads.
+  Each request now writes its uploads and outputs, the pair-logo PDFs included, into one temporary directory that is removed when the request ends, whether it succeeds, returns an error message or raises, so this count differs from the reference by design: no submission leaves a file of its own, and the `Cleaned up` lines in `stdout` are gone.
+  The log names those files by fixed names inside that directory, such as `seqfile1.seq` and `cladecompare-<sites>.pdf`, where this reference has `tmpXXXXXX` names.
+  The files that bottle 0.13 spools (see "Python 3, bottle and Biopython" below) are bottle's own, outside that directory.
 - `single.hypg` cases record the fraction of the column that matches the consensus, not a hypergeometric probability.
   A column whose consensus is X raises `KeyError`, as in the reference code; no recorded case has such a column.
 - `unequal.gtest` writes `_cc_combined.seq` into the working directory.

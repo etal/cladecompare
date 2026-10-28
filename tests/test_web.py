@@ -6,7 +6,8 @@ with the working and temporary directories redirected to scratch
 directories. The response status must be the recorded one; a successful
 response must equal the recorded body, and a failed one must have logged the
 recorded exception, or the one that ``ERRORS`` names. No case may write into
-the working directory.
+the working directory or leave a file of its own in the temporary directory,
+which the reference records it doing.
 
 The cases that run hmmalign carry the ``integration`` mark; see
 ``test_cli_cases.py``.
@@ -14,6 +15,7 @@ The cases that run hmmalign carry the ``integration`` mark; see
 
 import io
 import json
+import logging
 import os
 import re
 import tempfile
@@ -25,7 +27,7 @@ import pytest
 from test_cli_cases import expected_text
 
 import cladecomparelib.cladeweb  # registers the routes
-from cladecomparelib import core
+from cladecomparelib import core, report
 
 DATA = Path(__file__).resolve().parent / "data"
 REFERENCE = DATA / "py27" / "web"
@@ -43,10 +45,9 @@ CASES = {
     "web.single.urn": [],
 }
 
-# bottle 0.13 spools a request body or upload larger than 100 KiB to a named
-# temporary file, which is still present when the files are counted, so the
-# count of files left in the temporary directory is not comparable for the
-# submissions that upload CDK.hmm.
+# Under bottle 0.13, the submissions that upload CDK.hmm leave the named
+# temporary files to which bottle spools a request body or upload larger than
+# 100 KiB; they are bottle's own, outside the request's directory.
 SPOOLED = {"web.hmm.pair.gtest", "web.pdb.1HCK.gtest"}
 
 # Recorded failures that now raise a different exception by design, and the
@@ -134,9 +135,10 @@ def test_reference_submission(case, tmp_path, monkeypatch, require):
     else:
         assert response == (REFERENCE / case / "response.html").read_bytes()
     assert os.listdir(workdir) == record["written_files"] == []
-    if case not in SPOOLED:
-        leftovers = os.listdir(tmpdir)
-        assert len(leftovers) == record["leftover_temp_files"], leftovers
+    leftovers = os.listdir(tmpdir)
+    if case in SPOOLED:
+        leftovers = [name for name in leftovers if name.startswith("cladeweb-")]
+    assert leftovers == []
 
 
 def test_every_recorded_submission_is_tested():
@@ -179,3 +181,31 @@ def test_hypg_submission_matches_the_command_line(tmp_path, monkeypatch):
     assert expected.count(b"pair.hypg.out") == 2
     assert response == expected.replace(b"pair.hypg.out", b"web-pair-hypg")
     assert os.listdir(workdir) == []
+
+
+def test_a_failing_submission_leaves_no_temporary_files(tmp_path, monkeypatch, caplog):
+    """An exception after every output file is written removes them all."""
+
+    def fail(*_args):
+        raise RuntimeError("report failed")
+
+    monkeypatch.setattr(report, "do_single", fail)
+    caplog.set_level(logging.INFO, logger="cladecomparelib.pairlogo")
+    _workdir, tmpdir, status, _response, errors = submit(
+        load("web.pair.gtest"), tmp_path, monkeypatch
+    )
+    assert status.startswith("500"), errors
+    assert "report failed" in errors
+    # The pair-logo PDFs were written before the failure.
+    assert any(message.endswith(".pdf") for message in caplog.messages)
+    assert os.listdir(tmpdir) == []
+
+
+def test_a_rejected_submission_leaves_no_temporary_files(tmp_path, monkeypatch):
+    """A submission rejected with an error message removes its uploads."""
+    record = load("web.pair.gtest")
+    record["fields"][2] = ["alpha", "1.5"]
+    _workdir, tmpdir, status, response, errors = submit(record, tmp_path, monkeypatch)
+    assert status == "200 OK", errors
+    assert response == b"Error: alpha must be a number between 0 and 1"
+    assert os.listdir(tmpdir) == []

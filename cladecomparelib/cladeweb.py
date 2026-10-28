@@ -117,28 +117,35 @@ def form():
     return FORM_HTML
 
 
-# TODO - routes for downloading .pml, .pdf -- use static_file
+# TODO - routes for downloading .pml, .pdf -- use static_file. The files of a
+# request are removed when it ends, so they need a place that outlives it.
 
 
 @bottle.post("/cladecompare")
 def form_submit():
+    # The uploads and every file the run writes, including the pair-logo PDFs
+    # that process_output writes beside the pattern file, go into one
+    # directory, which is removed when the request ends, however it ends.
+    with tempfile.TemporaryDirectory(prefix="cladeweb-") as tmpdir:
+        return compare_submission(tmpdir)
+
+
+def compare_submission(tmpdir):
+    """Run the submitted form, writing files in tmpdir; return the response."""
     # ENH: pick a unique, informative name -- e.g. date or hostname
     name = bottle.request.forms.name
 
     seqfile1 = bottle.request.files.seqfile1
     if not hasattr(seqfile1, "file"):
         return "Error: You need to specify at least one sequence file."
-    seq1fname = handle2temp(
-        seqfile1.file, suffix=(".cma" if seqfile1.filename.endswith(".cma") else ".seq")
-    )
+    suffix1 = ".cma" if seqfile1.filename.endswith(".cma") else ".seq"
+    seq1fname = save_upload(seqfile1, tmpdir, "seqfile1" + suffix1)
 
     # Optional second sequence set -- if missing, do single mode
     seqfile2 = bottle.request.files.seqfile2
     if hasattr(seqfile2, "file"):
-        seq2fname = handle2temp(
-            seqfile2.file,
-            suffix=(".cma" if seqfile2.filename.endswith(".cma") else ".seq"),
-        )
+        suffix2 = ".cma" if seqfile2.filename.endswith(".cma") else ".seq"
+        seq2fname = save_upload(seqfile2, tmpdir, "seqfile2" + suffix2)
         if not name:
             name = "%s-vs-%s" % (
                 seqfile1.filename.rsplit(".", 1)[0],
@@ -154,7 +161,7 @@ def form_submit():
     if hasattr(profile, "file"):
         if not profile.filename.endswith(".hmm"):
             return "HMM profile file name must end in .hmm"
-        profname = handle2temp(profile.file, suffix=".hmm")
+        profname = save_upload(profile, tmpdir, "profile.hmm")
         logger.info("Aligning %s with profile %s", seq1fname, profname)
         fg_aln = core.hmm_align_and_read(profname, seq1fname)
         if seq2fname:
@@ -166,6 +173,9 @@ def form_submit():
         if seq2fname:
             bg_aln = core.read_aln(seq2fname, "fasta")
 
+    # The form does not offer this field. The structure is saved under a
+    # fixed name, from which pmlscript cannot read a PDB ID, so a request that
+    # sends one with a profile fails with InputError.
     pdbfile = bottle.request.files.pdbfile
     if hasattr(pdbfile, "file"):
         if not profname:
@@ -173,7 +183,7 @@ def form_submit():
                 "Error: to generate a PyMOL script for a PDB file you must "
                 "also specify an HMM profile"
             )
-        pdbfname = handle2temp(pdbfile.file)
+        pdbfname = save_upload(pdbfile, tmpdir, "pdbfile")
         logger.info("Aligning %s with profile %s", pdbfile.filename, profname)
         pdb_rec, pdb_resnums, pdb_inserts = core.pdb_hmm(profname, pdbfname)
         pdb_data = [(pdbfname, pdb_rec, pdb_resnums, pdb_inserts)]
@@ -188,10 +198,8 @@ def form_submit():
     except ValueError:
         return "Error: alpha must be a number between 0 and 1"
 
-    _fdo, tmp_output = tempfile.mkstemp(suffix=".out")
-    os.close(_fdo)
-    _fdp, tmp_pattern = tempfile.mkstemp(suffix=".pttrn")
-    os.close(_fdp)
+    tmp_output = os.path.join(tmpdir, "cladecompare.out")
+    tmp_pattern = os.path.join(tmpdir, "cladecompare.pttrn")
 
     # Run the algorithms...
 
@@ -208,35 +216,17 @@ def form_submit():
 
     # Get the HTML report data
     contents = report.do_single(tmp_output, tmp_pattern)[1]
-
-    cleanup(seq1fname)
-    cleanup(seq2fname)
-    cleanup(profname)
-    cleanup(tmp_output)
-    cleanup(tmp_pattern)
-
     return report.html_page_tpl % dict(title=name, contents=contents)
 
 
 # --- Helpers ---
 
 
-def handle2temp(handle, suffix=""):
-    """Write file handle contents to a temporary file, return tempfile name."""
-    _fd, fname = tempfile.mkstemp(suffix=suffix)
-    os.write(_fd, handle.read())
-    os.close(_fd)
+def save_upload(upload, dirname, basename):
+    """Save an uploaded file as dirname/basename; return that file name."""
+    fname = os.path.join(dirname, basename)
+    upload.save(fname)
     return fname
-
-
-def cleanup(fname):
-    """Remove a temporary file that may or may not exist."""
-    if os.path.isfile(fname):
-        try:
-            os.remove(fname)
-            print("Cleaned up", fname)
-        except OSError:
-            print("Failed to clean up", fname)
 
 
 # --- Run ---

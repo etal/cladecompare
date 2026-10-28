@@ -272,6 +272,7 @@ def test_hypg_weighted(tmp_path):
 def test_output_defaults_to_standard_output(tmp_path):
     """Without -o, the table that pair.gtest wrote to a file goes to stdout."""
     argv = load("pair.gtest")["commands"][0]["argv"]
+    assert argv[-2] == "-o"
     _workdir, written, [result], _tmpdir = run_commands([argv[:-2]], tmp_path)
     assert result.returncode == 0, result.stderr
     assert result.stdout == expected_text("pair.gtest", "pair.gtest.out").decode()

@@ -5,7 +5,8 @@ Each case submits the form fields and uploads recorded in
 with the working and temporary directories redirected to scratch
 directories. The response status must be the recorded one; a successful
 response must equal the recorded body, and a failed one must have logged the
-recorded exception. No case may write into the working directory.
+recorded exception, or the one that ``ERRORS`` names. No case may write into
+the working directory.
 
 The cases that run hmmalign carry the ``integration`` mark; see
 ``test_cli_cases.py``.
@@ -14,6 +15,7 @@ The cases that run hmmalign carry the ``integration`` mark; see
 import io
 import json
 import os
+import re
 import tempfile
 import wsgiref.util
 from pathlib import Path
@@ -22,7 +24,7 @@ import bottle
 import pytest
 from test_cli_cases import expected_text
 
-import cladecomparelib.cladeweb  # noqa: F401  (registers the routes)
+import cladecomparelib.cladeweb  # registers the routes
 
 DATA = Path(__file__).resolve().parent / "data"
 REFERENCE = DATA / "py27" / "web"
@@ -139,6 +141,19 @@ def test_reference_submission(case, tmp_path, monkeypatch, require):
 def test_every_recorded_submission_is_tested():
     recorded = {path.name for path in REFERENCE.iterdir()}
     assert recorded == set(CASES) | OWN_TESTS
+
+
+def test_form_offers_every_strategy():
+    """The form offers each strategy that -s accepts, with gtest checked."""
+    page = cladecomparelib.cladeweb.form()
+    assert re.findall(r'name="strategy" value="(\w+)"', page) == [
+        "gtest",
+        "urn",
+        "phospho",
+        "jsd",
+        "hypg",
+    ]
+    assert re.findall(r'value="(\w+)" checked="checked"', page) == ["gtest"]
 
 
 @pytest.mark.parametrize("mode", ["pair", "single"])

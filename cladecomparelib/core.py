@@ -80,6 +80,7 @@ def process_args(args):
 
     description, module = STRATEGIES[args.strategy]
     logger.info("Using %s", description)
+    output = args.output or sys.stdout
 
     if len(all_alns) == 1:
         aln, hits = process_one(all_alns[0], module, args.weight)
@@ -88,7 +89,7 @@ def process_args(args):
             None,
             hits,
             args.alpha,
-            args.output or sys.stdout,
+            output,
             args.pattern,
             pdb_data,
             args.pmlout,
@@ -102,7 +103,7 @@ def process_args(args):
             bg_clean,
             hits,
             args.alpha,
-            args.output or sys.stdout,
+            output,
             args.pattern,
             pdb_data,
             args.pmlout,
@@ -542,9 +543,7 @@ def clean_alignments(fg_aln, bg_aln):
         col for col in zip(*seqstrs, strict=True) if not all(c == "-" for c in col)
     ]
     clean_seqs = ["".join(row) for row in zip(*clean_cols, strict=True)]
-    # Where every column is a gap, clean_seqs is empty and the records keep
-    # their sequences.
-    for rec, clean_seq in zip(full_aln, clean_seqs, strict=False):
+    for rec, clean_seq in zip(full_aln, clean_seqs, strict=True):
         rec.seq = Seq(clean_seq)
 
     # Split the full alignment back into FG and BG sets

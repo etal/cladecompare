@@ -178,7 +178,6 @@ def form_submit():
         pdb_rec, pdb_resnums, pdb_inserts = core.pdb_hmm(profname, pdbfname)
         pdb_data = [(pdbfname, pdb_rec, pdb_resnums, pdb_inserts)]
     else:
-        pdbfname = ""
         pdb_data = None
 
     _description, stat_module = core.STRATEGIES[bottle.request.forms.strategy]

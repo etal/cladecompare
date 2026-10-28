@@ -54,7 +54,7 @@ def make_pairlogos(fg_aln, bg_aln, tophits, name, N):
     # Group together nearby "pattern sites"
     clusters = []
     last_seen = None
-    for posn, _faa, _baa in sorted(tophits, key=lambda pfb: pfb[0]):
+    for posn in sorted(posn for posn, _faa, _baa in tophits):
         # NB: posns are numbered from 1
         if last_seen and posn - last_seen <= N:
             clusters[-1].append(posn)

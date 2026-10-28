@@ -25,6 +25,7 @@ import pytest
 from test_cli_cases import expected_text
 
 import cladecomparelib.cladeweb  # registers the routes
+from cladecomparelib import core
 
 DATA = Path(__file__).resolve().parent / "data"
 REFERENCE = DATA / "py27" / "web"
@@ -144,16 +145,12 @@ def test_every_recorded_submission_is_tested():
 
 
 def test_form_offers_every_strategy():
-    """The form offers each strategy that -s accepts, with gtest checked."""
+    """The form offers each strategy that -s accepts, with the default checked."""
     page = cladecomparelib.cladeweb.form()
-    assert re.findall(r'name="strategy" value="(\w+)"', page) == [
-        "gtest",
-        "urn",
-        "phospho",
-        "jsd",
-        "hypg",
+    assert re.findall(r'name="strategy" value="(\w+)"', page) == list(core.STRATEGIES)
+    assert re.findall(r'name="strategy" value="(\w+)" checked="checked"', page) == [
+        core.DEFAULT_STRATEGY
     ]
-    assert re.findall(r'value="(\w+)" checked="checked"', page) == ["gtest"]
 
 
 @pytest.mark.parametrize("mode", ["pair", "single"])

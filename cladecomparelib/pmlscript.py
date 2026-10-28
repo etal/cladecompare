@@ -160,7 +160,7 @@ def pdbid_from_fname(fname):
             chnid = fn[5].upper()
         else:
             recognized = "chain" in fn
-            # TODO - where's the chain ID?
+            # The chain is not read from this form of name.
             chnid = None
     else:
         recognized = False

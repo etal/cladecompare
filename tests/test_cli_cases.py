@@ -307,14 +307,22 @@ def test_input_error_prints_a_message_without_traceback(tmp_path):
     assert written == set()
 
 
-@pytest.mark.parametrize("alpha", ["1.5", "-0.1", "nan", "x"])
-def test_alpha_outside_0_1_is_a_usage_error(alpha, tmp_path):
+@pytest.mark.parametrize(
+    "alpha, message",
+    [
+        ("1.5", "must be between 0 and 1"),
+        ("-0.1", "must be between 0 and 1"),
+        ("nan", "must be between 0 and 1"),
+        ("x", "invalid alpha value"),
+    ],
+)
+def test_rejected_alpha_values_are_usage_errors(alpha, message, tmp_path):
     _workdir, _written, [result], _tmpdir = run_commands(
         [["cladecompare.py", "cdc2-a.aln.fasta", "cdc2-b.aln.fasta", "-a", alpha]],
         tmp_path,
     )
     assert result.returncode == 2
-    assert "argument -a/--alpha" in result.stderr
+    assert f"argument -a/--alpha: {message}" in result.stderr
     assert "Traceback" not in result.stderr
 
 

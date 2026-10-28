@@ -234,8 +234,9 @@ def do_multi(fnames, patternfname):
     labels = [fn[: -len(".out")] if fn.endswith(".out") else fn for fn in fnames]
     chunked_posns = wrap_data(posns)
     chunked_pattern = wrap_data(pattern)
-    # strict=False keeps the truncation to the shortest .out file. It is
-    # untested: table_multi fails before any table is drawn.
+    # cladereport on more than one .out file always fails: table_multi unpacks
+    # four zipped sequences into three names, as the multi.gtest reference
+    # case records. The truncation to the shortest .out file is unobservable.
     wrapped_row_cells = zip(*map(wrap_data, rowcells), strict=False)
     wrapped_row_classes = zip(*map(wrap_data, rowclasses), strict=False)
     wrapped_row_pvalues = zip(*map(wrap_data, rowpvalues), strict=False)

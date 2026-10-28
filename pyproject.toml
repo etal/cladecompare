@@ -82,7 +82,7 @@ extend-exclude = [".pixi", "tests/data/capture_py27.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "LOG", "G"]
-# The code base uses percent formatting throughout and is not otherwise
+# The code base uses percent formatting in most places and is not otherwise
 # modernized. The dict-keyed templates of pmlscript do not convert to
 # f-strings, so the UP031 fix would leave a mix of str.format and f-strings,
 # in strings whose output tests/data/py27 records.

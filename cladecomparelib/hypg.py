@@ -1,15 +1,12 @@
-"""Hypergeometric Distribution
+"""Hypergeometric distribution.
 
-Gendankenexperiment:
+Thought experiment:
 
-    Foreground and background sequence sets are pre-defined.
-
-    Given N foreground sequences and M-N background sequences,
-we randomly select N sequences from M.  We consider the consensus
-residue in the foreground as being type I and ask what is the probability
-of observing at least as many type I sequences in our selection as we see
-in the foreground.
-
+    The foreground and background sequence sets are pre-defined.
+    Given N foreground sequences and M - N background sequences, select N
+    sequences at random from the M. Take the consensus residue of the
+    foreground column as type I, and ask for the probability of observing at
+    least as many type I sequences in the selection as the foreground has.
 """
 
 from math import ceil
@@ -57,8 +54,10 @@ def compare_cols(
 def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
     """The fraction of the column that matches the consensus residue.
 
-    A single alignment gives no second set to draw from, so this is not a
-    hypergeometric probability, and not a p-value.
+    The weighted count of the consensus residue is rounded up and divided by
+    the number of sequences, gaps included. A single alignment gives no
+    second set to draw from, so this is not a hypergeometric probability, and
+    not a p-value.
     """
     cons_count = count_col(col, weights)[cons_aa]
     cons_count_i = int(ceil(cons_count))

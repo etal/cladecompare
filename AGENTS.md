@@ -72,7 +72,8 @@ hypg now computes the tail with `hypergeom.sf`, which stays accurate for small t
 `pair.hypg.w` differs throughout: SciPy 1.11.4 and later return `nan` for the non-integral count of successes that weights produce, and hypg now rounds that count up, as it rounds the other counts; with SciPy 1.18.1 its p-values are finite and its pattern is empty.
 The `-s phospho` cases now complete where the reference records a failure, because of the earlier fix to the phospho sample size, and their unweighted outputs equal the legacy reference cases.
 `unequal.gtest` no longer writes `_cc_combined.seq` into the working directory, nor logs that it did.
-`web.pair.hypg` returns status 200 with the report that the command line writes for the same alignments, where the reference records status 500, because the web form now takes its strategies from the same registry as the command line; `web.pdb.1HCK.gtest` still returns status 500, with `InputError` in place of `AssertionError`.
+`web.pair.hypg` returns status 200 with the report that the command line writes for the same alignments, because the web form now takes its strategies from the same registry as the command line; the reference records status 500.
+`web.pdb.1HCK.gtest` still returns status 500, with `InputError` in place of `AssertionError`.
 Standard error and logs differ in the line numbers that the log format prints, in the wording of the duplicate-sequence message and of the strategy line for `urn` and `phospho`, and tracebacks take Python 3's own form; `tests/data/README.md` lists these and the few differences that come from the bottle and Biopython versions.
 biofrills `ff11246` declares `biopython>=1.86`, so the run with Biopython 1.83 installed biofrills without its dependencies; CladeCompare's own code needs no Biopython newer than 1.83.
 

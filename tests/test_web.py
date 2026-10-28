@@ -183,6 +183,16 @@ def test_hypg_submission_matches_the_command_line(tmp_path, monkeypatch):
     assert os.listdir(workdir) == []
 
 
+def test_submission_name_is_escaped(tmp_path, monkeypatch):
+    """The submission name, which titles the report, is text, not HTML."""
+    record = load("web.pair.gtest")
+    record["fields"][0] = ["name", "<b>R&D</b>"]
+    _workdir, _tmpdir, status, response, errors = submit(record, tmp_path, monkeypatch)
+    assert status == "200 OK", errors
+    assert b"<b>" not in response
+    assert response.count(b"&lt;b&gt;R&amp;D&lt;/b&gt;") == 2
+
+
 def test_a_failing_submission_leaves_no_temporary_files(tmp_path, monkeypatch, caplog):
     """An exception after every output file is written removes them all."""
 

@@ -1,5 +1,6 @@
 """Generate an HTML report summarizing CladeCompare output."""
 
+import html
 import logging
 from math import log10
 
@@ -46,6 +47,11 @@ html_page_tpl = """\
   </body>
 </html>
 """
+
+
+def html_page(title, contents):
+    """Render a report page; the title is plain text, the contents are HTML."""
+    return html_page_tpl % dict(title=html.escape(title), contents=contents)
 
 
 def parse_out(fname):
@@ -155,7 +161,7 @@ def tr_plain(label, cells):
 
 def tr_class(label, cells, pvalues, classes):
     out = "<tr>\n"
-    out += '<td class="label">%s</td>' % label
+    out += '<td class="label">%s</td>' % html.escape(label)
     out += "".join(
         [
             '<td class="%s" title="p=%s">%s</td>' % (cls, pval, txt)

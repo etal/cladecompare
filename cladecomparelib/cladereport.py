@@ -15,7 +15,7 @@ If given multiple files:
 import argparse
 
 from cladecomparelib import configure_logging
-from cladecomparelib.report import do_multi, do_single, html_page_tpl
+from cladecomparelib.report import do_multi, do_single, html_page
 
 
 def main():
@@ -37,7 +37,7 @@ def main():
         title, contents = do_single(args.outfiles[0], args.pattern)
     else:
         title, contents = do_multi(args.outfiles, args.pattern)
-    html_report = html_page_tpl % dict(title=title, contents=contents)
+    html_report = html_page(title, contents)
 
     if args.output:
         with open(args.output, "w") as handle:

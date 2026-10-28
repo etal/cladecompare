@@ -216,7 +216,7 @@ def compare_submission(tmpdir):
 
     # Get the HTML report data
     contents = report.do_single(tmp_output, tmp_pattern)[1]
-    return report.html_page_tpl % dict(title=name, contents=contents)
+    return report.html_page(name, contents)
 
 
 # --- Helpers ---

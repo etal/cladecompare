@@ -78,3 +78,13 @@ def test_parse_pattern_accepts_an_empty_pattern(tmp_path):
     path = tmp_path / "test.pttrn"
     path.write_text("1:")
     assert report.parse_pattern(str(path)) == []
+
+
+def test_tr_class_escapes_the_label():
+    """tr_class escapes the label, which do_multi takes from a file name.
+
+    do_multi draws no table while table_multi fails, as the multi.gtest
+    reference case records.
+    """
+    row = report.tr_class("R&D <1>", ["A"], [0.5], ["wt"])
+    assert '<td class="label">R&amp;D &lt;1&gt;</td>' in row

@@ -58,7 +58,14 @@ def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
     the number of sequences, gaps included. A single alignment gives no
     second set to draw from, so this is not a hypergeometric probability, and
     not a p-value.
+
+    A consensus residue that the alignment-wide frequencies lack, such as X,
+    raises KeyError, as in the reference code; it would otherwise score 0,
+    the most significant value. compare_cols does not check this, and still
+    returns 0 for such a consensus in paired mode.
     """
+    if cons_aa not in aa_freqs:
+        raise KeyError(cons_aa)
     cons_count = count_col(col, weights)[cons_aa]
     cons_count_i = int(ceil(cons_count))
     pvalue = float(cons_count_i) / len(col)

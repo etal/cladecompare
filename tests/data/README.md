@@ -142,7 +142,7 @@ A port that fixes one of them differs from the reference by design, and the test
   For the successful submissions, those files are exactly the pair-logo PDFs named in the log, which are written beside the temporary pattern file and never served.
   The failing submissions also leave the uploads and whatever other temporary files the request had already created, because the exception ends the request before the cleanup that `stdout` records for the successful ones; in the reference, `web.pair.hypg` fails before the output files are opened, so it leaves only its two uploads.
 - `single.hypg` cases record the fraction of the column that matches the consensus, not a hypergeometric probability.
-  A column whose consensus is X raised `KeyError` in the reference code, from a value that only a commented-out formula used, and now gives 0, as paired hypg already did; no recorded case has such a column.
+  A column whose consensus is X raises `KeyError`, as in the reference code; no recorded case has such a column.
 - `unequal.gtest` writes `_cc_combined.seq` into the working directory.
   The code no longer writes that file, so this case differs from the reference by design: `_cc_combined.seq` is absent from the written files, and the log line `Wrote _cc_combined.seq` is gone.
 
@@ -186,4 +186,4 @@ A port that fixes one of them differs from the reference by design, and the test
   MAPGAPS (`--mapgaps`): `run_gaps` is not available from conda-forge or bioconda.
   The pair-logo PDFs, beyond their names.
   The `--pmlout` option, which only renames the PyMOL script.
-  The form page itself (`GET /cladecompare`), which is static.
+  The form page itself (`GET /cladecompare`), which the code generates from the strategy registry; `tests/test_web.py` checks its strategy buttons.

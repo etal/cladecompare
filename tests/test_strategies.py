@@ -88,6 +88,16 @@ def test_hypg_rounds_weighted_counts_up():
     )
 
 
+def test_hypg_single_rejects_a_consensus_it_cannot_count():
+    """A consensus of X raises instead of scoring 0, the most significant value.
+
+    The alignment-wide frequencies skip X, as count_col does.
+    """
+    col = "XXXAD"
+    with pytest.raises(KeyError):
+        hypg.compare_one(col, "X", 5.0, ones(col), FREQS, PSEUDO)
+
+
 # --- urn ---
 
 

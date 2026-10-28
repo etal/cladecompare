@@ -129,19 +129,16 @@ def get_pml_name(pdb_fname, chain_id):
     return "%s%s" % (pdb_id.lower(), chain_id.upper())
 
 
-def pdbid_from_fname(fname, upper=False, default_chain=None):
-    """Extract an uppercase PDB ID and chain ID from a filename.
+def pdbid_from_fname(fname):
+    """Extract a PDB ID and chain ID from a filename.
 
     Ex:
-        1ABC.pdb
-        pdb1ABC.ent
-        00_1abc.pdb, 01_1abc.pdb
-        1abcA.pdb
-        1abc_A.pdb
-        1abc_chain_A.pdb (?)
+        1abc.pdb, 00_1abc.pdb, 01_1abc.pdb, 1abc_chain_A.pdb -> ('1abc', None)
+        1abcA.pdb, 1abc_a.pdb -> ('1abc', 'A')
+        pdb1abc.ent -> ('1abc', '1ABC')
 
-    will all return ('1ABC', None) or ('1ABC', 'A'). Any other name raises
-    InputError.
+    The PDB ID keeps the case of the file name, and the chain ID is
+    uppercase. Any other name raises InputError.
     """
     fn = os.path.basename(fname)
     if fn.endswith(".ent"):
@@ -154,7 +151,7 @@ def pdbid_from_fname(fname, upper=False, default_chain=None):
         pdbid = fn[:4]
         if len(fn) == 8:
             recognized = "_" not in fn
-            chnid = default_chain
+            chnid = None
         elif len(fn) == 9:
             recognized = "_" not in fn
             chnid = fn[4].upper()
@@ -164,7 +161,7 @@ def pdbid_from_fname(fname, upper=False, default_chain=None):
         else:
             recognized = "chain" in fn
             # TODO - where's the chain ID?
-            chnid = default_chain
+            chnid = None
     else:
         recognized = False
     if not recognized:
@@ -172,7 +169,7 @@ def pdbid_from_fname(fname, upper=False, default_chain=None):
             "Cannot read a PDB ID from the file name %s; name the file as, "
             "for example, 1abc.pdb, 1abcA.pdb, 1abc_A.pdb or pdb1abc.ent" % fname
         )
-    return (pdbid.upper() if upper else pdbid, chnid)
+    return pdbid, chnid
 
 
 # ---------------------------------------------------------

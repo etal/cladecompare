@@ -133,9 +133,9 @@ def pdbid_from_fname(fname):
     """Extract a PDB ID and chain ID from a filename.
 
     Ex:
-        1abc.pdb, 00_1abc.pdb, 01_1abc.pdb, 1abc_chain_A.pdb -> ('1abc', None)
+        1abc.pdb, 00_1abc.pdb, 01_1abc.pdb, 1abc_chain_A.pdb, pdb1abc.ent
+            -> ('1abc', None)
         1abcA.pdb, 1abc_a.pdb -> ('1abc', 'A')
-        pdb1abc.ent -> ('1abc', '1ABC')
 
     The PDB ID keeps the case of the file name, and the chain ID is
     uppercase. Any other name raises InputError.
@@ -144,7 +144,7 @@ def pdbid_from_fname(fname):
     if fn.endswith(".ent"):
         recognized = len(fn) == 11 and fn.startswith("pdb")
         pdbid = fn[3:-4]
-        chnid = fn[3:-4].upper()
+        chnid = None
     elif fn.endswith(".pdb"):
         if fn.startswith(("01_", "00_")):
             fn = fn[3:]

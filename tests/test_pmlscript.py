@@ -13,6 +13,7 @@ from cladecomparelib import InputError, pmlscript
         ("1hckA.pdb", ("1hck", "A")),
         ("1hck_a.pdb", ("1hck", "A")),
         ("1hck_chain_A.pdb", ("1hck", None)),
+        ("pdb1hck.ent", ("1hck", None)),
     ],
 )
 def test_pdbid_from_fname(fname, expected):
@@ -24,7 +25,7 @@ def test_pdbid_from_fname(fname, expected):
     ["tmpq355bkts", "x.pdb", "1HCKA_.pdb", "1hc_A.pdb", "1FIN-AB-CA.pdb", "1hck.ent"],
 )
 def test_pdbid_from_fname_rejects_other_names(fname):
-    # These raise even under python -O, where an assertion would not run and
-    # each name would give a wrong PDB ID.
+    """These raise even under python -O, where an assertion would not run
+    and each name would give a wrong PDB ID."""
     with pytest.raises(InputError, match="Cannot read a PDB ID"):
         pmlscript.pdbid_from_fname(fname)

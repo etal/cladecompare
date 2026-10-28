@@ -73,12 +73,15 @@ profile to align unaligned FASTA sequence sets. (See below for details about
 each field.) Sequences are not weighted unless you check the weighting box,
 which corresponds to the ``-w`` option of ``cladecompare``.
 
+``cladeweb`` serves the form at http://localhost:8080/cladecompare, on this
+computer only, and opens that address in your web browser once the server is
+listening. ``--port`` chooses another port, and ``--no-browser`` leaves the
+browser closed. If another ``cladeweb`` already serves that port, the command
+stops with an address-in-use error and opens no browser; the earlier server
+keeps running.
+
 If you launched the application from the command line, press Ctrl-C (on
 Unix-like systems) to stop the web server application.
-
-Note that only one instance of the server will run on your system at a time; if
-you launch ``cladeweb`` twice in a row, another browser tab or window will
-open but the server will not restart.
 
 
 Command line

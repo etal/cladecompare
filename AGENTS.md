@@ -20,7 +20,7 @@ Three console commands share one library of about 2,200 lines under `cladecompar
 | command | module | role |
 |---|---|---|
 | `cladecompare` | `cladecomparelib/cladecompare.py` | command line; the full option surface |
-| `cladeweb` | `cladecomparelib/cladeweb.py` | local browser form; one server instance per machine |
+| `cladeweb` | `cladecomparelib/cladeweb.py` | local browser form, served on localhost (`--port`, default 8080) |
 | `cladereport` | `cladecomparelib/cladereport.py` | renders an existing `.out` file to HTML, no statistics |
 
 The module names matter: the log format prints `%(module)s`, and the web reference cases record log lines from `cladeweb`.

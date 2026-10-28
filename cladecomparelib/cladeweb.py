@@ -11,10 +11,12 @@ Output (POST):
 #   - asterisks up top link to PDF pairlogos
 #   - below title, link to PyMOL script of PDB(s)
 
+import argparse
 import logging
 import os
 import tempfile
 import webbrowser
+from wsgiref.simple_server import WSGIServer
 
 import bottle
 
@@ -237,10 +239,52 @@ def save_upload(upload, dirname, basename):
     return fname
 
 
+class FormServer(WSGIServer):
+    """A WSGI server that does not bind an address and port another one listens on.
+
+    On Windows, SO_REUSEADDR lets a socket bind the address and port that
+    another socket is listening on, so the option is set only on other
+    systems, where it lets a new server reuse a port left in TIME_WAIT.
+    """
+
+    allow_reuse_address = os.name != "nt"
+
+
+class BrowserServer(FormServer):
+    """A form server that opens the form in a web browser once it listens.
+
+    If the port cannot be bound, OSError is raised before this point, and
+    no browser opens.
+    """
+
+    def server_activate(self):
+        super().server_activate()
+        webbrowser.open("http://localhost:%d/cladecompare" % self.server_port)
+
+
 # --- Run ---
 
 
 def main():
+    AP = argparse.ArgumentParser(
+        description="Serve the CladeCompare form on this computer."
+    )
+    AP.add_argument(
+        "--port",
+        type=int,
+        default=8080,
+        help="Port on localhost to serve the form from. (Default: 8080)",
+    )
+    AP.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="Do not open the form in a web browser.",
+    )
+    args = AP.parse_args()
+
     configure_logging()
-    webbrowser.open("http://localhost:8080/cladecompare")
-    bottle.run(host="localhost", port=8080)
+    bottle.run(
+        host="localhost",
+        port=args.port,
+        server_class=FormServer if args.no_browser else BrowserServer,
+    )

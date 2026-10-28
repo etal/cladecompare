@@ -18,9 +18,12 @@ import json
 import logging
 import os
 import re
+import socket
 import tempfile
+import webbrowser
 import wsgiref.util
 from pathlib import Path
+from wsgiref.simple_server import WSGIRequestHandler
 
 import bottle
 import pytest
@@ -236,3 +239,33 @@ def test_a_rejected_submission_leaves_no_temporary_files(tmp_path, monkeypatch):
     assert status == "200 OK", errors
     assert response == b"Error: alpha must be a number between 0 and 1"
     assert os.listdir(tmpdir) == []
+
+
+def test_browser_opens_once_the_server_listens(monkeypatch):
+    """The browser opens the form's address only when it can connect."""
+    opened = []
+
+    def open_url(url):
+        port = int(url.split(":")[2].split("/")[0])
+        with socket.create_connection(("localhost", port), timeout=5):
+            opened.append(url)
+
+    monkeypatch.setattr(webbrowser, "open", open_url)
+    server = cladecomparelib.cladeweb.BrowserServer(
+        ("localhost", 0), WSGIRequestHandler
+    )
+    server.server_close()
+    assert opened == ["http://localhost:%d/cladecompare" % server.server_port]
+
+
+def test_browser_does_not_open_when_the_port_is_taken(monkeypatch):
+    """A server already listening on the same address and port stops cladeweb
+    before the browser opens."""
+    opened = []
+    monkeypatch.setattr(webbrowser, "open", opened.append)
+    with socket.create_server(("localhost", 0)) as taken:
+        with pytest.raises(OSError):
+            cladecomparelib.cladeweb.BrowserServer(
+                taken.getsockname()[:2], WSGIRequestHandler
+            )
+    assert opened == []

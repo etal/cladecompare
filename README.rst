@@ -70,7 +70,8 @@ Web interface
 Launch the command ``cladeweb`` and fill in the form in your web browser.
 The form accepts sequences in FASTA or CMA format, and you can upload an HMM
 profile to align unaligned FASTA sequence sets. (See below for details about
-each field.)
+each field.) Sequences are not weighted unless you check the weighting box,
+which corresponds to the ``-w`` option of ``cladecompare``.
 
 If you launched the application from the command line, press Ctrl-C (on
 Unix-like systems) to stop the web server application.

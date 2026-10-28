@@ -166,6 +166,15 @@ def test_phospho_submission_completes(mode, tmp_path, monkeypatch):
     assert os.listdir(workdir) == []
 
 
+def assert_matches_cli_report(response, case, title):
+    """Assert that a response equals the report of a recorded command-line
+    case, whose title names its .out file, apart from the title."""
+    expected = expected_text(case, case + ".html")
+    outfname = (case + ".out").encode()
+    assert expected.count(outfname) == 2
+    assert response == expected.replace(outfname, title.encode())
+
+
 def test_hypg_submission_matches_the_command_line(tmp_path, monkeypatch):
     """hypg, which the reference records failing with KeyError, runs.
 
@@ -177,10 +186,18 @@ def test_hypg_submission_matches_the_command_line(tmp_path, monkeypatch):
         load("web.pair.hypg"), tmp_path, monkeypatch
     )
     assert status == "200 OK", errors
-    expected = expected_text("pair.hypg", "pair.hypg.html")
-    assert expected.count(b"pair.hypg.out") == 2
-    assert response == expected.replace(b"pair.hypg.out", b"web-pair-hypg")
+    assert_matches_cli_report(response, "pair.hypg", "web-pair-hypg")
     assert os.listdir(workdir) == []
+
+
+def test_weighted_submission_matches_the_command_line(tmp_path, monkeypatch):
+    """The form's weight checkbox gives the report of cladecompare -w."""
+    assert '<input type="checkbox" name="weight" />' in cladecomparelib.cladeweb.form()
+    record = load("web.pair.gtest")
+    record["fields"].append(["weight", "on"])
+    _workdir, _tmpdir, status, response, errors = submit(record, tmp_path, monkeypatch)
+    assert status == "200 OK", errors
+    assert_matches_cli_report(response, "pair.gtest.w", "web-pair-gtest")
 
 
 def test_submission_name_is_escaped(tmp_path, monkeypatch):

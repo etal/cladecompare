@@ -7,8 +7,6 @@ Output (POST):
 
 """
 
-# TODO:
-#   - take boolean do_weight as a form option (checkbox?)
 # ENH (in the report):
 #   - asterisks up top link to PDF pairlogos
 #   - below title, link to PyMOL script of PDB(s)
@@ -64,6 +62,13 @@ FORM_HTML = """\
   <p>
     Significance cutoff (alpha):
     <input type="text" name="alpha" value="0.005" />
+  </p>
+
+  <p>
+    <label>
+      <input type="checkbox" name="weight" />
+      Weight the sequences for the statistical test (cladecompare -w)
+    </label>
   </p>
 
 
@@ -197,6 +202,7 @@ def compare_submission(tmpdir):
             raise ValueError
     except ValueError:
         return "Error: alpha must be a number between 0 and 1"
+    do_weight = bool(bottle.request.forms.weight)
 
     tmp_output = os.path.join(tmpdir, "cladecompare.out")
     tmp_pattern = os.path.join(tmpdir, "cladecompare.pttrn")
@@ -205,13 +211,15 @@ def compare_submission(tmpdir):
 
     if seq2fname:
         # Pair mode
-        fg_clean, bg_clean, hits = core.process_pair(fg_aln, bg_aln, stat_module, False)
+        fg_clean, bg_clean, hits = core.process_pair(
+            fg_aln, bg_aln, stat_module, do_weight
+        )
         core.process_output(
             fg_clean, bg_clean, hits, alpha, tmp_output, tmp_pattern, pdb_data
         )
     else:
         # Single mode
-        aln, hits = core.process_one(fg_aln, stat_module, False)
+        aln, hits = core.process_one(fg_aln, stat_module, do_weight)
         core.process_output(aln, None, hits, alpha, tmp_output, tmp_pattern, pdb_data)
 
     # Get the HTML report data

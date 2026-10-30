@@ -34,7 +34,7 @@ BioFrills included, from the commit recorded in ``pyproject.toml``::
 
 With pip, install that BioFrills commit first, then CladeCompare::
 
-    pip install "biofrills[logo] @ git+https://github.com/etal/biofrills.git@ff11246a93e14a35723e6f04a3952c88c0cbf29c"
+    pip install "biofrills[logo] @ git+https://github.com/etal/biofrills.git@4aa8b57a5192b79707dc11ed8cdaf14b548fc257"
     pip install .
 
 .. _Biopython: https://biopython.org/
@@ -263,18 +263,16 @@ weight, and ``N_F`` and ``N_B`` are the sums of the weights.
 
 The sequence weights are the position-based weights of Henikoff & Henikoff
 (1994), computed separately for each set by BioFrills
-(``alnutils.sequence_weights`` with the scaling ``none``). At the BioFrills
-commit that CladeCompare installs, the weights of a set of ``N`` sequences
-sum to ``N L / Σ t(r_c)``, where the sum runs over the ``L`` columns that
-contribute to the weights, ``r_c`` is the number of distinct characters in
-column ``c`` (each gap character, ``-`` or ``.``, counting as one), and
-``t(r)`` is a tabulated estimate of the number of distinct types among ``r``
-residues drawn at random from the 20 amino acids. The sum is ``N`` for
-identical sequences and falls as the columns become more diverse, so it is not
-an effective number of independent sequences; a later BioFrills commit
-replaces this scaling with such an estimate. The analysis published in
-Talevich & Kannan (2013) always weighted the sequences; since October 2013,
-CladeCompare weights them only when ``-w`` is given.
+(``alnutils.sequence_weights`` with the scaling ``none``), which scales them
+to sum to an estimate of the effective number of independent sequences in
+the set: the number ``k`` of sequences with residues drawn at random from the
+20 amino acids whose expected number of distinct types in a column,
+``20 (1 - (19/20)^k)``, equals the mean number of distinct residue types
+(gaps not counted) over the columns that contribute to the weights, but at
+most the number of sequences. Identical sequences thus count as one. The
+analysis published in Talevich & Kannan (2013) always weighted the sequences,
+with an earlier scaling whose sum fell as the sequences became more diverse;
+since October 2013, CladeCompare weights them only when ``-w`` is given.
 
 ``f_a`` is the frequency of type ``a`` over the whole alignment (in paired
 mode, foreground and background together), weighted in the same way. Several
@@ -505,7 +503,10 @@ skipping when a program is missing.
 The reference outputs come from the Python 2 code base. On macOS, the
 ``py27-oracle`` environment reproduces the environment that captured them,
 and ``pixi run -e py27-oracle capture`` regenerates them, as described in
-``tests/data/README.md``.
+``tests/data/README.md``. Where a deliberate change moves a whole output
+file, as a change to the sequence weights does, the expected output is the
+current one, which ``tests/data/replay.py`` writes to ``tests/data/current``;
+review such a change against the explanation in ``tests/data/README.md``.
 
 Code is formatted with ``ruff format``, and the formatting-only commits are
 listed in ``.git-blame-ignore-revs``. To skip them in ``git blame``::

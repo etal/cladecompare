@@ -5,14 +5,17 @@ a scratch directory holding copies of ``tests/data/inputs``, with the installed
 ``cladecompare`` and ``cladereport`` commands in place of the scripts the
 record names. Each command must return the recorded code, and a failing one
 must fail with the recorded exception. The text files the commands write must
-equal the recorded ones; the reference records the pair-logo PDFs by name
+equal the recorded ones, or the regenerated ones for the cases in
+``REGENERATED``; the reference records the pair-logo PDFs by name
 only, so those must have the recorded names and embed the font that
 CladeCompare bundles. Every p-value written must be finite and within [0, 1].
 
 Where the code departs from the reference by design, as
 ``tests/data/README.md`` lists, the difference is declared here: a value
-substitution in ``SUBSTITUTIONS``, a file in ``NOT_WRITTEN``, or a test of
-its own.
+substitution in ``SUBSTITUTIONS``, a file in ``NOT_WRITTEN``, a case in
+``REGENERATED``, whose expected output is the current output that
+``tests/data/replay.py`` writes to ``tests/data/current``, or a test of its
+own.
 
 The cases that run hmmalign or MUSCLE carry the ``integration`` mark and are
 skipped unless the programs are on ``PATH``. ``pixi run test-integration``
@@ -35,6 +38,7 @@ from cladecomparelib import report
 
 DATA = Path(__file__).resolve().parent / "data"
 REFERENCE = DATA / "py27" / "cli"
+CURRENT = DATA / "current"
 
 # Recorded cases replayed as recorded, and the programs each needs.
 CASES = {
@@ -42,6 +46,7 @@ CASES = {
     "pair.gtest": [],
     "pair.gtest.w": [],
     "pair.hypg": [],
+    "pair.hypg.w": [],
     "pair.jsd.a.2": [],
     "pair.jsd.w.a.2": [],
     "pair.urn": [],
@@ -77,10 +82,27 @@ SUBSTITUTIONS = {
 # longer writes.
 NOT_WRITTEN = {"_cc_combined.seq"}
 
+# Recorded cases whose expected output is the current output in CURRENT,
+# written by tests/data/replay.py. The weighted cases moved with biofrills
+# 72282be, whose sequence weights keep their ratios but sum to an estimate of
+# the effective number of independent sequences; CladeCompare takes that sum
+# as the sample size, while the pseudocounts keep a fixed total, so every
+# weighted value that depends on the scale moved. pair.hypg.w also departs
+# from its record for the reason that "SciPy version" in tests/data/README.md
+# gives.
+REGENERATED = {
+    "pair.gtest.w",
+    "pair.hypg.w",
+    "pair.jsd.w.a.2",
+    "pair.urn.w",
+    "single.gtest.w.a.001",
+    "single.hypg.w.a.2",
+    "single.urn.w",
+}
+
 # Recorded cases with a test of their own below, and the legacy cases, which
 # those tests use as their expected output.
 OWN_TESTS = {
-    "pair.hypg.w",
     "pair.phospho",
     "pair.phospho.w",
     "single.phospho",
@@ -89,8 +111,8 @@ OWN_TESTS = {
 LEGACY = {"legacy.pair.phospho.nw", "legacy.single.phospho.nw"}
 
 
-def load(case):
-    text = (REFERENCE / case / "run.json").read_text(encoding="utf-8")
+def load(case, directory=REFERENCE):
+    text = (directory / case / "run.json").read_text(encoding="utf-8")
     return json.loads(text)
 
 
@@ -150,7 +172,8 @@ def assert_pdfs(workdir, pdfs, expected):
         assert b"DejaVuSansMono-Bold" in (workdir / name).read_bytes(), name
 
 
-def expected_text(case, name):
+def reference_text(case, name):
+    """The recorded bytes of a file, with the SUBSTITUTIONS applied."""
     expected = (REFERENCE / case / name).read_bytes()
     if name.endswith((".out", ".html")):
         for old, new, count in SUBSTITUTIONS.get(case, []):
@@ -158,6 +181,28 @@ def expected_text(case, name):
             assert expected.count(old) == count, (name, old)
             expected = expected.replace(old, new)
     return expected
+
+
+def expectation(case, directory=None):
+    """The names of the text files and the PDFs that a case must write.
+
+    By default the regenerated record in CURRENT for the cases in
+    REGENERATED, and the reference otherwise.
+    """
+    if directory is None:
+        directory = CURRENT if case in REGENERATED else REFERENCE
+    record = load(case, directory)
+    written = set(record["written_files"])
+    if directory == REFERENCE:
+        written -= NOT_WRITTEN
+    return written, set(record["pdfs"])
+
+
+def expected_text(case, name):
+    """The bytes that a case must write to a file."""
+    if case in REGENERATED:
+        return (CURRENT / case / name).read_bytes()
+    return reference_text(case, name)
 
 
 def check_case(case, tmp_path, path_prefix=None, commands=None):
@@ -177,8 +222,8 @@ def check_case(case, tmp_path, path_prefix=None, commands=None):
             assert error in result.stderr, result.stderr
 
     pdfs = {name for name in written if name.endswith(".pdf")}
-    assert_pdfs(workdir, pdfs, record["pdfs"])
-    expected = set(record["written_files"]) - NOT_WRITTEN
+    expected, expected_pdfs = expectation(case)
+    assert_pdfs(workdir, pdfs, expected_pdfs)
     assert written - pdfs == expected
     for name in sorted(expected):
         assert (workdir / name).read_bytes() == expected_text(case, name), name
@@ -203,6 +248,18 @@ def test_reference_case(case, tmp_path, require):
 def test_every_recorded_case_is_tested():
     recorded = {path.name for path in REFERENCE.iterdir()}
     assert recorded == set(CASES) | OWN_TESTS | LEGACY
+
+
+def test_regenerated_cases_are_declared():
+    """CURRENT holds exactly the REGENERATED cases, each unlike its record."""
+    assert {path.name for path in CURRENT.iterdir()} == REGENERATED
+    assert REGENERATED <= set(CASES)
+    assert REGENERATED.isdisjoint(SUBSTITUTIONS)
+    for case in sorted(REGENERATED):
+        written, pdfs = expectation(case)
+        assert (written, pdfs) != expectation(case, REFERENCE) or any(
+            expected_text(case, name) != reference_text(case, name) for name in written
+        ), case
 
 
 @pytest.mark.parametrize("mode", ["pair", "single"])
@@ -246,27 +303,6 @@ def test_phospho_weighted_completes(mode, tmp_path):
     )
     assert [r.returncode for r in results] == [0]
     assert_valid_pvalues(workdir / (case + ".out"))
-
-
-def test_hypg_weighted(tmp_path):
-    """Weighted hypg gives finite p-values, and on these inputs no pattern.
-
-    The reference values came from SciPy 1.2.1, which accepted a non-integral
-    population count, and have no counterpart in an integer model. With the
-    counts rounded up, 6 sequences are drawn from 13, and the smallest
-    attainable p-value, 1 / C(13, 6) or about 5.8e-4, is attained by only 16
-    columns, too few to pass the Benjamini-Hochberg threshold at the default
-    alpha, which first reaches that value at rank 29; every larger p-value
-    exceeds the threshold at its rank.
-    """
-    case = "pair.hypg.w"
-    workdir, written, results, _tmpdir = run_commands(
-        [step["argv"] for step in load(case)["commands"]], tmp_path
-    )
-    assert [r.returncode for r in results] == [0, 0], results[-1].stderr
-    assert_valid_pvalues(workdir / (case + ".out"))
-    assert (workdir / (case + ".pttrn")).read_text() == "1:"
-    assert written == {case + suffix for suffix in [".out", ".pttrn", ".html"]}
 
 
 def test_output_defaults_to_standard_output(tmp_path):

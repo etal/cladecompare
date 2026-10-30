@@ -124,6 +124,32 @@ The form offered gtest, urn, jsd and phospho; `web.pair.hypg` submits the one st
 Standard output, standard error, web response bodies, logs and tracebacks have the scratch working directory, the temporary directory, the extracted cladecompare and biofrills trees and the Python installation prefix replaced by `<workdir>`, `<tmp>`, `<cladecompare>` (or `<cladecompare-legacy>`), `<biofrills>` and `<python-prefix>`.
 The random part of a temporary file name is replaced by `tmpXXXXXX`.
 
+## Regenerated outputs in `current/`
+
+`current/<case>/` holds the expected output of each command-line case whose output now differs from `py27/` by a deliberate change that a substitution of a few values cannot express.
+It holds the text files the case writes and a `run.json` with only the two fields that can move, `written_files` and `pdfs`, which mean what they mean in `py27/`; the commands, return codes and the count of leftover temporary files remain those of the reference.
+`tests/test_cli_cases.py` lists these cases in `REGENERATED`, and fails if that list and the directories disagree or if a regenerated case no longer differs from its reference.
+
+The files are generated from the code under test, so each regeneration is a claim to be reviewed against the explanation below, never a way to make a failing case pass.
+With the dependencies of the lock files installed, `replay.py` replays every case that needs no external program and rewrites `current/` for those whose output differs from the reference:
+
+```sh
+uv run python tests/data/replay.py
+```
+
+Its output is deterministic, so a rerun on unchanged code leaves `current/` unchanged.
+
+- **Scale of the sequence weights** (`pair.gtest.w`, `pair.hypg.w`, `pair.jsd.w.a.2`, `pair.urn.w`, `single.gtest.w.a.001`, `single.hypg.w.a.2`, `single.urn.w`).
+  biofrills `72282be` changed the `none` scaling of `sequence_weights`, which `-w` uses, so that the weights of an alignment sum to an estimate of its effective number of independent sequences; the ratios between the weights did not change.
+  The sums moved from 5.004 to 2.117 for the 11 `scttlre-domain` sequences of the paired cases, from 6.146 to 7.734 for the 36 `cdc2-domain` sequences of the paired cases, and from 6.317 to 7.734 for the 37 `cdc2-domain` sequences of the single-alignment cases; the sequence that the paired cases remove from the background is identical to another, so it no longer changes the sum.
+  CladeCompare uses the weights as counts and their sum as the sample size, while the pseudocounts have a fixed total of 0.5, so the change of scale moves every weighted value that depends on it.
+  The change is exactly this rescaling: the code at biofrills `ff11246`, with each weight vector multiplied to give the new sum, writes every file under `current/` byte for byte.
+  The pattern of `pair.gtest.w` falls from 9 sites to none, so its six pair logos are no longer written; `pair.jsd.w.a.2` selects 32 sites instead of 29, in 7 logos instead of 8; `single.gtest.w.a.001` selects 50 sites instead of 41, and `single.urn.w` 14 instead of 3; the patterns of `pair.urn.w` and `single.hypg.w.a.2` remain empty.
+  For `pair.hypg.w`, see "SciPy version" below.
+  `single.jsd.w.a.2` is the one weighted case that still reproduces the reference: single-alignment jsd normalizes the weighted counts of a column and adds no pseudocounts, so the scale cancels.
+  The weighted phospho cases, whose reference records a failure, have tests of their own.
+  Every unweighted case, including those that run hmmalign and MUSCLE, reproduces the reference as before.
+
 ## Recorded defects
 
 The reference records the original behavior, defects included.
@@ -157,8 +183,8 @@ A port that fixes one of them differs from the reference by design, and the test
   The code now computes the tail directly with `hypergeom.sf`: on the 242 columns of `pair.hypg` under SciPy 1.18.1, its largest relative error against exact arithmetic is 6e-16, against 2e-7 for `1 - cdf`, and at the six significant digits of the `.out` file both print the newer values, which `tests/test_cli_cases.py` substitutes for the recorded ones.
   The values recorded for `pair.hypg.w` come from SciPy 1.2.1, which accepted the non-integral number of successes that weighted counts supply; SciPy 1.11.4 and 1.18.1 return `nan` for it.
   In 85 of the 242 columns that number is smaller than the foreground count rounded up, so those recorded values are probabilities of drawing more successes than the population holds.
-  The code now rounds the number of successes up, as it rounds the other counts, so `pair.hypg.w` differs from this reference by design: under SciPy 1.18.1 its p-values are finite, and its pattern is empty.
-  The effective foreground and background sizes, 5.004 and 6.146 sequences, each round up separately, to 6 and 7, so 6 sequences are drawn from 13, and across the 242 columns only 30 distinct p-values occur; the smallest, 1 / C(13, 6) or about 5.8e-4, is attained by 16 columns, while the Benjamini-Hochberg threshold at the default alpha first reaches it at rank 29, and every larger p-value, the next being about 4.1e-3, exceeds the threshold at its rank, so no site is selected.
+  The code now rounds the number of successes up, as it rounds the other counts, so `pair.hypg.w` differs from this reference by design, and its expected output is regenerated (see "Regenerated outputs in `current/`" above): its p-values are finite, and its pattern, which records 16 sites, is empty.
+  The effective foreground and background sizes, 2.117 and 7.734 sequences, each round up separately, to 3 and 8, so 3 sequences are drawn from 11, and across the 242 columns only 24 distinct p-values occur; the smallest, 1 / C(11, 3) or about 6.1e-3, is attained by 11 columns and already exceeds the default alpha of 0.005, so the Benjamini-Hochberg procedure selects no site at any rank.
   (`single.hypg.w.a.2` does not call `hypergeom`; see the recorded defects.)
 - **Consensus ties.**
   The consensus residue of a tied column comes from Python 2 dictionary order in biofrills.
@@ -168,6 +194,7 @@ A port that fixes one of them differs from the reference by design, and the test
   The ported CladeCompare runs against the ported biofrills rather than `36684bb`.
   On the alignments that the biofrills section of `AGENTS.md` lists as measured, the values biofrills returns to CladeCompare are identical or differ by at most a few units in the last place.
   End to end, with `ff11246`, every output file of every command-line case and the response of every successful web submission reproduce this reference, including `multi.gtest` and the cases that align with hmmalign and MUSCLE, under HMMER 3.0 and 3.4 alike, apart from the SciPy and hypg differences above, the deliberate changes to `-s phospho`, `unequal.gtest`, `web.pair.hypg` and `web.pdb.1HCK.gtest` under "Recorded defects", and the differences listed under "Python 3, bottle and Biopython" below.
+  With `4aa8b57`, the commit now pinned, the same holds for every unweighted case, measured with HMMER 3.4, and the seven weighted cases listed under "Regenerated outputs in `current/`" above differ as that section describes.
 - **Raw p-values.**
   The `.out` files hold unadjusted p-values, and their stars compare those raw values with alpha.
   The Benjamini-Hochberg procedure, limited to the 50 most significant sites, only selects the sites in the `.pttrn` file, which also name the pair logos and the PyMOL script.

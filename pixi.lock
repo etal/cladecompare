@@ -120,7 +120,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.16.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026e-h5d301ff_0.conda
       - pypi: ./
-      - pypi: git+https://github.com/etal/biofrills.git?rev=ff11246a93e14a35723e6f04a3952c88c0cbf29c#ff11246a93e14a35723e6f04a3952c88c0cbf29c
+      - pypi: git+https://github.com/etal/biofrills.git?rev=4aa8b57a5192b79707dc11ed8cdaf14b548fc257#4aa8b57a5192b79707dc11ed8cdaf14b548fc257
       - pypi: https://files.pythonhosted.org/packages/65/b6/495438ad95e0102aff8f6786b5474202f38cd5d4700d03a72b77977dec10/importlib_metadata-10.1.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8a/db/55a262f3606bebcae07cc14095338471ad7c0bbcaa37707e6f0ee49725b7/importlib_resources-7.1.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b8/44/7bd2007260da11cccca29ba2d4c345f1287aa663db38ee7cefeabf6386a5/zipp-4.1.2-py3-none-any.whl
@@ -209,7 +209,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-ng-2.3.3-h31dac16_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hf451053_7.conda
       - pypi: ./
-      - pypi: git+https://github.com/etal/biofrills.git?rev=ff11246a93e14a35723e6f04a3952c88c0cbf29c#ff11246a93e14a35723e6f04a3952c88c0cbf29c
+      - pypi: git+https://github.com/etal/biofrills.git?rev=4aa8b57a5192b79707dc11ed8cdaf14b548fc257#4aa8b57a5192b79707dc11ed8cdaf14b548fc257
       - pypi: https://files.pythonhosted.org/packages/65/b6/495438ad95e0102aff8f6786b5474202f38cd5d4700d03a72b77977dec10/importlib_metadata-10.1.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8a/db/55a262f3606bebcae07cc14095338471ad7c0bbcaa37707e6f0ee49725b7/importlib_resources-7.1.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b8/44/7bd2007260da11cccca29ba2d4c345f1287aa663db38ee7cefeabf6386a5/zipp-4.1.2-py3-none-any.whl
@@ -371,7 +371,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.16.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026e-h5d301ff_0.conda
       - pypi: ./
-      - pypi: git+https://github.com/etal/biofrills.git?rev=ff11246a93e14a35723e6f04a3952c88c0cbf29c#ff11246a93e14a35723e6f04a3952c88c0cbf29c
+      - pypi: git+https://github.com/etal/biofrills.git?rev=4aa8b57a5192b79707dc11ed8cdaf14b548fc257#4aa8b57a5192b79707dc11ed8cdaf14b548fc257
       - pypi: https://files.pythonhosted.org/packages/65/b6/495438ad95e0102aff8f6786b5474202f38cd5d4700d03a72b77977dec10/importlib_metadata-10.1.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8a/db/55a262f3606bebcae07cc14095338471ad7c0bbcaa37707e6f0ee49725b7/importlib_resources-7.1.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b8/44/7bd2007260da11cccca29ba2d4c345f1287aa663db38ee7cefeabf6386a5/zipp-4.1.2-py3-none-any.whl
@@ -460,7 +460,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-ng-2.3.3-h31dac16_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hf451053_7.conda
       - pypi: ./
-      - pypi: git+https://github.com/etal/biofrills.git?rev=ff11246a93e14a35723e6f04a3952c88c0cbf29c#ff11246a93e14a35723e6f04a3952c88c0cbf29c
+      - pypi: git+https://github.com/etal/biofrills.git?rev=4aa8b57a5192b79707dc11ed8cdaf14b548fc257#4aa8b57a5192b79707dc11ed8cdaf14b548fc257
       - pypi: https://files.pythonhosted.org/packages/65/b6/495438ad95e0102aff8f6786b5474202f38cd5d4700d03a72b77977dec10/importlib_metadata-10.1.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8a/db/55a262f3606bebcae07cc14095338471ad7c0bbcaa37707e6f0ee49725b7/importlib_resources-7.1.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b8/44/7bd2007260da11cccca29ba2d4c345f1287aa663db38ee7cefeabf6386a5/zipp-4.1.2-py3-none-any.whl
@@ -3779,13 +3779,13 @@ packages:
 - pypi: ./
   name: cladecompare
   requires_dist:
-  - biofrills[logo] @ git+https://github.com/etal/biofrills.git@ff11246a93e14a35723e6f04a3952c88c0cbf29c
+  - biofrills[logo] @ git+https://github.com/etal/biofrills.git@4aa8b57a5192b79707dc11ed8cdaf14b548fc257
   - biopython>=1.86
   - bottle>=0.13.2
   - reportlab>=4.4.10
   - scipy>=1.16.3
   requires_python: '>=3.12'
-- pypi: git+https://github.com/etal/biofrills.git?rev=ff11246a93e14a35723e6f04a3952c88c0cbf29c#ff11246a93e14a35723e6f04a3952c88c0cbf29c
+- pypi: git+https://github.com/etal/biofrills.git?rev=4aa8b57a5192b79707dc11ed8cdaf14b548fc257#4aa8b57a5192b79707dc11ed8cdaf14b548fc257
   name: biofrills
   version: 0.4.0.dev0
   requires_dist:

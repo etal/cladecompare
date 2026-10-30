@@ -5,7 +5,7 @@ requires-python = ">=3.12"
 [[package]]
 name = "biofrills"
 version = "0.4.0.dev0"
-source = { git = "https://github.com/etal/biofrills.git?rev=ff11246a93e14a35723e6f04a3952c88c0cbf29c#ff11246a93e14a35723e6f04a3952c88c0cbf29c" }
+source = { git = "https://github.com/etal/biofrills.git?rev=4aa8b57a5192b79707dc11ed8cdaf14b548fc257#4aa8b57a5192b79707dc11ed8cdaf14b548fc257" }
 dependencies = [
     { name = "biopython" },
 ]
@@ -215,7 +215,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "biofrills", extras = ["logo"], git = "https://github.com/etal/biofrills.git?rev=ff11246a93e14a35723e6f04a3952c88c0cbf29c" },
+    { name = "biofrills", extras = ["logo"], git = "https://github.com/etal/biofrills.git?rev=4aa8b57a5192b79707dc11ed8cdaf14b548fc257" },
     { name = "biopython", specifier = ">=1.86" },
     { name = "bottle", specifier = ">=0.13.2" },
     { name = "reportlab", specifier = ">=4.4.10" },

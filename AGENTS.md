@@ -66,16 +66,18 @@ The port removed `Bio.Alphabet` and `Bio._py3k`, which Biopython dropped in 1.78
 `tests/data/README.md` records the environment and how to regenerate it, the inputs, the defects the reference preserves on purpose, and how to read a mismatch.
 A change should reproduce those outputs, or differ from them only by a documented, deliberate change; the statistics are exactly the kind of output where a wrong answer looks entirely plausible.
 
-With HMMER 3.0 or 3.4 and MUSCLE 3.8.1551, under Python 3.12 with the ported biofrills, the ported code reproduces the `.out`, `.pttrn`, `.html` and PyMOL files of every command-line case and the response of every successful web submission byte for byte, both with Biopython 1.83, SciPy 1.11.4 and bottle 0.12.25 and with Biopython 1.88, SciPy 1.18.1 and bottle 0.13.4, apart from the differences below, which come from SciPy, from the later fixes to phospho and hypg, from the removal of `_cc_combined.seq`, from later changes to two failing web cases, or from the form of logs and tracebacks.
+With HMMER 3.0 or 3.4 and MUSCLE 3.8.1551, under Python 3.12 with the ported biofrills, the ported code reproduces the `.out`, `.pttrn`, `.html` and PyMOL files of every command-line case and the response of every successful web submission byte for byte, both with Biopython 1.83, SciPy 1.11.4 and bottle 0.12.25 and with Biopython 1.88, SciPy 1.18.1 and bottle 0.13.4, apart from the differences below, which come from SciPy, from the later fixes to phospho and hypg, from the scale of the sequence weights in later biofrills, from the removal of `_cc_combined.seq`, from later changes to two failing web cases, or from the form of logs and tracebacks.
 Under both SciPy versions, 13 small p-values of `pair.hypg` differ from the reference in the sixth significant digit; the values from both newer releases agree with exact rational arithmetic, and the reference values, computed with SciPy 1.2.1, do not.
 hypg now computes the tail with `hypergeom.sf`, which stays accurate for small tails, rather than as `1 - hypergeom.cdf`; on these inputs the two forms print the same values.
 `pair.hypg.w` differs throughout: SciPy 1.11.4 and later return `nan` for the non-integral count of successes that weights produce, and hypg now rounds that count up, as it rounds the other counts; with SciPy 1.18.1 its p-values are finite and its pattern is empty.
+Seven weighted cases differ from the reference since the biofrills pin moved to `4aa8b57`, whose `none` scaling makes the weights of an alignment sum to an estimate of its effective number of independent sequences; `tests/data/current/` holds the expected outputs of those cases, and `tests/data/README.md` explains the change.
+`single.jsd.w.a.2` still reproduces the reference, because single-alignment jsd does not depend on the scale of the weights, and the weighted phospho cases, whose reference records a failure, have tests of their own.
 The `-s phospho` cases now complete where the reference records a failure, because of the earlier fix to the phospho sample size, and their unweighted outputs equal the legacy reference cases.
 `unequal.gtest` no longer writes `_cc_combined.seq` into the working directory, nor logs that it did.
 `web.pair.hypg` returns status 200 with the report that the command line writes for the same alignments, because the web form now takes its strategies from the same registry as the command line; the reference records status 500.
 `web.pdb.1HCK.gtest` still returns status 500, with `InputError` in place of `AssertionError`.
 Standard error and logs differ in the line numbers that the log format prints, in the wording of the duplicate-sequence message and of the strategy line for `urn` and `phospho`, and in the temporary file names that the web logs show, and tracebacks take Python 3's own form; `tests/data/README.md` lists these and the few differences that come from the bottle and Biopython versions.
-biofrills `ff11246` declares `biopython>=1.86`, so the run with Biopython 1.83 installed biofrills without its dependencies; CladeCompare's own code needs no Biopython newer than 1.83.
+biofrills `ff11246` and `4aa8b57` declare `biopython>=1.86`, so the run with Biopython 1.83 installed biofrills without its dependencies; CladeCompare's own code needs no Biopython newer than 1.83.
 
 ## External aligners: any HMMER 3, and MUSCLE 3 only
 
@@ -96,7 +98,7 @@ CladeCompare calls six names from four pure-Python [biofrills](https://github.co
 The latest release on PyPI, 0.3.1 from 2013, cannot be installed on a current Python, because its `setup.py` always builds a Cython extension that no longer compiles.
 The biofrills development branch has since removed that extension and been ported to Python 3: it builds as a pure-Python `py3-none-any` wheel for Python 3.12 and later, and all six names import from it on Python 3.12, 3.14 and 3.15.
 The dependency is therefore `biofrills[logo]`, where the `logo` extra supplies WebLogo, which `pairlogo` reaches through `logoutils`.
-Until 0.4.0 is published, `[tool.uv.sources]` takes biofrills from its GitHub repository at a pinned commit, starting from `ff11246`, the commit measured below, so that `uv.lock` and `pixi.lock` record exactly which biofrills a result came from; moving to a newer commit is a deliberate change of that pin.
+Until 0.4.0 is published, `[tool.uv.sources]` takes biofrills from its GitHub repository at a pinned commit, now `4aa8b57`, so that `uv.lock` and `pixi.lock` record exactly which biofrills a result came from; moving to a newer commit is a deliberate change of that pin.
 A path source to a checkout beside this one was the alternative, but the lock then records only the path, and the checkout may hold unpushed or uncommitted changes.
 The pinned commit's version, `0.4.0.dev0`, sorts below `0.4` under PEP 440, so the floor is declared as `>=0.4.0.dev0`: with `>=0.4`, no installer that checks the floor could install the built wheel before 0.4.0 exists.
 Raise the floor to `0.4.0` with that release.
@@ -113,6 +115,7 @@ The entropies and weights that scale the letters of a pair logo, which WebLogo c
 The `.out` file prints p-values to six significant digits, so differences of this size should change a printed value only where it lies on a rounding boundary.
 On the reference cases none does: with `ff11246`, every `.out` file of the reference that does not call SciPy's `hypergeom` is reproduced exactly.
 Later biofrills releases can move numbers here, for instance through changes to consensus gap decisions or to frequency summation, so judge a biofrills upgrade against the reference outputs like any other change.
+Moving the pin from `ff11246` to `4aa8b57` moved seven weighted outputs and no unweighted one: the weights kept their ratios and changed only their sum, and the code at `ff11246`, given weights rescaled to the new sums, writes the new outputs byte for byte.
 
 biofrills implements `chisqprob` itself, adapted from Cephes to avoid a SciPy dependency, and SciPy removed its own `chisqprob` in 1.0, so `scipy.stats.chi2.sf` is the nearest SciPy function.
 Do not substitute one for the other in passing: at the 19 degrees of freedom the G-test uses, they differ by up to 4.0e-8 relative, which reflects the convergence tolerance `MACHEP = 1e-7` in biofrills, and which can change the sixth significant digit of a printed p-value and the ranking that the Benjamini–Hochberg selection depends on.
@@ -120,7 +123,7 @@ Do not substitute one for the other in passing: at the 19 degrees of freedom the
 ## Packaging and the two development workflows
 
 `pyproject.toml` is the only build configuration, with setuptools as the backend.
-The floors of biopython, bottle, reportlab and scipy are the versions Ubuntu 26.04 ships; biopython's floor is also the one that biofrills `ff11246` declares, although CladeCompare's own code needs no Biopython newer than 1.83.
+The floors of biopython, bottle, reportlab and scipy are the versions Ubuntu 26.04 ships; biopython's floor is also the one that biofrills `ff11246` and `4aa8b57` declare, although CladeCompare's own code needs no Biopython newer than 1.83.
 The pair-logo font, DejaVu Sans Mono Bold 2.33, ships as package data in `cladecomparelib/data/` together with its license, which is the reason the license expression names `Bitstream-Vera`.
 `pairlogo` loads that copy unconditionally; it consults no system font directory and has no fallback font, so every installation draws the logos with the same font and line height.
 
@@ -138,7 +141,7 @@ The example alignments are real alignments from Talevich, Mirza & Kannan (2011),
 `tests/test_cli_cases.py` replays every recorded command-line case that the current command line can run with the installed `cladecompare` and `cladereport` commands, in a scratch directory holding copies of `tests/data/inputs`; the two legacy phospho cases, whose `-nw` option no longer exists, serve as the expected output of the unweighted phospho cases.
 `tests/test_web.py` submits every recorded form to the cladeweb WSGI application.
 Each command or submission must give the recorded return code or status, each written file and successful response must equal the reference byte for byte, and every p-value written to a `.out` file must be finite and within [0, 1].
-Where the code departs from the reference by design, the test module declares the difference — a substituted value, a file no longer written, a different exception, or a test of its own — and `tests/data/README.md` explains it.
+Where the code departs from the reference by design, the test module declares the difference — a substituted value, a file no longer written, a different exception, an expected output regenerated into `tests/data/current/` by `tests/data/replay.py`, or a test of its own — and `tests/data/README.md` explains it.
 `tests/test_core.py`, `tests/test_strategies.py`, `tests/test_report.py` and `tests/test_pmlscript.py` test the parsing, site-selection and statistics functions on small constructed inputs, against hand computations and, for the site selection, against `scipy.stats.false_discovery_control`.
 A known defect that a test exposes is marked as a strict expected failure, so that fixing it fails the suite until the marker is removed.
 The cases that run hmmalign or MUSCLE, and a `--mapgaps` case that replaces MAPGAPS with a stand-in `run_gaps` built on hmmalign, are marked `integration` and are skipped unless the programs are on the PATH; `pixi run test-integration` runs them alone and fails instead of skipping.
@@ -157,3 +160,4 @@ The cases that run hmmalign or MUSCLE, and a `--mapgaps` case that replaces MAPG
   Otherwise `cladeweb` and `cladereport` let it propagate, and a missing program or MUSCLE 4 or later still raises `RuntimeError` with a traceback.
 - Every module that logs uses `logger = logging.getLogger(__name__)`, and the three commands configure logging through `configure_logging` in `cladecomparelib/__init__.py`.
 - The files under `tests/data/py27/` are generated but committed deliberately, as the reference; regenerate them with `tests/data/capture_py27.py`, for instance through `pixi run -e py27-oracle capture`, rather than editing them.
+- The files under `tests/data/current/` are generated from the current code and committed as the expected output of the cases that depart from `tests/data/py27/` by design; regenerate them with `tests/data/replay.py`, review the change against `tests/data/README.md`, and never edit them by hand.

@@ -83,13 +83,14 @@ SUBSTITUTIONS = {
 NOT_WRITTEN = {"_cc_combined.seq"}
 
 # Recorded cases whose expected output is the current output in CURRENT,
-# written by tests/data/replay.py. The weighted cases moved with biofrills
+# written by tests/data/replay.py. Five weighted cases moved with biofrills
 # 72282be, whose sequence weights keep their ratios but sum to an estimate of
 # the effective number of independent sequences; CladeCompare takes that sum
 # as the sample size, while the pseudocounts keep a fixed total, so every
 # weighted value that depends on the scale moved. pair.hypg.w also departs
 # from its record for the reason that "SciPy version" in tests/data/README.md
-# gives.
+# gives. The two urn cases moved because urn now weights the sequences as
+# CHAIN does ("CHAIN's weighting in urn" in tests/data/README.md).
 REGENERATED = {
     "pair.gtest.w",
     "pair.hypg.w",
@@ -260,6 +261,20 @@ def test_regenerated_cases_are_declared():
         assert (written, pdfs) != expectation(case, REFERENCE) or any(
             expected_text(case, name) != reference_text(case, name) for name in written
         ), case
+
+
+def test_weighting_leaves_single_alignment_urn_unchanged():
+    """urn weights no sequence of a single alignment, CHAIN's query family.
+
+    So the expected .out and .pttrn files of single.urn.w equal those that
+    the reference records for single.urn. Together with the replay of
+    single.urn.w against those expected files, this holds the command to
+    the unweighted output.
+    """
+    for suffix in [".out", ".pttrn"]:
+        assert expected_text("single.urn.w", "single.urn.w" + suffix) == (
+            expected_text("single.urn", "single.urn" + suffix)
+        )
 
 
 @pytest.mark.parametrize("mode", ["pair", "single"])

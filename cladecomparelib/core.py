@@ -38,6 +38,25 @@ STRATEGIES = {
 }
 DEFAULT_STRATEGY = "gtest"
 
+# The scalings of biofrills alnutils.sequence_weights that -w applies to the
+# foreground and to the background, unless the strategy's module sets its own
+# WEIGHT_SCALINGS; None counts every sequence once.
+DEFAULT_WEIGHT_SCALINGS = ("none", "none")
+
+
+def weight_scalings(module, do_weight):
+    """The foreground and background weight scalings for a strategy."""
+    if not do_weight:
+        return None, None
+    return getattr(module, "WEIGHT_SCALINGS", DEFAULT_WEIGHT_SCALINGS)
+
+
+def sequence_weights(aln, scaling):
+    """Sequence weights of an alignment; a scaling of None gives each 1."""
+    if scaling is None:
+        return [1 for i in range(len(aln))]
+    return alnutils.sequence_weights(aln, scaling)
+
 
 def parse_alpha(text):
     """Parse a significance threshold, which must be between 0 and 1.
@@ -162,13 +181,10 @@ def process_pair(fg_aln, bg_aln, module, do_weight):
         for each column position.
     """
     fg_aln, bg_aln = clean_alignments(fg_aln, bg_aln)
-    if do_weight:
-        fg_weights = alnutils.sequence_weights(fg_aln, "none")
-        bg_weights = alnutils.sequence_weights(bg_aln, "none")
-    else:
-        fg_weights = [1 for i in range(len(fg_aln))]
-        bg_weights = [1 for i in range(len(bg_aln))]
-    fg_size = fsum(fg_weights) if module != urn else len(fg_aln)
+    fg_scaling, bg_scaling = weight_scalings(module, do_weight)
+    fg_weights = sequence_weights(fg_aln, fg_scaling)
+    bg_weights = sequence_weights(bg_aln, bg_scaling)
+    fg_size = fsum(fg_weights)
     bg_size = fsum(bg_weights)
     # Overall aa freqs for pseudocounts
     aa_freqs = combined_frequencies(fg_aln, fg_weights, bg_aln, bg_weights)
@@ -210,11 +226,12 @@ def process_pair(fg_aln, bg_aln, module, do_weight):
 
 def process_one(aln, module, do_weight):
     """Calculate a mapping of alignment column positions to "contrast"."""
-    if do_weight:
-        weights = alnutils.sequence_weights(aln, "none")
-    else:
-        weights = [1 for i in range(len(aln))]
-    aln_size = fsum(weights) if module != urn else len(aln)
+    # A single alignment takes the foreground's weighting.
+    scaling = weight_scalings(module, do_weight)[0]
+    if do_weight and scaling is None:
+        logger.info("This strategy does not weight the sequences of one alignment")
+    weights = sequence_weights(aln, scaling)
+    aln_size = fsum(weights)
     aa_freqs = alnutils.aa_frequencies(aln, weights, gap_chars="-.X")
     cons = consensus.consensus(
         aln, weights=weights, trim_ends=False, gap_threshold=GAP_THRESH

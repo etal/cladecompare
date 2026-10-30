@@ -139,16 +139,23 @@ uv run python tests/data/replay.py
 
 Its output is deterministic, so a rerun on unchanged code leaves `current/` unchanged.
 
-- **Scale of the sequence weights** (`pair.gtest.w`, `pair.hypg.w`, `pair.jsd.w.a.2`, `pair.urn.w`, `single.gtest.w.a.001`, `single.hypg.w.a.2`, `single.urn.w`).
+- **Scale of the sequence weights** (`pair.gtest.w`, `pair.hypg.w`, `pair.jsd.w.a.2`, `single.gtest.w.a.001`, `single.hypg.w.a.2`).
   biofrills `72282be` changed the `none` scaling of `sequence_weights`, which `-w` uses, so that the weights of an alignment sum to an estimate of its effective number of independent sequences; the ratios between the weights did not change.
   The sums moved from 5.004 to 2.117 for the 11 `scttlre-domain` sequences of the paired cases, from 6.146 to 7.734 for the 36 `cdc2-domain` sequences of the paired cases, and from 6.317 to 7.734 for the 37 `cdc2-domain` sequences of the single-alignment cases; the sequence that the paired cases remove from the background is identical to another, so it no longer changes the sum.
   CladeCompare uses the weights as counts and their sum as the sample size, while the pseudocounts have a fixed total of 0.5, so the change of scale moves every weighted value that depends on it.
-  The change is exactly this rescaling: the code at biofrills `ff11246`, with each weight vector multiplied to give the new sum, writes every file under `current/` byte for byte.
-  The pattern of `pair.gtest.w` falls from 9 sites to none, so its six pair logos are no longer written; `pair.jsd.w.a.2` selects 32 sites instead of 29, in 7 logos instead of 8; `single.gtest.w.a.001` selects 50 sites instead of 41, and `single.urn.w` 14 instead of 3; the patterns of `pair.urn.w` and `single.hypg.w.a.2` remain empty.
+  The change is exactly this rescaling: the code at biofrills `ff11246`, with each weight vector multiplied to give the new sum, writes every file of these cases byte for byte.
+  The pattern of `pair.gtest.w` falls from 9 sites to none, so its six pair logos are no longer written; `pair.jsd.w.a.2` selects 32 sites instead of 29, in 7 logos instead of 8; `single.gtest.w.a.001` selects 50 sites instead of 41; the pattern of `single.hypg.w.a.2` remains empty.
   For `pair.hypg.w`, see "SciPy version" below.
   `single.jsd.w.a.2` is the one weighted case that still reproduces the reference: single-alignment jsd normalizes the weighted counts of a column and adds no pseudocounts, so the scale cancels.
   The weighted phospho cases, whose reference records a failure, have tests of their own.
-  Every unweighted case, including those that run hmmalign and MUSCLE, reproduces the reference as before.
+- **CHAIN's weighting in urn** (`pair.urn.w`, `single.urn.w`).
+  Under `-w`, urn now weights the sequences as CHAIN does (Neuwald et al. 2003, Methods): the foreground, CHAIN's query family, is not weighted, and the background is weighted with CHAIN's robust weights, which the `andy` scaling of `sequence_weights` gives from biofrills `205e1d1` on: normalized to a mean of one-half, with weights greater than one truncated to one.
+  The reference instead weighted both sets with the `none` scaling while taking the number of foreground sequences as the number of trials, so that the foreground count was understated against it.
+  These outputs no longer depend on the `none` scaling.
+  `pair.urn.w` had no p-value below 0.06 and an empty pattern; its smallest p-value is now 2.08e-05, and it selects 24 sites, in 8 pair logos.
+  `single.urn.w` analyzes CHAIN's query family alone, which is not weighted, so it writes the `.out` and `.pttrn` files that the reference records for `single.urn`, and its pattern has 50 sites instead of 3.
+
+Every unweighted case, including those that run hmmalign and MUSCLE, reproduces the reference as before.
 
 ## Recorded defects
 
@@ -193,7 +200,7 @@ A port that fixes one of them differs from the reference by design, and the test
 - **biofrills version.**
   The ported CladeCompare runs against the ported biofrills rather than `36684bb`.
   On the alignments that the biofrills section of `AGENTS.md` lists as measured, the values biofrills returns to CladeCompare are identical or differ by at most a few units in the last place.
-  End to end, with `ff11246`, every output file of every command-line case and the response of every successful web submission reproduce this reference, including `multi.gtest` and the cases that align with hmmalign and MUSCLE, under HMMER 3.0 and 3.4 alike, apart from the SciPy and hypg differences above, the deliberate changes to `-s phospho`, `unequal.gtest`, `web.pair.hypg` and `web.pdb.1HCK.gtest` under "Recorded defects", and the differences listed under "Python 3, bottle and Biopython" below.
+  End to end, with `ff11246` and the code of that time, every output file of every command-line case and the response of every successful web submission reproduced this reference, including `multi.gtest` and the cases that align with hmmalign and MUSCLE, under HMMER 3.0 and 3.4 alike, apart from the SciPy and hypg differences above, the deliberate changes to `-s phospho`, `unequal.gtest`, `web.pair.hypg` and `web.pdb.1HCK.gtest` under "Recorded defects", and the differences listed under "Python 3, bottle and Biopython" below.
   With `4aa8b57`, the commit now pinned, the same holds for every unweighted case, measured with HMMER 3.4, and the seven weighted cases listed under "Regenerated outputs in `current/`" above differ as that section describes.
 - **Raw p-values.**
   The `.out` files hold unadjusted p-values, and their stars compare those raw values with alpha.
@@ -202,6 +209,7 @@ A port that fixes one of them differs from the reference by design, and the test
   Standard error and the web logs come from logging with the format `%(module)s [@%(lineno)s]`, so editing a module above a logging call changes them without changing behavior.
   The legacy cases log in the default format of the root logger instead (`WARNING:root:...`) and record no `INFO` lines.
   Three messages of the current code also differ in wording: the duplicate-sequence message names the set (`Purging N identical sequences from the foreground` or `from the background`, where this reference has `from the alignment`), and the strategy lines read `Using ball-in-urn model of consensus residue conservation` and `Using urn model for phosphorylatable residues (S/T/Y)`, where this reference has `Using ball-in-urn statistical model` and `Using urn model for phosphorylatable residues`.
+  One message is new: with `-w`, `single.urn.w` logs `This strategy does not weight the sequences of one alignment`, which the reference does not record.
   At both captured commits, `pairlogo.py` looked for the DejaVu font first under `/usr/share/fonts/truetype/ttf-dejavu/` and then for a bundled copy, and used Courier if it found neither.
   `e265b1f` added that copy as `data/DejaVuSansMono-Bold.ttf` and pointed the fallback at it; at the legacy commit the fallback pointed inside `cladecomparelib/`, where no font was ever committed.
   On the capture host the system path did not exist either, so at the legacy commit `pairlogo.py` warned while being imported, and that first call configured logging before `cladecompare.py` could.

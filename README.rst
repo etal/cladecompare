@@ -259,7 +259,8 @@ foreground column and ``m_a`` its count in the background column. The
 characters ``-``, ``.`` and ``X`` are not counted. Without ``-w``, each
 sequence counts as 1, and ``N_F`` and ``N_B`` are the numbers of foreground and
 background sequences. With ``-w``, each sequence counts as its sequence
-weight, and ``N_F`` and ``N_B`` are the sums of the weights.
+weight, and ``N_F`` and ``N_B`` are the sums of the weights; urn weights the
+sequences in its own way, which its section below describes.
 
 The sequence weights are the position-based weights of Henikoff & Henikoff
 (1994), computed separately for each set by BioFrills
@@ -351,17 +352,20 @@ background columns together as the superalignment::
 
 with ``k = max(1, ⌈c⌉)`` and ``N`` the number of foreground sequences. With a
 single alignment, ``p_j = f_c*``, ``k = ⌈c⌉`` and ``N`` is the number of
-sequences. Under ``-w``, ``N`` remains the number of sequences while ``c``
-and ``m_c*`` are sums of weights, so the foreground count is understated
-relative to the number of trials.
+sequences.
+
+Under ``-w``, urn weights the sequences as CHAIN does. The foreground,
+CHAIN's query family, is not weighted, because CHAIN takes its sequences to
+be independent, so ``c`` remains a count. The background is weighted with
+CHAIN's robust weights: the position-based weights of Henikoff & Henikoff,
+normalized to a mean of one-half, with weights greater than one truncated to
+one (BioFrills' scaling ``andy``). ``m_c*``, ``N_B`` and the background
+consensus use these weights, and the frequencies ``f_a`` pool the unweighted
+foreground with the weighted background. With a single alignment, which
+takes the part of the query family, ``-w`` changes nothing.
 
 CladeCompare departs from CHAIN in these respects:
 
-- **Weights.** CHAIN does not weight the query family, whose sequences it
-  selects from distinct phyla or kingdoms and treats as independent, and it
-  weights the superalignment with position-based weights normalized to a mean
-  of one-half, with weights greater than one truncated to one. CladeCompare
-  either weights neither set or weights both as described above.
 - **Pseudocounts.** CHAIN adds one pseudocount for each amino acid type;
   CladeCompare adds pseudocounts of total size 0.5, in proportion to ``f_a``.
 - **Conserved residues.** CHAIN counts residues biochemically similar to the

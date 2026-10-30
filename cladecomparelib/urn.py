@@ -12,6 +12,12 @@ The section Methods of README.rst gives the formula as implemented here, with
 its choice of subalignment, superalignment and conserved residue, and lists
 where it departs from CHAIN.
 
+Under -w, the weighting follows CHAIN: the foreground, CHAIN's query family,
+is not weighted, because CHAIN takes its sequences to be independent, and the
+background is weighted with CHAIN's robust weights, normalized to a mean of
+one-half and truncated at one (biofrills' "andy" scaling). With a single
+alignment, which plays the part of the query family, -w changes nothing.
+
 CHAIN reports K_j = 1 / P_j, the expected number of random trials needed to
 observe the event, and displays it as a histogram bar whose height scales
 the number of trials t as
@@ -31,6 +37,9 @@ from math import ceil
 from scipy.stats import binom
 
 from .shared import count_col
+
+# Foreground and background scalings of the sequence weights under -w.
+WEIGHT_SCALINGS = (None, "andy")
 
 
 def compare_cols(

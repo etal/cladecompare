@@ -138,6 +138,8 @@ uv run python tests/data/replay.py
 ```
 
 Its output is deterministic, so a rerun on unchanged code leaves `current/` unchanged.
+It exits with an error while `PYTHONPATH` is set, because the commands it runs would inherit that path, and the files must record the biofrills that the lock files pin rather than a checkout on the path.
+The tests inherit `PYTHONPATH`, so they import a checkout on that path.
 
 - **Scale of the sequence weights** (`pair.gtest.w`, `pair.hypg.w`, `pair.jsd.w.a.2`, `single.gtest.w.a.001`, `single.hypg.w.a.2`).
   biofrills `72282be` changed the `none` scaling of `sequence_weights`, which `-w` uses, so that the weights of an alignment sum to an estimate of its effective number of independent sequences; the ratios between the weights did not change.

@@ -16,7 +16,10 @@ The files under current/ are generated; regenerate them with this script and
 review the change rather than editing them.  tests/test_cli_cases.py expects
 the cases it lists in REGENERATED to match these files and fails if that list
 and the directories disagree.  README.md beside this script explains each
-regenerated case.
+regenerated case.  The script refuses to run while PYTHONPATH is set, which
+the commands it runs would inherit, so that the files record the packages
+that the lock files install, biofrills at its pinned commit among them, and
+not a checkout on that path.
 
 Usage, from the repository root:
 
@@ -24,6 +27,7 @@ Usage, from the repository root:
 """
 
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -66,6 +70,8 @@ def replay(case):
 
 
 def main():
+    if os.environ.get("PYTHONPATH"):
+        sys.exit("PYTHONPATH is set; unset it so that the installed packages run")
     for case in sorted(CASES):
         if CASES[case]:
             continue

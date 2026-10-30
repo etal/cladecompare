@@ -53,7 +53,7 @@ finds MUSCLE 4 or later.
 
 .. _MUSCLE: http://www.drive5.com/muscle/
 .. _HMMER3: http://hmmer.org/
-.. _MAPGAPS: http://mapgaps.igs.umaryland.edu/
+.. _MAPGAPS: https://mapgaps.igs.umaryland.edu/
 
 The pixi_ environment described under Development below provides HMMER and
 MUSCLE 3.8.1551 from Bioconda, together with CladeCompare itself.
@@ -198,21 +198,24 @@ together::
 Strategies
 ----------
 
-Statistical tests ("-s" options) for column comparison:
+Statistical tests ("-s" options) for column comparison. The section Methods
+below gives the formula each one computes and the sources it follows:
 
 :gtest:
     (default) G-test for goodness-of-fit of FG amino acid counts vs. those of
     the BG column. BG frequencies include pseudocounts calculated from the
     amino acid frequencies of the full sequence set.
 :urn:
-    Ball-in-urn model (binomial), a la CHAIN_, for counts of the "consensus"
-    amino acid type in FG and BG.
+    Ball-in-urn model (binomial), after CHAIN (Neuwald et al. 2003), for
+    counts of the "consensus" amino acid type in FG and BG.
 :phospho:
     Ball-in-urn model, as in "urn", for the combined count of the
     phosphorylatable residues Ser, Thr and Tyr in the FG column, against
     their combined frequency in the FG and BG columns together.
 :jsd:
-    Jensen-Shannon divergence of column compositions, a la INTREPID_.
+    Jensen-Shannon divergence between the FG and BG column compositions,
+    after INTREPID (Sankararaman & Sjölander 2008). The value reported is a
+    score that is smaller for more divergent columns, not a p-value.
 :hypg:
     Hypergeometric model: the probability of drawing at least as many
     sequences of the FG consensus amino acid type as the FG column holds,
@@ -220,8 +223,245 @@ Statistical tests ("-s" options) for column comparison:
     together. With a single alignment, the fraction of the column that
     matches the consensus, which is not a p-value.
 
-.. _CHAIN: http://chain.igs.umaryland.edu/
-.. _INTREPID: http://bioinformatics.oxfordjournals.org/content/24/21/2445.full
+
+Methods
+-------
+
+This section records what each strategy computes, as implemented, and the
+published methods it follows or adapts. CladeCompare belongs to a set of
+projects by the same author, with the libraries BioFrills_ and biocma_ and the
+program fammer_, that implement the central ideas of Andrew Neuwald's CHAIN
+(Neuwald et al. 2003; Neuwald 2007) and MAPGAPS (Neuwald 2009) programs, with
+variations. CHAIN builds on PSI-BLAST alignments; CladeCompare aligns
+sequences to profiles with HMMER, and also accepts alignments from MAPGAPS.
+
+.. _biocma: https://github.com/etal/biocma
+.. _fammer: https://github.com/etal/fammer
+
+Preparing the alignments
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Before comparing a foreground with a background, CladeCompare removes from
+the background every sequence whose ID also occurs in the foreground, removes
+repeated identical sequences (a background sequence identical to a foreground
+sequence is removed from the background), aligns the two sets to each other
+with MUSCLE if they differ in width, and drops the columns in which every
+sequence of both sets has the gap character ``-``. The column numbers of the
+``.out`` and pattern files, and of the pair logos, refer to this cleaned
+alignment; the PyMOL script maps them to residues through the structure's own
+alignment to the profile.
+
+Counts, weights and pseudocounts
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For one alignment column, ``n_a`` is the count of amino acid type ``a`` in the
+foreground column and ``m_a`` its count in the background column. The
+characters ``-``, ``.`` and ``X`` are not counted. Without ``-w``, each
+sequence counts as 1, and ``N_F`` and ``N_B`` are the numbers of foreground and
+background sequences. With ``-w``, each sequence counts as its sequence
+weight, and ``N_F`` and ``N_B`` are the sums of the weights.
+
+The sequence weights are the position-based weights of Henikoff & Henikoff
+(1994), computed separately for each set by BioFrills
+(``alnutils.sequence_weights`` with the scaling ``none``). At the BioFrills
+commit that CladeCompare installs, the weights of a set of ``N`` sequences
+sum to ``N L / Σ t(r_c)``, where the sum runs over the ``L`` columns that
+contribute to the weights, ``r_c`` is the number of distinct characters in
+column ``c`` (each gap character, ``-`` or ``.``, counting as one), and
+``t(r)`` is a tabulated estimate of the number of distinct types among ``r``
+residues drawn at random from the 20 amino acids. The sum is ``N`` for
+identical sequences and falls as the columns become more diverse, so it is not
+an effective number of independent sequences; a later BioFrills commit
+replaces this scaling with such an estimate. The analysis published in
+Talevich & Kannan (2013) always weighted the sequences; since October 2013,
+CladeCompare weights them only when ``-w`` is given.
+
+``f_a`` is the frequency of type ``a`` over the whole alignment (in paired
+mode, foreground and background together), weighted in the same way. Several
+strategies add pseudocounts of total size ``π = 0.5``, distributed over the
+amino acid types in proportion to ``f_a``.
+
+Consensus residues and untested columns
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The consensus residue of a column in one set is the type ``a`` that maximizes
+the relative entropy term ``q_a ln(q_a / b_a)``, where ``q_a`` is the
+unweighted frequency of ``a`` in the column and ``b_a`` the weighted frequency
+of ``a`` over all columns of the same set; ties go to the alphabetically first
+type. A column whose weighted fraction of ``-`` characters is 0.8 or more has
+a gap as its consensus, except where such columns form a run at the start or
+the end of the alignment: those receive a residue consensus however many gaps
+they hold. A column with no uppercase residue at all has a gap as its
+consensus. A column whose foreground or background consensus is a gap is not
+tested and is reported with p = 1. Below, ``c*`` is the foreground consensus
+residue and ``c = n_c*`` its count in the foreground column.
+
+G-test (gtest)
+~~~~~~~~~~~~~~
+
+In paired mode, the foreground counts are compared with the composition of
+the background column, including pseudocounts, by a G-test (Dunning 1993)::
+
+    E_a = N_F (m_a + π f_a) / (N_B + π)
+    G   = 2 Σ n_a ln(n_a / E_a)        (sum over the types with n_a > 0)
+    p   = P(χ²₁₉ ≥ G)
+
+This is the test of Talevich & Kannan (2013). The upper tail of the
+chi-squared distribution with 19 degrees of freedom is computed by BioFrills
+(``stats.chisq.chisqprob``, adapted from Cephes). The expected values sum to
+``N_F`` times the share of the background column, pseudocounts included,
+that is not gaps, while the observed counts sum to the residues of the
+foreground column, so in columns with gaps the two totals differ. The
+background composition is estimated from the background column but enters the
+test as a known distribution, so with small sequence sets these p-values tend
+to be smaller than a test that accounted for that uncertainty would give.
+
+With a single alignment, each column is compared with the composition of the
+whole alignment::
+
+    O_a = n_a + π f_a
+    G   = 2 Σ O_a ln(O_a / f_a)
+    p   = P(χ²₁₉ ≥ G)
+
+Here the expected values ``f_a`` sum to 1, while the observed values sum to
+the number of residues in the column plus ``π``, so ``G`` grows with the
+number of sequences, and these values are not calibrated p-values.
+
+Ball-in-urn model (urn)
+~~~~~~~~~~~~~~~~~~~~~~~
+
+CHAIN (Neuwald et al. 2003) measures the selective constraint at position
+``j`` of a subalignment as the probability of drawing, with replacement, at
+least as many conserved residues from the corresponding column of a
+superalignment as the subalignment holds: the cumulative binomial
+probability ::
+
+    P_j = Σ_{i=c..N} C(N, i) p_j^i (1 - p_j)^(N - i)
+
+where ``c`` and ``N`` are the numbers of conserved residues and of residues in
+column ``j`` of the subalignment, and ``p_j`` is the frequency of the
+conserved residue in column ``j`` of the superalignment. CHAIN reports
+``K_j = 1 / P_j``, the expected number of trials needed to observe this
+event; CladeCompare reports ``P_j``.
+
+In paired mode, CladeCompare takes the foreground as the subalignment, the
+foreground consensus residue as the conserved residue, and the foreground and
+background columns together as the superalignment::
+
+    p_j = (m_c* + π f_c* + c) / (N_B + N + π)
+    P   = Σ_{i=k..N} C(N, i) p_j^i (1 - p_j)^(N - i)
+
+with ``k = max(1, ⌈c⌉)`` and ``N`` the number of foreground sequences. With a
+single alignment, ``p_j = f_c*``, ``k = ⌈c⌉`` and ``N`` is the number of
+sequences. Under ``-w``, ``N`` remains the number of sequences while ``c``
+and ``m_c*`` are sums of weights, so the foreground count is understated
+relative to the number of trials.
+
+CladeCompare departs from CHAIN in these respects:
+
+- **Weights.** CHAIN does not weight the query family, whose sequences it
+  selects from distinct phyla or kingdoms and treats as independent, and it
+  weights the superalignment with position-based weights normalized to a mean
+  of one-half, with weights greater than one truncated to one. CladeCompare
+  either weights neither set or weights both as described above.
+- **Pseudocounts.** CHAIN adds one pseudocount for each amino acid type;
+  CladeCompare adds pseudocounts of total size 0.5, in proportion to ``f_a``.
+- **Conserved residues.** CHAIN counts residues biochemically similar to the
+  conserved residue as conserved; CladeCompare counts only the consensus
+  residue type.
+- **Superalignment.** CHAIN draws from a separate superalignment;
+  CladeCompare pools the foreground and background columns.
+
+Phosphorylatable residues (phospho)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ball-in-urn model is applied to the combined count of Ser, Thr and Tyr
+instead of the consensus residue. With ``t_F = Σ (n_a + π f_a)`` and
+``t_B = Σ (m_a + π f_a)``, both summed over ``a`` in {S, T, Y}::
+
+    p = (t_B + t_F) / (N_B + N_F + 2)
+    P = Σ_{i=⌈t_F⌉..N+1} C(N + 1, i) p^i (1 - p)^(N + 1 - i),   N = ⌈N_F⌉
+
+With a single alignment, ``t = Σ (n_a + π f_a)`` over {S, T, Y},
+``p = f_S + f_T + f_Y``, ``N`` is the sum of the weights rounded up, and the
+sum runs from ``⌈t⌉`` to ``N + 1`` in the same way.
+
+Jensen-Shannon divergence (jsd)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In paired mode, ``P`` is the foreground composition ``n_a / Σ n`` and ``Q`` the
+background composition including pseudocounts, ``(m_a + π f_a)``, normalized
+to sum to 1. With ``M = (P + Q) / 2`` and ``H`` the Shannon entropy in bits::
+
+    JSD   = H(M) - (H(P) + H(Q)) / 2
+    score = (1 - JSD)²
+
+With a single alignment, ``Q`` is the uniform distribution over the 20 amino
+acid types. The score lies between 0 and 1 and is smaller for more divergent
+columns. It is not a p-value, and it does not account for the number of
+sequences, so a small foreground set appears divergent partly through
+sampling variation. INTREPID (Sankararaman & Sjölander 2008), which this
+strategy follows, uses JSD between a column and a background distribution as
+a conservation score.
+
+Hypergeometric model (hypg)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In paired mode, with every count and size rounded up to an integer,
+``k = max(1, ⌈c⌉)``, ``K = ⌈m_c* + c⌉`` and ``M = ⌈N_F⌉ + ⌈N_B⌉``, the
+p-value is the upper tail ``P(X ≥ k)`` of a hypergeometric variable ``X``
+counting the consensus residues among ``⌈N_F⌉`` sequences drawn without
+replacement from a population of ``M`` that holds ``K`` of them. No
+pseudocounts are added. With a single alignment, the value is ``⌈c⌉`` divided
+by the number of sequences, the fraction of the column that matches the
+consensus, which is not a p-value.
+
+Significant sites
+~~~~~~~~~~~~~~~~~
+
+The ``.out`` file holds each column's value as computed above, unadjusted.
+The pattern file, the pair logos and the residues highlighted in the PyMOL
+script come from the Benjamini-Hochberg step-up procedure (Benjamini &
+Hochberg 1995) at a false discovery rate of alpha, over all columns of the
+cleaned alignment, including the untested columns with p = 1, and limited
+to the 50 most significant columns.
+
+Alignments from MAPGAPS
+~~~~~~~~~~~~~~~~~~~~~~~
+
+MAPGAPS (Neuwald 2009) aligns sequences to a hierarchy of profiles and writes
+the aligned sequences in CMA format. ``--mapgaps`` runs its ``run_gaps``
+program and reads the result; CladeCompare also reads CMA files written
+earlier. Lowercase residues in a CMA alignment are insertions relative to the
+profile and are not compared.
+
+References
+~~~~~~~~~~
+
+- Benjamini Y, Hochberg Y (1995) Controlling the false discovery rate: a
+  practical and powerful approach to multiple testing. *Journal of the Royal
+  Statistical Society, Series B* 57(1):289-300.
+  doi:10.1111/j.2517-6161.1995.tb02031.x
+- Dunning T (1993) Accurate methods for the statistics of surprise and
+  coincidence. *Computational Linguistics* 19(1):61-74.
+- Henikoff S, Henikoff JG (1994) Position-based sequence weights. *Journal
+  of Molecular Biology* 243(4):574-578. doi:10.1016/0022-2836(94)90032-9
+- Neuwald AF (2007) The CHAIN program: forging evolutionary links to
+  underlying mechanisms. *Trends in Biochemical Sciences* 32(11):487-493.
+  doi:10.1016/j.tibs.2007.08.009
+- Neuwald AF (2009) Rapid detection, classification and accurate alignment of
+  up to a million or more related protein sequences. *Bioinformatics*
+  25(15):1869-1875. doi:10.1093/bioinformatics/btp342 (MAPGAPS)
+- Neuwald AF, Kannan N, Poleksic A, Hata N, Liu JS (2003) Ran's C-terminal,
+  basic patch, and nucleotide exchange mechanisms in light of a canonical
+  structure for Rab, Rho, Ras, and Ran GTPases. *Genome Research*
+  13(4):673-692. doi:10.1101/gr.862303 (the CHAIN methods)
+- Sankararaman S, Sjölander K (2008) INTREPID: INformation-theoretic TREe
+  traversal for Protein functional site IDentification. *Bioinformatics*
+  24(21):2445-2452. doi:10.1093/bioinformatics/btn474
+- Talevich E, Kannan N (2013) Structural and evolutionary adaptation of
+  rhoptry kinases and pseudokinases, a family of coccidian virulence factors.
+  *BMC Evolutionary Biology* 13:117. doi:10.1186/1471-2148-13-117
 
 
 Development

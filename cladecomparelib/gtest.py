@@ -9,12 +9,13 @@ The contingency table looks like::
 where O<resname> is the "observed" residue count in the foreground (using
 weighted sequences, so usually not an integer) and E<resname> is the "expected"
 residue count, calculated from the background column residue frequencies and
-scaled to match the size of the foreground. A pseudocount size of 1 is used in
-the background frequencies to avoid divide-by-zero issues and, I suppose,
-account for possible sampling and alignment errors/issues.
+scaled to match the size of the foreground. Pseudocounts of total size 0.5
+(core.PSEUDO_SIZE), in proportion to the amino acid frequencies of the whole
+alignment, are added to the background counts so that no expected count is
+zero.
 
 This is a goodness-of-fit test where the null hypothesis is that the foreground
-column residues were drawn from the the distribution represented by the
+column residues were drawn from the distribution represented by the
 background set. The test assumes the foreground is a sub-clade within the
 background clade.
 

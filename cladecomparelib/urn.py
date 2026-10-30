@@ -1,50 +1,27 @@
 r"""Compare two alignments via CHAIN's ball-in-urn stats.
 
-CHAIN formula:
+The model is the selective-constraint statistic of CHAIN: Neuwald AF, Kannan
+N, Poleksic A, Hata N, Liu JS (2003) Genome Research 13(4):673-692,
+doi:10.1101/gr.862303, Methods, "CHAIN Analysis". For c conserved residues
+among the N residues of column j of a subalignment, and p_j the frequency of
+the conserved residue in column j of the superalignment,
 
-The selective constraint acting at position j in a subalignment is expressed in
-terms of the number of random trials needed to draw from among the residues in
-a superalignment (with replacement) at least as many conserved residues as are
-observed in the subalignment at that position.
+    P_j = sum_{i=c..N} C(N, i) p_j^i (1 - p_j)^(N - i)
 
-    P_j^{(L,B} = \sum_{i=c_j^{(L)}^{N_j^{(L)}
-                    \binom{N_j}{i}
-                    (p_j^{(B)})^i
-                    (1-p_j^{(B)})^{N_j^{(L)}-i}
+The section Methods of README.rst gives the formula as implemented here, with
+its choice of subalignment, superalignment and conserved residue, and lists
+where it departs from CHAIN.
 
-where c_j^{(L)} and N_j^{(L)} are the number of conserved residues and total
-number of residues, respectively, in the j^th column of subalignment L, and
-p_j^{(B)} is the frequency of the conserved residues observed at that position
-for superalignment B, which serves as the background model.
-
-Neuwald: "Note that weights are not computed for the query family alignment,
-because these sequences are selected from distinct phyla or kingdoms and,
-therefore, are treated as statistically independent."
-
-The corresponding selective constraint acting on subalignment L is then defined
-as
-
-    K_j^{(L,B)} = 1 / P_j^{(L,B)}
-
-the expected number of random trials needed to observed this event.
-(e.g. P = 0.01 => 100 trials)
-
-Histogram bar height ~ number of random trials implied by K (i.e., K).
-
-A hack of logarithmic scaling:
+CHAIN reports K_j = 1 / P_j, the expected number of random trials needed to
+observe the event, and displays it as a histogram bar whose height scales
+the number of trials t as
 
     h = (t^{1-sigma}) / (1 - sigma)
 
-where
-    t = number of random trials
-    sigma \in [0,1) is a scaling parameter for adjusting the relative bar
-    heights so as to converge to linear scaling at sigma=0 and logarithmic
-    scaling as sigma->1. (Automatically determined by the display program)
-
-The order-of-magnitude increase in t as a function of sigma, when he relative
-bar height increases by twofold, is given by
-    log_10 (t_2h / t_h) = log_10 (2^{1/(1-sigma)})
-
+where sigma in [0, 1) moves the scaling from linear (sigma = 0) toward
+logarithmic (sigma -> 1) and is chosen by the display program. When the
+relative bar height doubles, t increases by log_10(2^{1/(1-sigma)}) orders
+of magnitude. CladeCompare reports P_j and does not draw these bars.
 """
 
 # ENH: Dirichlet mixture priors; Brown et al. 1993

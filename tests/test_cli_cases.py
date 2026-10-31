@@ -12,10 +12,10 @@ CladeCompare bundles. Every p-value written must be finite and within [0, 1].
 
 Where the code departs from the reference by design, as
 ``tests/data/README.md`` lists, the difference is declared here: a value
-substitution in ``SUBSTITUTIONS``, a file in ``NOT_WRITTEN``, a case in
-``REGENERATED``, whose expected output is the current output that
-``tests/data/replay.py`` writes to ``tests/data/current``, or a test of its
-own.
+substitution in ``SUBSTITUTIONS``, a file in ``NOT_WRITTEN``, a return code
+in ``RETURNCODES``, or a case in ``REGENERATED``, whose expected output is the
+current output that ``tests/data/replay.py`` writes to ``tests/data/current``.
+The cases in ``LEGACY`` are kept as a record and not replayed.
 
 The cases that run hmmalign or MUSCLE carry the ``integration`` mark and are
 skipped unless the programs are on ``PATH``. ``pixi run test-integration``
@@ -49,6 +49,8 @@ CASES = {
     "pair.hypg.w": [],
     "pair.jsd.a.2": [],
     "pair.jsd.w.a.2": [],
+    "pair.phospho": [],
+    "pair.phospho.w": [],
     "pair.urn": [],
     "pair.urn.w": [],
     "single.gtest.a.001": [],
@@ -57,6 +59,8 @@ CASES = {
     "single.hypg.w.a.2": [],
     "single.jsd.a.2": [],
     "single.jsd.w.a.2": [],
+    "single.phospho": [],
+    "single.phospho.w": [],
     "single.urn": [],
     "single.urn.w": [],
     "hmm.pair.gtest": ["hmmalign"],
@@ -82,6 +86,15 @@ SUBSTITUTIONS = {
 # longer writes.
 NOT_WRITTEN = {"_cc_combined.seq"}
 
+# The reference records -s phospho failing with TypeError in every case;
+# each now completes ("Recorded defects" in tests/data/README.md).
+RETURNCODES = {
+    "pair.phospho": [0],
+    "pair.phospho.w": [0],
+    "single.phospho": [0],
+    "single.phospho.w": [0],
+}
+
 # Recorded cases whose expected output is the current output in CURRENT,
 # written by tests/data/replay.py. Five weighted cases moved with biofrills
 # 72282be, whose sequence weights keep their ratios but sum to an estimate of
@@ -90,25 +103,24 @@ NOT_WRITTEN = {"_cc_combined.seq"}
 # weighted value that depends on the scale moved. pair.hypg.w also departs
 # from its record for the reason that "SciPy version" in tests/data/README.md
 # gives. The two urn cases moved because urn now weights the sequences as
-# CHAIN does ("CHAIN's weighting in urn" in tests/data/README.md).
+# CHAIN does ("CHAIN's weighting in urn" in tests/data/README.md). The
+# phospho cases fail in the reference.
 REGENERATED = {
     "pair.gtest.w",
     "pair.hypg.w",
     "pair.jsd.w.a.2",
+    "pair.phospho",
+    "pair.phospho.w",
     "pair.urn.w",
     "single.gtest.w.a.001",
     "single.hypg.w.a.2",
+    "single.phospho",
+    "single.phospho.w",
     "single.urn.w",
 }
 
-# Recorded cases with a test of their own below, and the legacy cases, which
-# those tests use as their expected output.
-OWN_TESTS = {
-    "pair.phospho",
-    "pair.phospho.w",
-    "single.phospho",
-    "single.phospho.w",
-}
+# Recorded at the last commit at which -s phospho ran, with an option that no
+# longer exists; they document that behavior and are not replayed.
 LEGACY = {"legacy.pair.phospho.nw", "legacy.single.phospho.nw"}
 
 
@@ -207,6 +219,11 @@ def expected_text(case, name):
     return reference_text(case, name)
 
 
+def expected_codes(case, steps):
+    """The return codes that the recorded commands of a case must give."""
+    return RETURNCODES.get(case, [step["returncode"] for step in steps])
+
+
 def check_case(case, tmp_path, path_prefix=None, commands=None):
     """Replay a recorded case and compare it with the record."""
     record = load(case)
@@ -215,11 +232,10 @@ def check_case(case, tmp_path, path_prefix=None, commands=None):
         commands or [step["argv"] for step in steps], tmp_path, path_prefix
     )
 
-    assert [r.returncode for r in results] == [s["returncode"] for s in steps], results[
-        -1
-    ].stderr
-    for result, step in zip(results, steps, strict=True):
-        if step["returncode"]:
+    codes = expected_codes(case, steps)
+    assert [r.returncode for r in results] == codes, results[-1].stderr
+    for result, step, code in zip(results, steps, codes, strict=True):
+        if code:
             error = step["stderr"].strip().splitlines()[-1].split(":")[0]
             assert error in result.stderr, result.stderr
 
@@ -249,7 +265,7 @@ def test_reference_case(case, tmp_path, require):
 
 def test_every_recorded_case_is_tested():
     recorded = {path.name for path in REFERENCE.iterdir()}
-    assert recorded == set(CASES) | OWN_TESTS | LEGACY
+    assert recorded == set(CASES) | LEGACY
 
 
 def test_regenerated_cases_are_declared():
@@ -264,71 +280,20 @@ def test_regenerated_cases_are_declared():
         ), case
 
 
-def test_weighting_leaves_single_alignment_urn_unchanged():
-    """urn weights no sequence of a single alignment, CHAIN's query family.
+@pytest.mark.parametrize("strategy", ["urn", "phospho"])
+def test_weighting_leaves_single_alignment_unchanged(strategy):
+    """urn and phospho weight no sequence of a single alignment.
 
-    So the expected .out and .pttrn files of single.urn.w equal those that
-    the reference records for single.urn. Together with the replay of
-    single.urn.w against those expected files, this holds the command to
-    the unweighted output.
+    A single alignment plays the part of CHAIN's query family, so the
+    expected .out and .pttrn files of the weighted case equal those of the
+    unweighted one. Together with the replay of the weighted case against
+    those expected files, this holds the command to the unweighted output.
     """
+    case = f"single.{strategy}"
     for suffix in [".out", ".pttrn"]:
-        assert expected_text("single.urn.w", "single.urn.w" + suffix) == (
-            expected_text("single.urn", "single.urn" + suffix)
+        assert expected_text(case + ".w", case + ".w" + suffix) == (
+            expected_text(case, case + suffix)
         )
-
-
-@pytest.mark.parametrize(
-    ("case", "legacy"),
-    [
-        ("pair.phospho", "legacy.pair.phospho.nw"),
-        ("single.phospho", "legacy.single.phospho.nw"),
-        ("single.phospho.w", "legacy.single.phospho.nw"),
-    ],
-)
-def test_phospho_matches_legacy(case, legacy, tmp_path):
-    """phospho writes the output of the last commit at which it ran.
-
-    The reference records the TypeError that the alignment size caused
-    before it was rounded to an integer; the legacy case records the same
-    comparison, unweighted, from before the size became a floating-point
-    sum. Under -w, phospho does not weight a single alignment, CHAIN's query
-    family, so single.phospho.w writes the unweighted output.
-    """
-    record = load(case)
-    workdir, written, results, _tmpdir = run_commands(
-        [step["argv"] for step in record["commands"]], tmp_path
-    )
-    assert [r.returncode for r in results] == [0]
-    expected = load(legacy)["pdfs"]
-    assert_pdfs(
-        workdir,
-        {name for name in written if name.endswith(".pdf")},
-        [name.replace(legacy, case) for name in expected],
-    )
-    for suffix in [".out", ".pttrn"]:
-        assert (workdir / (case + suffix)).read_bytes() == (
-            REFERENCE / legacy / (legacy + suffix)
-        ).read_bytes()
-    assert_valid_pvalues(workdir / (case + ".out"))
-
-
-def test_phospho_weighted_pair_completes(tmp_path):
-    """Weighted paired phospho, which the reference records failing, completes.
-
-    Its values have no reference, and replay.py does not replay the cases
-    that have tests of their own, so their range is checked, and a bound on
-    the smallest. With the foreground unweighted, as CHAIN leaves it, the
-    smallest p-value lies more than an order of magnitude below the bound;
-    weighting the foreground reduces it to too few trials, and the smallest
-    lies more than an order of magnitude above.
-    """
-    case = "pair.phospho.w"
-    workdir, _written, results, _tmpdir = run_commands(
-        [step["argv"] for step in load(case)["commands"]], tmp_path
-    )
-    assert [r.returncode for r in results] == [0]
-    assert min(assert_valid_pvalues(workdir / (case + ".out"))) < 1e-4
 
 
 def test_output_defaults_to_standard_output(tmp_path):

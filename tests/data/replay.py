@@ -3,7 +3,8 @@
 
 Each case of tests/test_cli_cases.py that needs no external program is
 replayed with the installed cladecompare and cladereport commands, as that
-module replays it.  Where the text files written, their contents or the names
+module replays it, and must give the return codes that the module expects.
+Where the text files written, their contents or the names
 of the pair-logo PDFs differ from the reference in py27/cli, with the
 substitutions that module declares applied, the case's directory under
 current/ is rewritten: the text files the commands wrote, and a run.json
@@ -41,6 +42,7 @@ from test_cli_cases import (  # noqa: E402
     CURRENT,
     REFERENCE,
     expectation,
+    expected_codes,
     load,
     reference_text,
     run_commands,
@@ -56,9 +58,9 @@ def replay(case):
             [step["argv"] for step in record["commands"]], Path(tmp)
         )
         codes = [result.returncode for result in results]
-        expected_codes = [step["returncode"] for step in record["commands"]]
-        if codes != expected_codes:
-            sys.exit(f"{case}: return codes {codes}, recorded {expected_codes}")
+        expected = expected_codes(case, record["commands"])
+        if codes != expected:
+            sys.exit(f"{case}: return codes {codes}, expected {expected}")
         pdfs = {name for name in written if name.endswith(".pdf")}
         names = written - pdfs
         files = {name: (workdir / name).read_bytes() for name in sorted(names)}

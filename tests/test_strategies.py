@@ -120,22 +120,28 @@ def test_urn_single_is_the_binomial_tail_of_the_overall_frequency():
 # --- phospho ---
 
 
-def test_phospho_pair_tests_ser_thr_tyr_with_one_extra_trial():
-    # Foreground S+T+Y with pseudocounts: 4 + (0.2 + 0.05 + 0.05) * 0.5 =
-    # 4.15, rounded up to 5; background: 1 + 0.15 = 1.15.
-    p_j = (1.15 + 4.15) / (8 + 5 + 2.0)
+def test_phospho_pair_is_the_binomial_tail_of_the_pooled_ser_thr_tyr():
+    # Foreground S+T+Y count, without pseudocounts: 4. Background with
+    # pseudocounts: 1 + (0.2 + 0.05 + 0.05) * 0.5 = 1.15.
+    p_j = (1.15 + 4) / (8 + 5 + PSEUDO)
     assert pair(phospho, "SSTYE", "SEEEEEAA") == pytest.approx(
-        binom_tail(5, 6, p_j), rel=1e-12
+        binom_tail(4, 5, p_j), rel=1e-12
     )
 
 
-def test_phospho_single_tests_ser_thr_tyr_with_one_extra_trial():
-    # S+T+Y count with pseudocounts: 3 + 0.15 = 3.15, rounded up to 4.
+def test_phospho_single_is_the_binomial_tail_of_the_overall_ser_thr_tyr():
     col = "SSTEE"
     p_j = FREQS["S"] + FREQS["T"] + FREQS["Y"]
     assert phospho.compare_one(
         col, "S", 5.0, ones(col), FREQS, PSEUDO
-    ) == pytest.approx(binom_tail(4, 6, p_j), rel=1e-12)
+    ) == pytest.approx(binom_tail(3, 5, p_j), rel=1e-12)
+
+
+def test_phospho_column_without_ser_thr_tyr_is_not_significant():
+    """No Ser/Thr/Tyr in the foreground gives 1, not the chance of one."""
+    assert pair(phospho, "DDDEE", "SSSSSSAA") == 1.0
+    col = "DDDEE"
+    assert phospho.compare_one(col, "D", 5.0, ones(col), FREQS, PSEUDO) == 1.0
 
 
 # --- jsd ---

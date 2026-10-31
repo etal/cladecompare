@@ -127,7 +127,7 @@ The random part of a temporary file name is replaced by `tmpXXXXXX`.
 ## Regenerated outputs in `current/`
 
 `current/<case>/` holds the expected output of each command-line case whose output now differs from `py27/` by a deliberate change that a substitution of a few values cannot express.
-It holds the text files the case writes and a `run.json` with only the two fields that can move, `written_files` and `pdfs`, which mean what they mean in `py27/`; the commands, return codes and the count of leftover temporary files remain those of the reference.
+It holds the text files the case writes and a `run.json` with only the two fields that can move, `written_files` and `pdfs`, which mean what they mean in `py27/`; the commands and the count of leftover temporary files remain those of the reference, and so do the return codes, except where `RETURNCODES` in `tests/test_cli_cases.py` declares that a command recorded failing now succeeds.
 `tests/test_cli_cases.py` lists these cases in `REGENERATED`, and fails if that list and the directories disagree or if a regenerated case no longer differs from its reference.
 
 The files are generated from the code under test, so each regeneration is a claim to be reviewed against the explanation below, never a way to make a failing case pass.
@@ -149,15 +149,24 @@ The tests inherit `PYTHONPATH`, so they import a checkout on that path.
   The pattern of `pair.gtest.w` falls from 9 sites to none, so its six pair logos are no longer written; `pair.jsd.w.a.2` selects 32 sites instead of 29, in 7 logos instead of 8; `single.gtest.w.a.001` selects 50 sites instead of 41; the pattern of `single.hypg.w.a.2` remains empty.
   For `pair.hypg.w`, see "SciPy version" below.
   `single.jsd.w.a.2` is the one weighted case that still reproduces the reference: single-alignment jsd normalizes the weighted counts of a column and adds no pseudocounts, so the scale cancels.
-  The weighted phospho cases, whose reference records a failure, have tests of their own.
+  The weighted phospho cases, whose reference records a failure, are described below.
 - **CHAIN's weighting in urn** (`pair.urn.w`, `single.urn.w`).
   Under `-w`, urn now weights the sequences as CHAIN does (Neuwald et al. 2003, Methods): the foreground, CHAIN's query family, is not weighted, and the background is weighted with CHAIN's robust weights, which the `andy` scaling of `sequence_weights` gives from biofrills `205e1d1` on: normalized to a mean of one-half, with weights greater than one truncated to one.
   The reference instead weighted both sets with the `none` scaling while taking the number of foreground sequences as the number of trials, so that the foreground count was understated against it.
   These outputs no longer depend on the `none` scaling.
   `pair.urn.w` had no p-value below 0.06 and an empty pattern; its smallest p-value is now 2.08e-05, and it selects 24 sites, in 8 pair logos.
   `single.urn.w` analyzes CHAIN's query family alone, which is not weighted, so it writes the `.out` and `.pttrn` files that the reference records for `single.urn`, and its pattern has 50 sites instead of 3.
+- **phospho** (`pair.phospho`, `pair.phospho.w`, `single.phospho`, `single.phospho.w`).
+  The reference records a failure for every phospho case (see "Recorded defects"), so these files are the first expected output of the current code; `legacy.pair.phospho.nw` and `legacy.single.phospho.nw` record the output of the last commit at which phospho ran.
+  phospho now follows urn's pseudocounts: the foreground count has none, the pooled frequency's denominator adds the pseudocount size `π` = 0.5, and the binomial tail runs over the `N` foreground sequences, from the observed count, so that a column without Ser, Thr or Tyr gives exactly 1.
+  The legacy code added pseudocounts to the foreground count as well, used `N + 1` trials, and added 2 to the denominator, a constant from when the pseudocounts had a total size of 1; the tail is now computed with `binom.sf`.
+  No p-value of `pair.phospho` or `single.phospho` is smaller than in the corresponding legacy case, and the median ratio of the p-values below 1 in both is 2.26 in `pair.phospho` and 1.23 in `single.phospho`.
+  178 of the 242 columns of `pair.phospho` and 90 of the 249 of `single.phospho` hold no Ser, Thr or Tyr in the foreground and now give 1; in the legacy cases only the 7 gap columns of the single alignment did.
+  The smallest p-value of `pair.phospho` rises from 1.91e-08 to 1.10e-07, and its pattern loses Y154, keeping 5 of 6 sites; `single.phospho` keeps 30 of its 33 sites, losing A44, T151 and T174.
+  `pair.phospho.w`, whose foreground is not weighted (see "Recorded defects") and which has no legacy counterpart, has a smallest p-value of 2.21e-05, at column 149, where the legacy pseudocounts gave 4.94e-06; that is just above the threshold of 2.07e-05 that Benjamini–Hochberg sets for the first rank at alpha 0.005 over 242 columns, so its pattern, which held column 149, is now empty.
+  `single.phospho.w` writes the files of `single.phospho`.
 
-Every unweighted case, including those that run hmmalign and MUSCLE, reproduces the reference as before.
+Every unweighted case, including those that run hmmalign and MUSCLE, reproduces the reference as before, apart from the phospho cases, which fail in the reference.
 
 ## Recorded defects
 
@@ -166,13 +175,11 @@ A port that fixes one of them differs from the reference by design, and the test
 
 - `-s phospho` fails with `TypeError` in every case captured from `e265b1f`, paired and single, with and without `-w`, and in the web form: the alignment size reaches `range()` as a float.
   It ran only without weights, before the unweighted size also became a floating-point sum; the legacy cases record that behavior.
-  The code has since been fixed to round the size up to an integer, so it differs from these cases by design: the unweighted cases now match `legacy.pair.phospho.nw` and `legacy.single.phospho.nw`, and the weighted and web cases complete where the reference records the failure.
+  The code has since been fixed to round the size up to an integer, so it differs from these cases by design: every phospho case completes where the reference records the failure, and `RETURNCODES` in `tests/test_cli_cases.py` declares the difference.
+  With that fix alone, the unweighted cases wrote the files of `legacy.pair.phospho.nw` and `legacy.single.phospho.nw`; phospho's pseudocounts have since changed, as "Regenerated outputs in `current/`" describes.
   Under `-w`, phospho now weights the sequences as urn does, following CHAIN: the foreground is not weighted and the background takes the `andy` scaling.
   phospho left the foreground unweighted when it was added on 2013-05-21, until the refactor of the strategy modules dropped that rule on 2013-06-03.
-  `single.phospho.w` therefore writes the `.out` and `.pttrn` files of `legacy.single.phospho.nw`.
-  Weighting both sets with the `none` scaling instead reduced the 11 foreground sequences of `pair.phospho.w` to a sample size of 2.117, which phospho rounds up to 3 and to 4 binomial trials, so that no p-value fell below 0.0237 and the pattern was empty.
-  `pair.phospho.w` now has a foreground of 11 and a background of 17.836, a smallest p-value of 4.94e-06, and a pattern of one site, column 149; at alpha 0.05 it selects the six sites of the unweighted pattern.
-  It has no expected output: because its reference records a failure, it is one of the cases with a test of their own, which `replay.py` does not replay, so its test checks that the p-values are finite and within [0, 1] and that the smallest is below 1e-4, which a weighted foreground does not reach.
+  Weighting both sets with the `none` scaling instead reduced the 11 foreground sequences of `pair.phospho.w` to a sample size of 2.117, which phospho rounded up to 3 and to 4 binomial trials, so that with the legacy pseudocounts no p-value fell below 0.0237, where, with the same pseudocounts, the unweighted foreground gave 4.94e-06.
 - `pdb.1FIN-AB-CA.gtest` fails with `KeyError` in `choose_best_aligned`, which indexes the aligned chains with a (key, value) pair whenever more than one chain aligns to the profile, so every multi-chain structure fails.
 - `multi.gtest` writes its three `.out` and `.pttrn` pairs, but `cladereport.py` on more than one `.out` file fails with `ValueError` in `report.table_multi`.
 - `web.pair.hypg` returns status 500 with `KeyError`: the web application's strategy table lacks hypg.
@@ -209,7 +216,7 @@ A port that fixes one of them differs from the reference by design, and the test
   The ported CladeCompare runs against the ported biofrills rather than `36684bb`.
   On the alignments that the biofrills section of `AGENTS.md` lists as measured, the values biofrills returns to CladeCompare are identical or differ by at most a few units in the last place.
   End to end, with `ff11246` and the code of that time, every output file of every command-line case and the response of every successful web submission reproduced this reference, including `multi.gtest` and the cases that align with hmmalign and MUSCLE, under HMMER 3.0 and 3.4 alike, apart from the SciPy and hypg differences above, the deliberate changes to `-s phospho`, `unequal.gtest`, `web.pair.hypg` and `web.pdb.1HCK.gtest` under "Recorded defects", and the differences listed under "Python 3, bottle and Biopython" below.
-  With `4aa8b57`, the commit now pinned, the same holds for every unweighted case, measured with HMMER 3.4, and the seven weighted cases listed under "Regenerated outputs in `current/`" above differ as that section describes.
+  With `4aa8b57`, the commit now pinned, the same holds for every unweighted case, measured with HMMER 3.4, and the seven weighted cases listed under "Scale of the sequence weights" and "CHAIN's weighting in urn" above differ as those items describe.
 - **Raw p-values.**
   The `.out` files hold unadjusted p-values, and their stars compare those raw values with alpha.
   The Benjamini-Hochberg procedure, limited to the 50 most significant sites, only selects the sites in the `.pttrn` file, which also name the pair logos and the PyMOL script.

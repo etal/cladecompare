@@ -378,15 +378,25 @@ Phosphorylatable residues (phospho)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ball-in-urn model is applied to the combined count of Ser, Thr and Tyr
-instead of the consensus residue. With ``t_F = Σ (n_a + π f_a)`` and
-``t_B = Σ (m_a + π f_a)``, both summed over ``a`` in {S, T, Y}::
+instead of the consensus residue, with the pseudocounts of urn. With
+``t_F = Σ n_a``, the observed count, and ``t_B = Σ (m_a + π f_a)``, both
+summed over ``a`` in {S, T, Y}::
 
-    p = (t_B + t_F) / (N_B + N_F + 2)
-    P = Σ_{i=⌈t_F⌉..N+1} C(N + 1, i) p^i (1 - p)^(N + 1 - i),   N = N_F
+    p = (t_B + t_F) / (N_B + N_F + π)
+    P = Σ_{i=⌈t_F⌉..N} C(N, i) p^i (1 - p)^(N - i),   N = N_F
 
-With a single alignment, ``t = Σ (n_a + π f_a)`` over {S, T, Y},
-``p = f_S + f_T + f_Y``, ``N`` is the number of sequences, and the sum runs
-from ``⌈t⌉`` to ``N + 1`` in the same way.
+A foreground column without Ser, Thr or Tyr thus has ``P = 1``; unlike urn,
+phospho does not raise the lower limit of the sum to 1. With a single
+alignment, ``t = Σ n_a`` over {S, T, Y}, ``p = f_S + f_T + f_Y``, and ``N`` is
+the number of sequences.
+
+Until October 2026, phospho also added pseudocounts to the foreground count,
+computed the sum over ``N + 1`` trials, and divided by ``N_B + N_F + 2``, a
+constant left from when the pseudocounts had a total size of 1. A column
+without Ser, Thr or Tyr thus received a p-value below 1, and a column of Ser,
+Thr and Tyr alone received ``p^(N+1)`` rather than ``p^N``. Without ``-w``,
+no p-value of the current form is smaller than the earlier one on the
+example alignments.
 
 Under ``-w``, phospho weights the sequences as urn does, following CHAIN: the
 foreground is not weighted, so ``N_F`` is the number of foreground sequences,

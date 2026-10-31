@@ -2,34 +2,49 @@
 CladeCompare
 ============
 
-Compare protein sequence alignments. Identify diagnostic residues between the
-given "foreground" (FG) and  "background" (BG) clades.
+CladeCompare compares two protein sequence alignments, a *foreground* (FG)
+clade and a *background* (BG) of related sequences, and reports for each
+alignment column how strongly the amino acid composition of the foreground
+differs from that of the background. Its purpose is to identify the residues
+that distinguish a protein subfamily from its relatives.
 
-If you use this software in a publication, please cite our paper that describes
-it:
+If you use this software in a publication, please cite the paper that
+describes it:
 
-    Talevich, E. & Kannan, N. (2013) Structural and evolutionary adaptation of
-    rhoptry kinases and pseudokinases, a family of coccidian virulence factors.
-    *BMC Evolutionary Biology* 13:117
-    doi:10.1186/1471-2148-13-117
+    Talevich E, Kannan N (2013) Structural and evolutionary adaptation of
+    rhoptry kinases and pseudokinases, a family of coccidian virulence
+    factors. *BMC Evolutionary Biology* 13:117.
+    doi:`10.1186/1471-2148-13-117 <https://doi.org/10.1186/1471-2148-13-117>`_
 
-    Available at: http://www.biomedcentral.com/1471-2148/13/117
+CladeCompare is distributed under the BSD 2-clause license (see
+``LICENSE``). The font it ships for drawing sequence logos, DejaVu Sans Mono,
+is under the Bitstream Vera license (see
+``cladecomparelib/data/LICENSE.DejaVu``).
 
-
-Freely distributed under the permissive BSD 2-clause license (see LICENSE).
 
 Installation
 ------------
 
 CladeCompare requires Python 3.12 or later. It depends on Biopython_,
-BioFrills_ (with its ``logo`` extra, which brings in WebLogo), SciPy_,
-ReportLab_ and bottle_, and installs three commands: ``cladecompare``,
-``cladereport`` and ``cladeweb``.
+BioFrills_ (with its ``logo`` extra, which brings in WebLogo_), SciPy_,
+ReportLab_ and bottle_, and installs three commands:
 
-Until BioFrills 0.4.0 is released on PyPI, install CladeCompare from a copy of
-this repository. With uv_, the dependencies are resolved automatically,
-BioFrills included, from the commit recorded in ``pyproject.toml``::
+``cladecompare``
+    compares alignments and writes the results to text files;
+``cladereport``
+    renders a result file of ``cladecompare`` as an HTML page;
+``cladeweb``
+    serves a form in your web browser that runs a comparison and shows the
+    resulting page.
 
+Until BioFrills 0.4.0 is released on PyPI, install CladeCompare from a copy
+of this repository. Both routes below need ``git``, because BioFrills is
+installed from its repository. With uv_, the dependencies are resolved
+automatically, BioFrills included, from the commit recorded in
+``pyproject.toml``::
+
+    git clone https://github.com/etal/cladecompare.git
+    cd cladecompare
     uv tool install .
 
 With pip, install that BioFrills commit first, then CladeCompare::
@@ -38,167 +53,239 @@ With pip, install that BioFrills commit first, then CladeCompare::
     pip install .
 
 .. _Biopython: https://biopython.org/
-.. _biofrills: https://github.com/etal/biofrills
+.. _BioFrills: https://github.com/etal/biofrills
+.. _WebLogo: https://weblogo.threeplusone.com/
 .. _SciPy: https://scipy.org/
 .. _ReportLab: https://pypi.org/project/reportlab/
 .. _bottle: https://bottlepy.org/
 .. _uv: https://docs.astral.sh/uv/
 
-Optionally, CladeCompare can align your sequences for you if you have HMMER3_
-(3.0 or later) or MAPGAPS_ installed. If a foreground and a
-background alignment differ in width, CladeCompare aligns them to each other
-with MUSCLE_, which must be MUSCLE 3, such as 3.8.1551: MUSCLE 5 has no
-profile-profile alignment mode, and CladeCompare stops with an error if it
-finds MUSCLE 4 or later.
+External programs
+~~~~~~~~~~~~~~~~~
 
-.. _MUSCLE: http://www.drive5.com/muscle/
-.. _HMMER3: http://hmmer.org/
+Three external programs are optional. Each is needed only by the options
+that run it, and a program that is missing is reported when it is first run,
+not when CladeCompare starts.
+
+HMMER_ 3, any release from 3.0
+    ``hmmalign`` aligns unaligned sequences, and the chains of a structure,
+    to a profile HMM, for ``--hmm`` and ``--pdb``.
+MUSCLE_ 3, such as 3.8.1551
+    aligns a foreground and a background alignment of different widths to
+    each other. MUSCLE 5 has no profile-profile alignment mode, and
+    CladeCompare stops with an error if it finds MUSCLE 4 or later. Bioconda_
+    packages MUSCLE 3.8.1551, the version the tests use, and the `MUSCLE 3
+    download page`_ offers binaries of 3.8.31.
+MAPGAPS_
+    ``run_gaps`` aligns sequences to a hierarchy of profiles, for
+    ``--mapgaps``. Its distribution holds binaries compiled for Linux on
+    x86-64.
+
+The pixi_ environment described under Development below provides HMMER 3.4
+and MUSCLE 3.8.1551 from Bioconda, together with CladeCompare itself.
+
+.. _HMMER: https://hmmer.org/
+.. _MUSCLE: https://drive5.com/muscle/
+.. _MUSCLE 3 download page: https://drive5.com/muscle/downloads_v3.htm
 .. _MAPGAPS: https://mapgaps.igs.umaryland.edu/
-
-The pixi_ environment described under Development below provides HMMER and
-MUSCLE 3.8.1551 from Bioconda, together with CladeCompare itself.
-
-.. _pixi: https://pixi.sh/
+.. _Bioconda: https://bioconda.github.io/
+.. _pixi: https://pixi.prefix.dev/
 
 
 Usage
 -----
 
-Web interface
-~~~~~~~~~~~~~
+The examples below use the two alignments of protein kinase domains in this
+repository's ``test`` directory, which come from Talevich, Mirza & Kannan
+(2011). Where an example names a file that the repository does not hold,
+such as ``fg.fasta`` or ``subfam1.aln``, the name stands for a file of your
+own. ``cladecompare --help`` lists every option.
 
-Launch the command ``cladeweb`` and fill in the form in your web browser.
-The form accepts sequences in FASTA or CMA format, and you can upload an HMM
-profile to align unaligned FASTA sequence sets. (See below for details about
-each field.) Sequences are not weighted unless you check the weighting box,
-which corresponds to the ``-w`` option of ``cladecompare``.
+Comparing two alignments
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-``cladeweb`` serves the form at http://localhost:8080/cladecompare, on this
-computer only, and opens that address in your web browser once the server is
-listening. ``--port`` chooses another port, and ``--no-browser`` leaves the
-browser closed. If another ``cladeweb`` already serves that port, the command
-stops with an address-in-use error and opens no browser; the earlier server
-keeps running.
+Give the foreground and the background alignments, in that order::
 
-If you launched the application from the command line, press Ctrl-C (on
-Unix-like systems) to stop the web server application.
-
-
-Command line
-~~~~~~~~~~~~
-
-The command-line interface ``cladecompare`` provides the same functionality
-as the web interface, plus a few more options.  To read the built-in help and
-option descriptions::
-
-    cladecompare --help
-
-Two alignments are compared by specifying the foreground and background sets,
-in that order, as arguments::
-
-    # Compare two alignments
-    cladecompare fg_aln.seq bg_aln.seq
-
-The program prints the following information for each column in the alignment(s):
-
-- The consensus amino acid types of the foreground and background
-- p-value indicating the significance of the contrast in amino acid frequencies
-- an ASCII bar chart indicating contrast, based on the p-value: one asterisk
-  per order of magnitude, shown only where the p-value is below the
-  significance threshold alpha (the ``-a`` option, between 0 and 1, default
-  0.005).
-
-These per-column p-values are not adjusted for multiple testing, so with
-hundreds of columns some may fall below alpha by chance. The multiple-testing
-correction applies to the pattern file described below.
-
-Redirect the output to a file with the extension ".out"::
-
-    # Compare two alignments
-    cladecompare fg_aln.seq bg_aln.seq > fg-v-bg.out
-
-Or specify the output file name with the ``-o`` option (same effect)::
-
-    cladecompare fg_aln.seq bg_aln.seq -o fg-v-bg.out
-
-If you're not using MAPGAPS_, it would make sense to either:
-
-- Create a sequence alignment of all sequences, foreground and background,
-  together; then divide the alignment into two FASTA files (e.g. by sequence
-  ID).
-- Align both the foreground and background sets with hmmalign (HMMER3_) using
-  the same profile, then use a script (your own) to delete any insert columns.
-
-If you do neither, and the foreground and background alignments differ in
-width, CladeCompare aligns them to each other with MUSCLE.
-
-To align the FASTA sequences with MAPGAPS on the fly, specify the profile name
-(minus the extension) with the ``--mapgaps`` flag::
-
-    # Align sequence sets w/ MAPGAPS, then compare
-    cladecompare test/scttlre-domain.fasta test/cdc2-domain.fasta --mapgaps test/CDK_CMGC \
-        -o scttlre-v-cdc2.out
-
-Pre-aligned sequences in CMA format (.cma) are also accepted::
-
-    # Use pre-aligned sequence sets (MAPGAPS "CMA" format)
     cladecompare test/scttlre-domain.fasta_aln.cma test/cdc2-domain.fasta_aln.cma \
         -o scttlre-v-cdc2.out
 
-Finally, given the '-p' option, cladecompare will write a "pattern" file
-listing the alignment column numbers with significant contrasts, most
-significant first (this can be useful input to other scripts of your own), as
-well as PDF files of paired sequence logos representing the foreground and
-background alignments around each significant site. Only these outputs, and the
-residues highlighted in the PyMOL script written with ``--pdb``, are corrected
-for multiple testing: a column is significant if it passes the
-Benjamini-Hochberg "step-up" procedure at a false discovery rate (FDR) of alpha
-(the ``-a`` option), taken over all columns of the alignment. At most the 50
-most significant columns are considered::
+Without ``-o``, the result is written to standard output. A file whose name
+ends in ``.cma``, or any file when ``-f cma`` is given, is read as a CMA
+alignment, the format MAPGAPS writes; any other file is read in the format
+that ``-f`` names, using Biopython's names for alignment formats (``fasta``
+by default, or for instance ``clustal`` or ``stockholm``). The two
+alignments should share their columns, as they do when both are aligned to
+the same profile. If they differ in width, CladeCompare aligns them to each
+other with MUSCLE, and the column numbers then refer to that combined
+alignment, which is not written out.
 
-    # Specify where the outputs go
-    cladecompare fg_aln.seq bg_aln.seq -o fg-v-bg.out -p fg-v-bg.pttrn
+Each line of the result, the ``.out`` file, describes one column::
 
-Outputs
-```````
+    V (Y) 1 : prob=1.83534e-10       *********
+    R (T) 2 : prob=2.67812e-05       ****
+    ...
+    K (K) 94 : prob=0.190823
 
-The command ``cladereport`` converts the "\*.out" files to an HTML file showing
-the alignment of the FG and BG consensus sequences, with the FG sequence
-colorized by the uncorrected p-value of each site (red for p below 0.1, darker
-as p decreases; white from 0.1 to 0.5; blue for larger p-values, i.e. similar
-columns), inserts (yellow) and deletions (gray gaps). The colors do not depend
-on alpha::
+The fields are the consensus residue of the foreground column, that of the
+background column in parentheses, the column number, and the value of the
+statistic, which for most strategies is a p-value. A consensus of ``-``
+marks a gap column, as Methods_ defines it, which is not tested and is given
+the value 1. The asterisks, after a tab, show one per order of magnitude of
+the value where it is below the significance threshold alpha (``-a``,
+between 0 and 1, default 0.005). These values are not adjusted for multiple
+testing, so among hundreds of columns some fall below alpha by chance; the
+correction applies to the significant sites described below. Methods_ also
+describes how CladeCompare prepares the alignments, and so which columns
+the numbers refer to.
 
-    # Visualize the per-site contrasts as a colorized alignment
-    cladereport scttlre-v-cdc2.out > scttlre-v-cdc2.html
+``-s`` chooses the statistic, as described under Strategies_, and ``-w``
+weights the sequences, so that a group of closely related sequences counts
+for less than the same number of unrelated ones; Methods_ describes the
+weights each strategy uses. With ``-q``, only warnings and errors are
+printed.
 
-Single- and multi-profile modes
-```````````````````````````````
+Pattern files and sequence logos
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If a single sequence set is given, the aligned columns are compared to the
-overall amino-acid frequencies of the alignment::
+With ``-p``, ``cladecompare`` also writes a pattern file listing the
+significant columns, and PDF files of paired sequence logos around them::
 
-    cladecompare subfam1.seq -o subfam1-single.out
+    cladecompare test/scttlre-domain.fasta_aln.cma test/cdc2-domain.fasta_aln.cma \
+        -o scttlre-v-cdc2.out -p scttlre-v-cdc2.pttrn
 
-When more than 2 sequence sets are given, each set is individually treated as a
-foreground and the rest treated as the background for evaluation::
+The pattern file holds one line in the style of the pattern files of
+mcBPPS (Neuwald 2010): ``1:`` and the significant columns, most significant
+first, each written as the foreground consensus residue followed by the
+column number::
 
-    # Compare several related alignments, e.g. all subfamilies
-    cladecompare subfam1.seq subfam2.seq subfam3.seq ...
+    1:L135,V1,L158,M123,Y154,L47,G9,I153,...
 
-This multi-mode generates and names the "\*.out" files according to the
-corresponding sequence file names; the ``-o`` and ``-p`` options are ignored,
-and ``cladecompare`` warns if either is given. You can visualize these all
-together::
+The significant columns are those that pass the Benjamini-Hochberg
+procedure at a false discovery rate of alpha, taken over all columns of the
+alignment, and at most 50 columns are selected, even where the procedure
+accepts more, as `Significant sites`_ under Methods explains. Each logo
+file shows the foreground above the background for a group of significant
+columns that lie at most 10 columns apart, with up to 10 columns on either
+side, and is named after the pattern file and the columns it highlights,
+as in ``scttlre-v-cdc2-31,32,34,37,40,43,47,52,53.pdf``.
 
-    # Visualize each subfamily's contrasts together
-    cladereport subfam1.out subfam2.out subfam3.out ... > somefamily.html
+Aligning sequences to a profile
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Unaligned sequences in FASTA format can be aligned when the comparison
+runs. With ``--hmm``, each set of sequences is aligned to a profile HMM with
+``hmmalign``, and only the columns of the profile's match states are kept,
+so the two sets share their columns::
+
+    cladecompare test/scttlre-domain.fasta test/cdc2-domain.fasta \
+        --hmm test/CDK.hmm -o scttlre-v-cdc2.out
+
+With ``--mapgaps``, each set is aligned with MAPGAPS' ``run_gaps``, which
+writes its alignment beside the input file, named after it with
+``_aln.cma`` added; the profile is named without its file extension::
+
+    cladecompare fg.fasta bg.fasta --mapgaps path/to/profile -o fg-v-bg.out
+
+Without these options, align the foreground and background sets together
+and then divide the alignment into two files, or align each to the same
+profile.
+
+Mapping sites onto a structure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+With ``--pdb`` and a profile given with ``--hmm`` or ``--mapgaps``,
+``cladecompare`` aligns a structure in PDB format to the same profile and
+writes a PyMOL_ script that draws the aligned chain as a cartoon and the
+residues of the significant columns as sticks. For instance, with the
+structure 1HCK from the Protein Data Bank::
+
+    curl -O https://files.rcsb.org/download/1HCK.pdb
+    cladecompare test/scttlre-domain.fasta test/cdc2-domain.fasta \
+        --hmm test/CDK.hmm --pdb 1HCK.pdb -o scttlre-v-cdc2.out
+
+The script is written to the structure's file name with ``.pml`` added
+(here ``1HCK.pdb.pml``), or to the file that ``--pmlout`` names. The file
+name of the structure must give its PDB ID, as in ``1abc.pdb``,
+``1abcA.pdb``, ``1abc_A.pdb`` or ``pdb1abc.ent``. Without a profile, the
+comparison runs and an error is logged, but no script is written. Two
+limitations apply in this release: a file holding more than one protein
+chain, such as a kinase in complex with a cyclin, stops the run with an
+error, so keep only the chain of interest in the file; and ``--pdb`` given
+more than once stops the run with an error after the ``.out`` file is
+written.
+
+.. _PyMOL: https://pymol.org/
+
+One alignment
+~~~~~~~~~~~~~
+
+Given a single alignment, ``cladecompare`` compares each column with the
+amino acid composition of the whole alignment::
+
+    cladecompare test/cdc2-domain.fasta_aln.cma -o cdc2.out
+
+The background consensus in the ``.out`` file is then ``_``. With ``-p``,
+the pattern file is written, but no logos are drawn.
+
+More than two alignments
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Given three or more alignments, ``cladecompare`` takes each in turn as the
+foreground and all the others together as the background::
+
+    cladecompare subfam1.aln subfam2.aln subfam3.aln
+
+All the alignments must have the same width. For each alignment, the result,
+the pattern file and the logos are written to the current directory, named
+after the alignment file, as in ``subfam1.aln.out``, ``subfam1.aln.pttrn``
+and ``subfam1.aln-12,15.pdf``. ``-o`` and ``-p`` are ignored, with a warning.
+With ``--pdb``, each comparison writes its PyMOL script to the same file,
+so the file holds the script of the last alignment.
+
+Viewing the results
+~~~~~~~~~~~~~~~~~~~
+
+``cladereport`` renders a ``.out`` file as an HTML page::
+
+    cladereport scttlre-v-cdc2.out -p scttlre-v-cdc2.pttrn -o scttlre-v-cdc2.html
+
+The page shows the foreground and background consensus sequences, with each
+foreground residue colored by the unadjusted value of its column: red below
+0.1, darker as the value decreases; white from 0.1 to 0.5; blue above 0.5,
+for columns that are similar in both sets. Columns whose foreground
+consensus is a gap are gray, and those whose background consensus is a gap
+are yellow. The colors do not depend on alpha. With ``-p``, an asterisk
+above the sequences marks each column of the pattern file. Without ``-o``,
+the page is written to standard output. ``cladereport`` is meant to show
+several ``.out`` files as rows of one page, but in this release it stops
+with an error when given more than one.
+
+Web interface
+~~~~~~~~~~~~~
+
+``cladeweb`` serves a form at http://localhost:8080/cladecompare, on this
+computer only, and opens that address in your web browser once the server
+is listening. ``--port`` chooses another port, and ``--no-browser`` leaves
+the browser closed. If another ``cladeweb`` already serves that port, the
+command stops with an address-in-use error and opens no browser; the earlier
+server keeps running. Press Ctrl-C to stop the server.
+
+The form takes one or two sequence files: with one, the comparison is that
+of a single alignment, described above. A file whose name ends in ``.cma``
+is read as CMA, and any other as FASTA. If an HMM profile, whose file name
+must end in ``.hmm``, is given as well, the sequences are aligned to it with
+``hmmalign``, as with ``--hmm``, and must then be in FASTA format. The form
+also chooses the strategy, alpha and, with its checkbox, the weighting of
+``-w``. The submission name becomes the title of the result, which is the
+page that ``cladereport`` would write for the ``.out`` and pattern files.
+The web interface does not offer the logos, structures or more than two
+alignments; use ``cladecompare`` for these.
 
 
 Strategies
 ----------
 
-Statistical tests ("-s" options) for column comparison. The section Methods
+The statistic that compares the columns is chosen with ``-s``. Methods_
 below gives the formula each one computes and the sources it follows:
 
 :gtest:
@@ -222,6 +309,14 @@ below gives the formula each one computes and the sources it follows:
     when as many sequences as the FG holds are drawn from the FG and BG
     together. With a single alignment, the fraction of the column that
     matches the consensus, which is not a p-value.
+
+gtest, urn, phospho, and hypg with two alignments report p-values. The jsd
+score, and the value of hypg for a single alignment, are not p-values, but
+in this release they still receive asterisks where they are below alpha and
+pass through the same selection of significant sites. For these, the
+pattern file lists the columns with the smallest values, without the
+meaning of a false discovery rate; for hypg with a single alignment, those
+are the least conserved columns.
 
 
 Methods
@@ -476,8 +571,12 @@ The ``.out`` file holds each column's value as computed above, unadjusted.
 The pattern file, the pair logos and the residues highlighted in the PyMOL
 script come from the Benjamini-Hochberg step-up procedure (Benjamini &
 Hochberg 1995) at a false discovery rate of alpha, over all columns of the
-cleaned alignment, including the untested columns with p = 1, and limited
-to the 50 most significant columns.
+cleaned alignment, including the untested columns with p = 1. The step-up
+search examines only the 50 most significant columns, so at most 50 columns
+are selected, and where the full procedure would accept more than 50, the
+selection can hold fewer than 50. On the example pair at the default alpha,
+without ``-w``, gtest, urn and hypg accept 102, 67 and 104 columns, and
+each of their pattern files lists 50.
 
 Alignments from MAPGAPS
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -505,6 +604,9 @@ References
 - Neuwald AF (2009) Rapid detection, classification and accurate alignment of
   up to a million or more related protein sequences. *Bioinformatics*
   25(15):1869-1875. doi:10.1093/bioinformatics/btp342 (MAPGAPS)
+- Neuwald AF (2010) Bayesian classification of residues associated with
+  protein functional divergence: Arf and Arf-like GTPases. *Biology Direct*
+  5:66. doi:10.1186/1745-6150-5-66 (mcBPPS)
 - Neuwald AF, Kannan N, Poleksic A, Hata N, Liu JS (2003) Ran's C-terminal,
   basic patch, and nucleotide exchange mechanisms in light of a canonical
   structure for Rab, Rho, Ras, and Ran GTPases. *Genome Research*
@@ -515,6 +617,9 @@ References
 - Talevich E, Kannan N (2013) Structural and evolutionary adaptation of
   rhoptry kinases and pseudokinases, a family of coccidian virulence factors.
   *BMC Evolutionary Biology* 13:117. doi:10.1186/1471-2148-13-117
+- Talevich E, Mirza A, Kannan N (2011) Structural and evolutionary
+  divergence of eukaryotic protein kinases in Apicomplexa. *BMC Evolutionary
+  Biology* 11:321. doi:10.1186/1471-2148-11-321
 
 
 Development

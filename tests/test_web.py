@@ -4,7 +4,9 @@ Each case submits the form fields and uploads recorded in
 ``tests/data/py27/web/<case>/run.json`` to the cladeweb WSGI application,
 with the working and temporary directories redirected to scratch
 directories. The response status must be the recorded one; a successful
-response must equal the recorded body, and a failed one must have logged the
+response must equal the recorded body, or, for the submissions in
+``REPORTS``, the current report of the command-line case whose report the
+reference records it equal to; and a failed one must have logged the
 recorded exception, or the one that ``ERRORS`` names. No case may write into
 the working directory or leave a file of its own in the temporary directory,
 which the reference records it doing.
@@ -35,7 +37,9 @@ from cladecomparelib import core, report
 DATA = Path(__file__).resolve().parent / "data"
 REFERENCE = DATA / "py27" / "web"
 
-# Recorded submissions replayed as recorded, and the programs each needs.
+# Recorded submissions, each compared with its recorded response or, for those
+# in REPORTS, with the current report of a command-line case, and the programs
+# each needs.
 CASES = {
     "web.hmm.pair.gtest": ["hmmalign"],
     "web.pair-cma.gtest": [],
@@ -43,6 +47,7 @@ CASES = {
     "web.pair.jsd": [],
     "web.pair.urn": [],
     "web.pdb.1HCK.gtest": ["hmmalign"],
+    "web.single.gtest": [],
     "web.single.jsd": [],
     "web.single.urn": [],
 }
@@ -57,13 +62,21 @@ SPOOLED = {"web.hmm.pair.gtest", "web.pdb.1HCK.gtest"}
 # InputError instead of an assertion.
 ERRORS = {"web.pdb.1HCK.gtest": "InputError"}
 
-# Recorded submissions with a test of their own below.
-OWN_TESTS = {
-    "web.pair.hypg",
-    "web.pair.phospho",
-    "web.single.gtest",
-    "web.single.phospho",
+# Recorded submissions whose response the reference records equal, apart from
+# the title, to the report of a recorded command-line case on the same
+# alignments. The G-test has since changed, so each response must equal the
+# current report of its case. web.single.gtest submits alpha 0.005 where
+# single.gtest.a.001 used 0.001, and its report is the same because the
+# Benjamini-Hochberg search stops at the same 50 sites at both.
+REPORTS = {
+    "web.hmm.pair.gtest": "hmm.pair.gtest",
+    "web.pair-cma.gtest": "pair.gtest",
+    "web.pair.gtest": "pair.gtest",
+    "web.single.gtest": "single.gtest.a.001",
 }
+
+# Recorded submissions with a test of their own below.
+OWN_TESTS = {"web.pair.hypg", "web.pair.phospho", "web.single.phospho"}
 
 BOUNDARY = "cladecompare-test-boundary"
 
@@ -139,6 +152,9 @@ def test_reference_submission(case, tmp_path, monkeypatch, require):
     if record["error"]:
         error = record["error"].strip().splitlines()[-1].split(":")[0]
         assert ERRORS.get(case, error) in errors
+    elif case in REPORTS:
+        title = dict(record["fields"])["name"]
+        assert response == cli_report(REPORTS[case], title)
     else:
         assert response == (REFERENCE / case / "response.html").read_bytes()
     assert os.listdir(workdir) == record["written_files"] == []
@@ -151,6 +167,15 @@ def test_reference_submission(case, tmp_path, monkeypatch, require):
 def test_every_recorded_submission_is_tested():
     recorded = {path.name for path in REFERENCE.iterdir()}
     assert recorded == set(CASES) | OWN_TESTS
+
+
+def test_recorded_responses_are_the_recorded_reports():
+    """Each submission in REPORTS recorded the report of its command-line case,
+    apart from the title."""
+    for case, cli_case in sorted(REPORTS.items()):
+        title = dict(load(case)["fields"])["name"]
+        recorded = (REFERENCE / case / "response.html").read_bytes()
+        assert recorded == cli_report(cli_case, title, reference_text), case
 
 
 def test_form_offers_every_strategy():
@@ -173,13 +198,13 @@ def test_phospho_submission_completes(mode, tmp_path, monkeypatch):
     assert os.listdir(workdir) == []
 
 
-def assert_matches_cli_report(response, case, title):
-    """Assert that a response equals the report of a recorded command-line
-    case, whose title names its .out file, apart from the title."""
-    expected = expected_text(case, case + ".html")
+def cli_report(case, title, source=expected_text):
+    """The report of a recorded command-line case, whose title names its .out
+    file, retitled as the report of a submission."""
+    expected = source(case, case + ".html")
     outfname = (case + ".out").encode()
     assert expected.count(outfname) == 2
-    assert response == expected.replace(outfname, title.encode())
+    return expected.replace(outfname, title.encode())
 
 
 def test_hypg_submission_matches_the_command_line(tmp_path, monkeypatch):
@@ -193,7 +218,7 @@ def test_hypg_submission_matches_the_command_line(tmp_path, monkeypatch):
         load("web.pair.hypg"), tmp_path, monkeypatch
     )
     assert status == "200 OK", errors
-    assert_matches_cli_report(response, "pair.hypg", "web-pair-hypg")
+    assert response == cli_report("pair.hypg", "web-pair-hypg")
     assert os.listdir(workdir) == []
 
 
@@ -204,30 +229,7 @@ def test_weighted_submission_matches_the_command_line(tmp_path, monkeypatch):
     record["fields"].append(["weight", "on"])
     _workdir, _tmpdir, status, response, errors = submit(record, tmp_path, monkeypatch)
     assert status == "200 OK", errors
-    assert_matches_cli_report(response, "pair.gtest.w", "web-pair-gtest")
-
-
-def test_single_gtest_submission_matches_the_command_line(tmp_path, monkeypatch):
-    """Single-alignment gtest gives the report of the command line.
-
-    The form submits the alignment of single.gtest.a.001 in FASTA form with
-    alpha 0.005, and the reference records the report of that case, apart
-    from the title, because the Benjamini-Hochberg search stops at the same
-    50 sites at both alphas. The p-values have since moved with the expected
-    counts of single-mode gtest, and the response follows the case.
-    """
-    recorded = (REFERENCE / "web.single.gtest" / "response.html").read_bytes()
-    report_html = reference_text("single.gtest.a.001", "single.gtest.a.001.html")
-    assert recorded == report_html.replace(
-        b"single.gtest.a.001.out", b"web-single-gtest"
-    )
-    workdir, tmpdir, status, response, errors = submit(
-        load("web.single.gtest"), tmp_path, monkeypatch
-    )
-    assert status == "200 OK", errors
-    assert_matches_cli_report(response, "single.gtest.a.001", "web-single-gtest")
-    assert os.listdir(workdir) == []
-    assert os.listdir(tmpdir) == []
+    assert response == cli_report("pair.gtest.w", "web-pair-gtest")
 
 
 def test_submission_name_is_escaped(tmp_path, monkeypatch):

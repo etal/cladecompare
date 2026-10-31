@@ -1,0 +1,23 @@
+{
+  "written_files": [
+    "cdc2-a.aln.fasta.out",
+    "cdc2-a.aln.fasta.pttrn",
+    "cdc2-b.aln.fasta.out",
+    "cdc2-b.aln.fasta.pttrn",
+    "scttlre-domain.fasta_aln.cma.out",
+    "scttlre-domain.fasta_aln.cma.pttrn"
+  ],
+  "pdfs": [
+    "cdc2-a.aln.fasta-148.pdf",
+    "cdc2-a.aln.fasta-168.pdf",
+    "cdc2-b.aln.fasta-238.pdf",
+    "cdc2-b.aln.fasta-87.pdf",
+    "scttlre-domain.fasta_aln.cma-1,2,3,4,9,14.pdf",
+    "scttlre-domain.fasta_aln.cma-111,112,113,123,124,128,133,135,138,142,144,146,149,151,153,154,158,160,164,169,175,176.pdf",
+    "scttlre-domain.fasta_aln.cma-194,196,201,208,209.pdf",
+    "scttlre-domain.fasta_aln.cma-238,241.pdf",
+    "scttlre-domain.fasta_aln.cma-31,32,34,37,40,43,47,52,53.pdf",
+    "scttlre-domain.fasta_aln.cma-65,73,74,75.pdf",
+    "scttlre-domain.fasta_aln.cma-87,93.pdf"
+  ]
+}

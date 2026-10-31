@@ -1,0 +1,19 @@
+{
+  "written_files": [
+    "1HCK.pdb.pml",
+    "pdb.1HCK.gtest.html",
+    "pdb.1HCK.gtest.out",
+    "pdb.1HCK.gtest.pttrn"
+  ],
+  "pdfs": [
+    "pdb.1HCK.gtest-105.pdf",
+    "pdb.1HCK.gtest-123,124,125,135,145,147,150,154,156,158,160,163,165,167,168,172,179,184,190,191.pdf",
+    "pdb.1HCK.gtest-2,3,9,14.pdf",
+    "pdb.1HCK.gtest-207,210,212,217.pdf",
+    "pdb.1HCK.gtest-229,235,236,238.pdf",
+    "pdb.1HCK.gtest-256.pdf",
+    "pdb.1HCK.gtest-27,31,32,34,37,42,49,54,55,56.pdf",
+    "pdb.1HCK.gtest-285,288.pdf",
+    "pdb.1HCK.gtest-74,77,78,79.pdf"
+  ]
+}

@@ -1,37 +1,33 @@
 """Compare two alignments via G-test of column amino acid frequencies.
 
-The contingency table looks like::
+In paired mode, each column gives a contingency table of weighted residue
+counts (usually not integers when the sequences are weighted)::
 
-                Ala Cys Asp ...
-    observed    OA  OC  OD  ...
-    expected    EA  EC  ED  ...
+                    Ala Cys Asp ...
+    foreground      FA  FC  FD  ...
+    background      BA  BC  BD  ...
 
-where O<resname> is the "observed" residue count in the foreground (using
-weighted sequences, so usually not an integer) and E<resname> is the "expected"
-residue count, calculated from the background column residue frequencies and
-scaled to match the size of the foreground. Pseudocounts of total size 0.5
-(core.PSEUDO_SIZE), in proportion to the amino acid frequencies of the whole
-alignment, are added to the background counts so that no expected count is
-zero.
+with one column of the table for each residue type found in either set. The
+test is the G-test of homogeneity (Dunning 1993, section 5.3): the null
+hypothesis is that the two sets draw the column's residues from one
+distribution, whose frequencies are estimated from both sets together. The
+expected count of each cell is its row total times its column total divided by
+the table total, and::
 
-This is a goodness-of-fit test where the null hypothesis is that the foreground
-column residues were drawn from the distribution represented by the
-background set. The test assumes the foreground is a sub-clade within the
-background clade.
+        G = 2 * sum_ij( O_ij * ln(O_ij / E_ij) )
 
-Formula::
-
-        G = 2 * sum_i( O_i * ln(Oi/Ei) )
-
-The test statistic G follows the chi-squared distribution with 19 degrees of
-freedom (20 amino acids, 2 compared sets -> (20-1)x(2-1) = 19), and the p-value
-is its upper tail, scipy.stats.chi2.sf(G, 19).
+over the cells with O_ij > 0. With K residue types in the table, G follows the
+chi-squared distribution with (K-1)x(2-1) = K-1 degrees of freedom, and the
+p-value is its upper tail, scipy.stats.chi2.sf(G, K - 1). A column with fewer
+than two types gives 1. No pseudocounts are added, so the p-value of a column
+depends on that column alone.
 
 For a single alignment, the observed counts are each column's weighted residue
-counts plus the same pseudocounts, and the expected counts are the amino acid
-frequencies of the whole alignment scaled to the column's observed total, so
-that the test compares the column's composition with the alignment's on 19
-degrees of freedom.
+counts plus pseudocounts of total size 0.5 (core.PSEUDO_SIZE), in proportion to
+the amino acid frequencies of the whole alignment, and the expected counts are
+those frequencies scaled to the column's observed total, so that the test
+compares the column's composition with the alignment's on 19 degrees of
+freedom.
 
 """
 
@@ -55,17 +51,27 @@ def compare_cols(
     pseudo_size,
 ):
     """Compare amino acid frequencies between aligned columns via G-test."""
-    # Calculate the "expected" aa frequencies
-    bg_counts = count_col(bg_col, bg_weights, aa_freqs, pseudo_size)
-    expected = {}
-    for aa in "ACDEFGHIKLMNPQRSTVWY":
-        # Scale to same size as foreground
-        expected[aa] = fg_size * (bg_counts[aa] / (bg_size + pseudo_size))
-    # Calculate the G-value of observed vs. expected
-    observed = count_col(fg_col, fg_weights)
-    G = 2 * sum(obsv * math.log(obsv / expected[aa]) for aa, obsv in observed.items())
-    # 4. Calculate the Chi-squared p-value of G
-    pvalue = chi2.sf(G, 19)
+    fg_counts = count_col(fg_col, fg_weights)
+    bg_counts = count_col(bg_col, bg_weights)
+    # Column totals of the table, over the residue types present in either set
+    col_totals = {
+        aa: both
+        for aa in set(fg_counts) | set(bg_counts)
+        if (both := fg_counts.get(aa, 0.0) + bg_counts.get(aa, 0.0))
+    }
+    if len(col_totals) < 2:
+        # The compositions cannot differ, and the test has no degrees of freedom
+        return 1.0
+    fg_total = math.fsum(fg_counts.values())
+    bg_total = math.fsum(bg_counts.values())
+    total = fg_total + bg_total
+    G = 2 * math.fsum(
+        count * math.log(count * total / (row_total * col_totals[aa]))
+        for counts, row_total in ((fg_counts, fg_total), (bg_counts, bg_total))
+        for aa, count in counts.items()
+        if count
+    )
+    pvalue = chi2.sf(G, len(col_totals) - 1)
     return pvalue
 
 

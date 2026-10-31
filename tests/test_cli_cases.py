@@ -70,17 +70,12 @@ CASES = {
     "unequal.gtest": ["muscle"],
 }
 
-# Printed p-values that differ from the reference because the reference
-# computed them less accurately. SciPy 1.2.1 gave three hypergeometric tails
-# of pair.hypg less accurately than later releases do, and exact rational
-# arithmetic agrees with the later values; biofrills' chisqprob, which gtest
-# called until October 2026, gave one chi-squared tail of multi.gtest less
-# accurately than SciPy does. Each (reference, current, counts) replaces a
-# p-value printed at the number of sites that `counts` gives for each file.
+# SciPy 1.2.1, which computed the reference, gave three hypergeometric tails
+# of pair.hypg less accurately than later releases do; exact rational
+# arithmetic agrees with the later values. Each (reference, current, counts)
+# replaces a p-value printed at the number of sites that `counts` gives for
+# each file.
 SUBSTITUTIONS = {
-    "multi.gtest": [
-        ("0.528722", "0.528721", {"cdc2-b.aln.fasta.out": 1}),
-    ],
     "pair.hypg": [
         ("6.8898e-10", "6.88977e-10", {"pair.hypg.out": 5, "pair.hypg.html": 5}),
         ("5.74155e-11", "5.74147e-11", {"pair.hypg.out": 5, "pair.hypg.html": 5}),
@@ -112,22 +107,29 @@ RETURNCODES = {
 # CHAIN does ("CHAIN's weighting in urn" in tests/data/README.md). The
 # phospho cases fail in the reference. The three single-alignment gtest cases
 # moved because single-mode gtest now scales its expected counts to the
-# column total ("The G-test" in tests/data/README.md); single.gtest.w.a.001
-# moved for that reason and with the weights.
+# column total, and the paired gtest cases because paired gtest is now the
+# G-test of homogeneity ("The G-test" in tests/data/README.md);
+# single.gtest.w.a.001 and pair.gtest.w moved for that reason and with the
+# weights.
 REGENERATED = {
+    "hmm.pair.gtest",
     "hmm.single.gtest",
+    "multi.gtest",
+    "pair.gtest",
     "pair.gtest.w",
     "pair.hypg.w",
     "pair.jsd.w.a.2",
     "pair.phospho",
     "pair.phospho.w",
     "pair.urn.w",
+    "pdb.1HCK.gtest",
     "single.gtest.a.001",
     "single.gtest.w.a.001",
     "single.hypg.w.a.2",
     "single.phospho",
     "single.phospho.w",
     "single.urn.w",
+    "unequal.gtest",
 }
 
 # Recorded at the last commit at which -s phospho ran, with an option that no

@@ -2,8 +2,8 @@
 
 The expected values are computed here from the definitions, in exact rational
 arithmetic where the statistic is a sum of probabilities, and for the G-test
-with the closed form of the chi-squared tail at odd degrees of freedom, so that
-a test does not share its numerical method with the code it checks.
+with the closed forms of the chi-squared tail, so that a test does not share
+its numerical method with the code it checks.
 """
 
 import math
@@ -38,13 +38,21 @@ def hypergeom_tail(k, M, n, N):
 
 
 def chisq_tail(x, df):
-    """P(X >= x) for X ~ chi-squared with odd df >= 3 (Abramowitz & Stegun 26.4.5)."""
+    """P(X >= x) for X ~ chi-squared, from the closed forms for even and odd df
+    (Abramowitz & Stegun, section 26.4)."""
+    if df % 2 == 0:
+        term = 1.0
+        terms = []
+        for j in range(1, df // 2 + 1):
+            terms.append(term)
+            term *= x / (2 * j)
+        return math.exp(-x / 2) * math.fsum(terms)
     chi = math.sqrt(x)
     term = chi
-    terms = [term]
-    for r in range(2, (df - 1) // 2 + 1):
-        term *= x / (2 * r - 1)
+    terms = []
+    for r in range(1, (df - 1) // 2 + 1):
         terms.append(term)
+        term *= x / (2 * r + 1)
     return math.erfc(chi / math.sqrt(2)) + 2 * math.exp(-x / 2) / math.sqrt(
         2 * math.pi
     ) * math.fsum(terms)
@@ -195,20 +203,59 @@ def test_jsd_single_compares_with_uniform_frequencies():
 # --- gtest ---
 
 
-def test_gtest_pair_compares_with_the_scaled_background():
-    # Expected counts: the pseudocounted background frequencies, scaled to
-    # the foreground size; 19 degrees of freedom.
-    bg = {
-        aa: n + FREQS.get(aa, 0.0) * PSEUDO
-        for aa, n in {"D": 1, "E": 5, "A": 2}.items()
-    }
-    expected = {aa: 5 * bg[aa] / (8 + PSEUDO) for aa in bg}
-    G = 2 * math.fsum(
-        o * math.log(o / expected[aa]) for aa, o in {"D": 4, "E": 1}.items()
+def homogeneity_g(fg, bg):
+    """G of the 2 x K table of two dicts of residue counts, and its df.
+
+    Computed as 2 (sum O ln O - sum R ln R - sum C ln C + N ln N) over the
+    cells O, the row totals R, the column totals C and the table total N.
+    """
+    rows = [math.fsum(fg.values()), math.fsum(bg.values())]
+    cols = [fg.get(aa, 0) + bg.get(aa, 0) for aa in set(fg) | set(bg)]
+
+    def xlogx(values):
+        return math.fsum(v * math.log(v) for v in values if v)
+
+    total = math.fsum(rows)
+    G = 2 * (
+        xlogx([*fg.values(), *bg.values()])
+        - xlogx(rows)
+        - xlogx(cols)
+        + total * math.log(total)
     )
+    return G, len(cols) - 1
+
+
+def test_gtest_pair_is_the_g_test_of_homogeneity():
+    # The 2 x 3 table D, E, A: foreground 4, 1, 0; background 1, 5, 2.
+    G, df = homogeneity_g({"D": 4, "E": 1}, {"D": 1, "E": 5, "A": 2})
+    assert df == 2
     assert pair(gtest, "DDDDE", "DEEEEEAA") == pytest.approx(
-        chisq_tail(G, 19), rel=1e-12
+        chisq_tail(G, df), rel=1e-12
     )
+    assert chisq_tail(G, df) == pytest.approx(0.03155, abs=1e-5)
+
+
+def test_gtest_pair_two_types_have_no_continuity_correction():
+    """A 2 x 2 table gives the uncorrected G on 1 degree of freedom, where
+    Yates' correction would give about 0.021."""
+    G, df = homogeneity_g({"D": 8, "E": 3}, {"D": 10, "E": 26})
+    assert df == 1
+    assert pair(gtest, "D" * 8 + "E" * 3, "D" * 10 + "E" * 26) == pytest.approx(
+        chisq_tail(G, df), rel=1e-12
+    )
+    assert chisq_tail(G, df) == pytest.approx(0.0076, abs=1e-4)
+
+
+def test_gtest_pair_ignores_gaps():
+    """Gaps in either column change neither the table nor the p-value."""
+    assert pair(gtest, "DD--DDE-", "DEEEE-EAA") == pytest.approx(
+        pair(gtest, "DDDDE", "DEEEEEAA"), rel=1e-12
+    )
+
+
+def test_gtest_pair_single_residue_type_is_not_significant():
+    """One residue type in both columns leaves no degrees of freedom: p = 1."""
+    assert pair(gtest, "DDD", "DDDDD-") == 1.0
 
 
 def test_gtest_single_compares_with_overall_frequencies_at_the_column_total():

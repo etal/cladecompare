@@ -138,7 +138,7 @@ A case that needs hmmalign or MUSCLE is replayed only when the program is on `PA
 pixi run python tests/data/replay.py
 ```
 
-`uv run python tests/data/replay.py` replays the same cases where hmmalign and MUSCLE are installed, and otherwise only those that need no external program, which leaves `current/hmm.single.gtest` as it was.
+`uv run python tests/data/replay.py` replays the same cases where hmmalign and MUSCLE are installed, and otherwise only those that need no external program, which leaves the directories of `hmm.pair.gtest`, `hmm.single.gtest`, `pdb.1HCK.gtest` and `unequal.gtest` as they were.
 
 Its output is deterministic, so a rerun on unchanged code leaves `current/` unchanged.
 It exits with an error while `PYTHONPATH` is set, because the commands it runs would inherit that path, and the files must record the biofrills that the lock files pin rather than a checkout on the path.
@@ -148,8 +148,8 @@ The tests inherit `PYTHONPATH`, so they import a checkout on that path.
   biofrills `72282be` changed the `none` scaling of `sequence_weights`, which `-w` uses, so that the weights of an alignment sum to an estimate of its effective number of independent sequences; the ratios between the weights did not change.
   The sums moved from 5.004 to 2.117 for the 11 `scttlre-domain` sequences of the paired cases, from 6.146 to 7.734 for the 36 `cdc2-domain` sequences of the paired cases, and from 6.317 to 7.734 for the 37 `cdc2-domain` sequences of the single-alignment cases; the sequence that the paired cases remove from the background is identical to another, so it no longer changes the sum.
   CladeCompare uses the weights as counts and their sum as the sample size, while the pseudocounts have a fixed total of 0.5, so the change of scale moves every weighted value that depends on it.
-  The change is exactly this rescaling: the code at biofrills `ff11246`, with each weight vector multiplied to give the new sum, writes every file of these cases byte for byte.
-  The pattern of `pair.gtest.w` falls from 9 sites to none, so its six pair logos are no longer written; `pair.jsd.w.a.2` selects 32 sites instead of 29, in 7 logos instead of 8; `single.gtest.w.a.001` selected 50 sites instead of 41, until single-mode gtest changed (see "The G-test" below); the pattern of `single.hypg.w.a.2` remains empty.
+  The change is exactly this rescaling: the code at biofrills `ff11246`, with each weight vector multiplied to give the new sum, writes every file of these cases byte for byte; `pair.gtest.w` and `single.gtest.w.a.001` have since moved with the G-test (see "The G-test" below).
+  The pattern of `pair.gtest.w` falls from 9 sites to none, so its six pair logos are no longer written; `pair.jsd.w.a.2` selects 32 sites instead of 29, in 7 logos instead of 8; `single.gtest.w.a.001` selected 50 sites instead of 41, until single-mode gtest changed; the pattern of `single.hypg.w.a.2` remains empty.
   For `pair.hypg.w`, see "SciPy version" below.
   `single.jsd.w.a.2` is the one weighted case that still reproduces the reference: single-alignment jsd normalizes the weighted counts of a column and adds no pseudocounts, so the scale cancels.
   The weighted phospho cases, whose reference records a failure, are described below.
@@ -168,18 +168,22 @@ The tests inherit `PYTHONPATH`, so they import a checkout on that path.
   The smallest p-value of `pair.phospho` rises from 1.91e-08 to 1.10e-07, and its pattern loses Y154, keeping 5 of 6 sites; `single.phospho` keeps 30 of its 33 sites, losing A44, T151 and T174.
   `pair.phospho.w`, whose foreground is not weighted (see "Recorded defects") and which has no legacy counterpart, has a smallest p-value of 2.21e-05, at column 149, where the legacy pseudocounts gave 4.94e-06; that is just above the threshold of 2.07e-05 that Benjamini–Hochberg sets for the first rank at alpha 0.005 over 242 columns, so its pattern, which held column 149, is now empty.
   `single.phospho.w` writes the files of `single.phospho`.
-- **The G-test** (`single.gtest.a.001`, `single.gtest.w.a.001`, `hmm.single.gtest`).
+- **The G-test** (`single.gtest.a.001`, `single.gtest.w.a.001`, `hmm.single.gtest`, `pair.gtest`, `pair.gtest.w`, `multi.gtest`, `hmm.pair.gtest`, `pdb.1HCK.gtest`, `unequal.gtest`).
   With a single alignment, gtest compared each column's counts, pseudocounts included, with the alignment-wide amino-acid frequencies themselves, which sum to 1, while the observed values sum to the column's residues plus the pseudocount total of 0.5.
   G therefore grew with the number of sequences, and nearly every column was significant.
   The expected values are now those frequencies scaled to the column's observed total, so a column with the alignment's composition gives G = 0.
   In `single.gtest.a.001`, the median p-value rises from 1.21e-67 to 7.83e-15, the columns below 1e-10 fall from 242 to 165 and those below alpha 0.001 from 242 to 237 of 249; the pattern still holds the 50 sites at which the Benjamini-Hochberg search stops, 43 of them recorded.
   `hmm.single.gtest` changes in the same way: the median rises from 2.53e-66 to 3.90e-14, the columns below its alpha of 0.005 fall from 288 to 274 of 289, and the pattern keeps 44 of its 50 sites.
   In `single.gtest.w.a.001`, where the weights sum to 7.734, the median rises from 0.00315 in the reference to 0.425, the columns below alpha 0.001 fall from 86 to 8, and the pattern falls to the single site W179, one of the 41 recorded.
-  `web.single.gtest` submits the alignment of `single.gtest.a.001` in FASTA form; its recorded response equals that case's report apart from the title, and `tests/test_web.py` now checks that it still does, in place of the recorded response.
-  gtest also takes the chi-squared tail probability from `scipy.stats.chi2.sf` in place of `chisqprob` from biofrills, whose convergence tolerance of 1e-7 leaves a relative error of up to 4.1e-8 at 19 degrees of freedom.
-  On the reference cases this moves one printed value: column 153 of `cdc2-b.aln.fasta.out` in `multi.gtest`, where SciPy gives 0.5287214945 and `chisqprob` gave 0.5287215077, now prints 0.528721 instead of 0.528722, and no pattern changes.
-  `tests/test_cli_cases.py` substitutes that value for the recorded one, as it does for `pair.hypg` (see "SciPy version" below), so `multi.gtest` has no directory here.
-  The other paired gtest cases reproduce the reference as before.
+  The web submissions of gtest each recorded a response equal, apart from the title, to the report of a command-line case on the same alignments: `web.single.gtest` to that of `single.gtest.a.001`, `web.pair.gtest` and `web.pair-cma.gtest` to that of `pair.gtest`, and `web.hmm.pair.gtest` to that of `hmm.pair.gtest`; `tests/test_web.py` checks that the recorded responses still equal those reports and that each response equals the current report of its case.
+  gtest also takes the chi-squared tail probability from `scipy.stats.chi2.sf` in place of `chisqprob` from biofrills, whose convergence tolerance of 1e-7 leaves a relative error of up to 4.1e-8 at 19 degrees of freedom; with the paired test of that time, this moved one printed value of the reference cases, in `multi.gtest`, from 0.528722 to 0.528721.
+  In paired mode, gtest tested the foreground counts for goodness of fit to the background column's composition, pseudocounts included, on 19 degrees of freedom; it is now the G-test of homogeneity on the 2 × K table of the two columns' counts, on K - 1 degrees of freedom, without pseudocounts (README.rst, "G-test (gtest)").
+  In `pair.gtest`, the median p-value falls from 0.120 to 0.0138, the smallest p-value rises from 1.69e-28 to 4.55e-11, the columns below 1e-10 fall from 39 to 1, and those below alpha 0.005 rise from 91 to 109 of 242; the pattern holds 50 sites as before, 35 of them recorded.
+  Exactly the 12 columns with one residue type across both sets give 1, where the reference gave 1 at 33 columns.
+  `unequal.gtest` changes in the same way (median 0.127 to 0.0191, 106 columns below 0.005 instead of 91, 36 of 50 sites recorded), and so does the `scttlre-domain` comparison of `multi.gtest`, which writes the `.out` and `.pttrn` files of `pair.gtest`.
+  `hmm.pair.gtest` and `pdb.1HCK.gtest` write the same `.out` file: the median falls from 0.0411 to 0.00905, the smallest p-value rises from 5.38e-32 to 1.13e-11, 135 columns instead of 124 are below 0.005 of 289, and the pattern keeps 33 of its 50 sites, which changes the residues of `1HCK.pdb.pml`.
+  In `multi.gtest`, `cdc2-a.aln.fasta` and `cdc2-b.aln.fasta`, each compared with the other two alignments together, have 37 and 39 columns below 0.005 where they had 68 and 76, and smallest p-values of 4.87e-06 and 1.16e-05 where they had 1.58e-16 and 2.31e-15; their patterns fall from 50 sites to the 2 that the Benjamini-Hochberg procedure accepts, T168 and H148 for `cdc2-a`, and N238 and P87 for `cdc2-b`, each of them recorded.
+  The pattern of `pair.gtest.w` remains empty, as it has been since the change of weight scale; its smallest p-value, 9.14e-07 in the reference and 0.0744 after that change, is now 0.0165.
 
 Every unweighted case, including those that run hmmalign and MUSCLE, reproduces the reference as before, apart from the phospho cases, which fail in the reference, and the G-test cases above.
 

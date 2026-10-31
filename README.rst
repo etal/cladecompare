@@ -202,9 +202,9 @@ Statistical tests ("-s" options) for column comparison. The section Methods
 below gives the formula each one computes and the sources it follows:
 
 :gtest:
-    (default) G-test for goodness-of-fit of FG amino acid counts vs. those of
-    the BG column. BG frequencies include pseudocounts calculated from the
-    amino acid frequencies of the full sequence set.
+    (default) G-test of homogeneity between the amino acid compositions of
+    the FG and BG columns. With a single alignment, G-test of goodness of fit
+    of each column's composition against that of the whole alignment.
 :urn:
     Ball-in-urn model (binomial), after CHAIN (Neuwald et al. 2003), for
     counts of the "consensus" amino acid type in FG and BG.
@@ -298,22 +298,49 @@ residue and ``c = n_c*`` its count in the foreground column.
 G-test (gtest)
 ~~~~~~~~~~~~~~
 
-In paired mode, the foreground counts are compared with the composition of
-the background column, including pseudocounts, by a G-test (Dunning 1993)::
+In paired mode, the foreground and background columns form a 2 × K table of
+counts over the ``K`` residue types that occur in either column, and the
+G-test of homogeneity (Dunning 1993, section 5.3) tests whether the two sets
+draw the column's residues from one distribution. With ``F = Σ n_a`` and
+``B = Σ m_a`` the residue totals of the two columns, gaps excluded (unlike
+``N_F`` and ``N_B``), and with all sums over the ``K`` types::
+
+    E_a = F (n_a + m_a) / (F + B)        (expected foreground count)
+    D_a = B (n_a + m_a) / (F + B)        (expected background count)
+    G   = 2 Σ [n_a ln(n_a / E_a) + m_a ln(m_a / D_a)]
+    p   = P(χ²_(K-1) ≥ G)
+
+where a term whose count is zero is zero. A column with fewer than two residue
+types gives ``p = 1``. No pseudocounts are added, so each p-value depends on
+its column alone, and gaps do not enter the table. The upper tail of the
+chi-squared distribution is computed by SciPy (``scipy.stats.chi2.sf``). On
+the example alignments, 726,000 columns from 3,000 random divisions of the 47
+pooled ``scttlre-domain`` and ``cdc2-domain`` sequences into 11 foreground and
+36 background sequences, unweighted, gave 4.7% below 0.05, 0.66% below 0.01
+and 0.04% below 0.001. Under ``-w`` the counts are sequence weights, whose
+sums estimate the effective numbers of sequences, 2.1 and 7.7 for that pair,
+so the tables are small and the test seldom rejects: with ``-w``, no column of
+the example pair falls below 0.005, the smallest p-value being 0.017, and none
+did under the earlier test with the same weights.
+
+Until October 2026, gtest instead tested the foreground counts for goodness
+of fit to the background column's composition, including pseudocounts, on 19
+degrees of freedom::
 
     E_a = N_F (m_a + π f_a) / (N_B + π)
     G   = 2 Σ n_a ln(n_a / E_a)        (sum over the types with n_a > 0)
-    p   = P(χ²₁₉ ≥ G)
 
-This is the test of Talevich & Kannan (2013). The upper tail of the
-chi-squared distribution with 19 degrees of freedom is computed by SciPy
-(``scipy.stats.chi2.sf``). The expected values sum to ``N_F`` times the share
-of the background column, pseudocounts included, that is not gaps, while the
-observed counts sum to the residues of the foreground column, so in columns
-with gaps the two totals differ. The background composition is estimated from
-the background column but enters the test as a known distribution, so with
-small sequence sets these p-values tend to be smaller than a test that
-accounted for that uncertainty would give.
+This was the test of Talevich & Kannan (2013), which cites Dunning (1993),
+whose test compares two samples. It took the background composition as known,
+although it is estimated from the background column, and its expected values
+summed to ``N_F`` times the background's share of residues rather than to the
+foreground's residues. On the same random divisions it gave 7.2% below 0.05,
+3.6% below 0.01 and 1.4% below 0.001. A foreground residue that the background
+lacks was compared with its pseudocount alone: in column 95 of the example
+pair, where 8 of 11 foreground residues are W and the background has no W,
+the earlier test gave 8.6e-21 and the test of homogeneity gives 7.1e-05. In
+column 160, all V in the foreground against I, V and L in the background, the
+earlier test gave 0.076 and the test of homogeneity gives 1.6e-05.
 
 With a single alignment, each column is compared with the composition of the
 whole alignment, by a G-test of goodness of fit whose expected values are the

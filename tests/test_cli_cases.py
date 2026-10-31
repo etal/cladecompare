@@ -161,10 +161,11 @@ def run_commands(commands, tmp_path, path_prefix=None):
 
 
 def assert_valid_pvalues(path):
-    """Every p-value in a .out file is finite and within [0, 1]."""
+    """Every p-value in a .out file is finite and within [0, 1]; return them."""
     pvalues = [prob for _fg, _bg, _posn, prob, _stars in report.parse_out(path)]
     invalid = [p for p in pvalues if not (math.isfinite(p) and 0.0 <= p <= 1.0)]
     assert pvalues and not invalid, f"{path.name}: {invalid[:5]}"
+    return pvalues
 
 
 def assert_pdfs(workdir, pdfs, expected):
@@ -277,21 +278,28 @@ def test_weighting_leaves_single_alignment_urn_unchanged():
         )
 
 
-@pytest.mark.parametrize("mode", ["pair", "single"])
-def test_phospho_matches_legacy(mode, tmp_path):
-    """Unweighted phospho reproduces the last commit at which it ran.
+@pytest.mark.parametrize(
+    ("case", "legacy"),
+    [
+        ("pair.phospho", "legacy.pair.phospho.nw"),
+        ("single.phospho", "legacy.single.phospho.nw"),
+        ("single.phospho.w", "legacy.single.phospho.nw"),
+    ],
+)
+def test_phospho_matches_legacy(case, legacy, tmp_path):
+    """phospho writes the output of the last commit at which it ran.
 
     The reference records the TypeError that the alignment size caused
     before it was rounded to an integer; the legacy case records the same
-    comparison from before the size became a floating-point sum.
+    comparison, unweighted, from before the size became a floating-point
+    sum. Under -w, phospho does not weight a single alignment, CHAIN's query
+    family, so single.phospho.w writes the unweighted output.
     """
-    case = mode + ".phospho"
     record = load(case)
     workdir, written, results, _tmpdir = run_commands(
         [step["argv"] for step in record["commands"]], tmp_path
     )
     assert [r.returncode for r in results] == [0]
-    legacy = f"legacy.{mode}.phospho.nw"
     expected = load(legacy)["pdfs"]
     assert_pdfs(
         workdir,
@@ -305,19 +313,22 @@ def test_phospho_matches_legacy(mode, tmp_path):
     assert_valid_pvalues(workdir / (case + ".out"))
 
 
-@pytest.mark.parametrize("mode", ["pair", "single"])
-def test_phospho_weighted_completes(mode, tmp_path):
-    """Weighted phospho, which has never run before, completes.
+def test_phospho_weighted_pair_completes(tmp_path):
+    """Weighted paired phospho, which the reference records failing, completes.
 
-    Its values have no reference, and the rule for its sample size and
-    trial count is not settled, so only their range is checked.
+    Its values have no reference, and replay.py does not replay the cases
+    that have tests of their own, so their range is checked, and a bound on
+    the smallest. With the foreground unweighted, as CHAIN leaves it, the
+    smallest p-value lies more than an order of magnitude below the bound;
+    weighting the foreground reduces it to too few trials, and the smallest
+    lies more than an order of magnitude above.
     """
-    case = mode + ".phospho.w"
+    case = "pair.phospho.w"
     workdir, _written, results, _tmpdir = run_commands(
         [step["argv"] for step in load(case)["commands"]], tmp_path
     )
     assert [r.returncode for r in results] == [0]
-    assert_valid_pvalues(workdir / (case + ".out"))
+    assert min(assert_valid_pvalues(workdir / (case + ".out"))) < 1e-4
 
 
 def test_output_defaults_to_standard_output(tmp_path):

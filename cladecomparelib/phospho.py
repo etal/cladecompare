@@ -3,6 +3,10 @@
 Based on the "urn" model, but testing for conservation of Ser/Thr/Tyr instead of
 the foreground consensus residue type.
 
+Under -w, the weighting follows CHAIN, as in urn: the foreground is not
+weighted, and the background is weighted with biofrills' "andy" scaling. With
+a single alignment, -w changes nothing.
+
 """
 
 import logging
@@ -13,6 +17,9 @@ from scipy.stats import binom
 from .shared import count_col
 
 logger = logging.getLogger(__name__)
+
+# Foreground and background scalings of the sequence weights under -w.
+WEIGHT_SCALINGS = (None, "andy")
 
 
 def compare_cols(
@@ -36,7 +43,7 @@ def compare_cols(
     p_j = (bg_counts["S"] + bg_counts["T"] + bg_counts["Y"] + fg_tot) / (
         bg_size + fg_size + 2.0
     )  # pseudocount size = 1.0
-    # The count carries fractional pseudocounts and the size sums weights;
+    # The count carries fractional pseudocounts and the size is a float sum;
     # range() and the binomial trial count need integers
     fg_tot_i = int(math.ceil(fg_tot))
     fg_size_i = int(math.ceil(fg_size))
@@ -58,7 +65,7 @@ def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
     col_counts = count_col(col, weights, aa_freqs, pseudo_size)
     col_tot = col_counts["S"] + col_counts["T"] + col_counts["Y"]
     p_j = aa_freqs["S"] + aa_freqs["T"] + aa_freqs["Y"]
-    # The count carries fractional pseudocounts and the size sums weights;
+    # The count carries fractional pseudocounts and the size is a float sum;
     # range() and the binomial trial count need integers
     col_tot_i = int(math.ceil(col_tot))
     size_i = int(math.ceil(aln_size))

@@ -38,7 +38,7 @@ The module names matter: the log format prints `%(module)s`, and the web referen
 `STRATEGIES` in `cladecomparelib/core.py` registers each strategy once, mapping its name to a one-line description and its module, and `DEFAULT_STRATEGY` names the default.
 The `-s` choices and help text, the radio buttons of the cladeweb form, the module that `process_args` and the web application run, and the log line that names the strategy all come from it, so adding a sixth means writing the module under `cladecomparelib/` and adding one entry to `STRATEGIES`, together with the module's import in `core.py`.
 Before the registry, the strategies were listed in four places, and `hypg` reached the command line but never the web form.
-One rule remains outside the registry: under `-w`, a strategy's module may name the `sequence_weights` scalings of the foreground and the background in `WEIGHT_SCALINGS`, with `None` for unweighted, and `urn` does so to follow CHAIN, which weights the background only; every other strategy weights both sets with the `none` scaling (`DEFAULT_WEIGHT_SCALINGS` in `core.py`).
+One rule remains outside the registry: under `-w`, a strategy's module may name the `sequence_weights` scalings of the foreground and the background in `WEIGHT_SCALINGS`, with `None` for unweighted, and `urn` and `phospho` do so to follow CHAIN, which weights the background only; every other strategy weights both sets with the `none` scaling (`DEFAULT_WEIGHT_SCALINGS` in `core.py`).
 `process_one` gives a single alignment the foreground's scaling, and every size is the sum of the weights.
 
 ## `.out` p-values are raw; Benjamini–Hochberg only selects the pattern
@@ -73,7 +73,7 @@ hypg now computes the tail with `hypergeom.sf`, which stays accurate for small t
 `pair.hypg.w` differs throughout: SciPy 1.11.4 and later return `nan` for the non-integral count of successes that weights produce, and hypg now rounds that count up, as it rounds the other counts; with SciPy 1.18.1 its p-values are finite and its pattern is empty.
 Seven weighted cases differ from the reference: five since the biofrills pin moved to `4aa8b57`, whose `none` scaling makes the weights of an alignment sum to an estimate of its effective number of independent sequences, and the two `urn` cases because `urn` now weights the sequences as CHAIN does; `tests/data/current/` holds the expected outputs of those cases, and `tests/data/README.md` explains both changes.
 `single.jsd.w.a.2` still reproduces the reference, because single-alignment jsd does not depend on the scale of the weights, and the weighted phospho cases, whose reference records a failure, have tests of their own.
-The `-s phospho` cases now complete where the reference records a failure, because of the earlier fix to the phospho sample size, and their unweighted outputs equal the legacy reference cases.
+The `-s phospho` cases now complete where the reference records a failure, because of the earlier fix to the phospho sample size; their unweighted outputs equal the legacy reference cases, and so does the weighted single-alignment output, because phospho weights a single alignment as CHAIN weights the query family, which is not at all.
 `unequal.gtest` no longer writes `_cc_combined.seq` into the working directory, nor logs that it did.
 `web.pair.hypg` returns status 200 with the report that the command line writes for the same alignments, because the web form now takes its strategies from the same registry as the command line; the reference records status 500.
 `web.pdb.1HCK.gtest` still returns status 500, with `InputError` in place of `AssertionError`.
@@ -139,7 +139,7 @@ The example alignments are real alignments from Talevich, Mirza & Kannan (2011),
 `test/` holds them under the names that the examples in `README.rst` use, and `tests/data/make_inputs.py` copies them from there into `tests/data/inputs`.
 
 `uv run pytest` or `pixi run test` runs the suite under `tests/`.
-`tests/test_cli_cases.py` replays every recorded command-line case that the current command line can run with the installed `cladecompare` and `cladereport` commands, in a scratch directory holding copies of `tests/data/inputs`; the two legacy phospho cases, whose `-nw` option no longer exists, serve as the expected output of the unweighted phospho cases.
+`tests/test_cli_cases.py` replays every recorded command-line case that the current command line can run with the installed `cladecompare` and `cladereport` commands, in a scratch directory holding copies of `tests/data/inputs`; the two legacy phospho cases, whose `-nw` option no longer exists, serve as the expected output of the unweighted phospho cases and of `single.phospho.w`.
 `tests/test_web.py` submits every recorded form to the cladeweb WSGI application.
 Each command or submission must give the recorded return code or status, each written file and successful response must equal the reference byte for byte, and every p-value written to a `.out` file must be finite and within [0, 1].
 Where the code departs from the reference by design, the test module declares the difference — a substituted value, a file no longer written, a different exception, an expected output regenerated into `tests/data/current/` by `tests/data/replay.py`, or a test of its own — and `tests/data/README.md` explains it.

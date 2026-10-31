@@ -259,8 +259,8 @@ foreground column and ``m_a`` its count in the background column. The
 characters ``-``, ``.`` and ``X`` are not counted. Without ``-w``, each
 sequence counts as 1, and ``N_F`` and ``N_B`` are the numbers of foreground and
 background sequences. With ``-w``, each sequence counts as its sequence
-weight, and ``N_F`` and ``N_B`` are the sums of the weights; urn weights the
-sequences in its own way, which its section below describes.
+weight, and ``N_F`` and ``N_B`` are the sums of the weights; urn and phospho
+weight the sequences in their own way, which their sections below describe.
 
 The sequence weights are the position-based weights of Henikoff & Henikoff
 (1994), computed separately for each set by BioFrills
@@ -382,11 +382,17 @@ instead of the consensus residue. With ``t_F = Σ (n_a + π f_a)`` and
 ``t_B = Σ (m_a + π f_a)``, both summed over ``a`` in {S, T, Y}::
 
     p = (t_B + t_F) / (N_B + N_F + 2)
-    P = Σ_{i=⌈t_F⌉..N+1} C(N + 1, i) p^i (1 - p)^(N + 1 - i),   N = ⌈N_F⌉
+    P = Σ_{i=⌈t_F⌉..N+1} C(N + 1, i) p^i (1 - p)^(N + 1 - i),   N = N_F
 
 With a single alignment, ``t = Σ (n_a + π f_a)`` over {S, T, Y},
-``p = f_S + f_T + f_Y``, ``N`` is the sum of the weights rounded up, and the
-sum runs from ``⌈t⌉`` to ``N + 1`` in the same way.
+``p = f_S + f_T + f_Y``, ``N`` is the number of sequences, and the sum runs
+from ``⌈t⌉`` to ``N + 1`` in the same way.
+
+Under ``-w``, phospho weights the sequences as urn does, following CHAIN: the
+foreground is not weighted, so ``N_F`` is the number of foreground sequences,
+and the background is weighted with the scaling ``andy``, which ``t_B`` and
+``N_B`` carry; ``f_a`` pools the unweighted foreground with the weighted
+background. With a single alignment, ``-w`` changes nothing.
 
 Jensen-Shannon divergence (jsd)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

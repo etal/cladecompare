@@ -167,6 +167,12 @@ A port that fixes one of them differs from the reference by design, and the test
 - `-s phospho` fails with `TypeError` in every case captured from `e265b1f`, paired and single, with and without `-w`, and in the web form: the alignment size reaches `range()` as a float.
   It ran only without weights, before the unweighted size also became a floating-point sum; the legacy cases record that behavior.
   The code has since been fixed to round the size up to an integer, so it differs from these cases by design: the unweighted cases now match `legacy.pair.phospho.nw` and `legacy.single.phospho.nw`, and the weighted and web cases complete where the reference records the failure.
+  Under `-w`, phospho now weights the sequences as urn does, following CHAIN: the foreground is not weighted and the background takes the `andy` scaling.
+  phospho left the foreground unweighted when it was added on 2013-05-21, until the refactor of the strategy modules dropped that rule on 2013-06-03.
+  `single.phospho.w` therefore writes the `.out` and `.pttrn` files of `legacy.single.phospho.nw`.
+  Weighting both sets with the `none` scaling instead reduced the 11 foreground sequences of `pair.phospho.w` to a sample size of 2.117, which phospho rounds up to 3 and to 4 binomial trials, so that no p-value fell below 0.0237 and the pattern was empty.
+  `pair.phospho.w` now has a foreground of 11 and a background of 17.836, a smallest p-value of 4.94e-06, and a pattern of one site, column 149; at alpha 0.05 it selects the six sites of the unweighted pattern.
+  It has no expected output: because its reference records a failure, it is one of the cases with a test of their own, which `replay.py` does not replay, so its test checks that the p-values are finite and within [0, 1] and that the smallest is below 1e-4, which a weighted foreground does not reach.
 - `pdb.1FIN-AB-CA.gtest` fails with `KeyError` in `choose_best_aligned`, which indexes the aligned chains with a (key, value) pair whenever more than one chain aligns to the profile, so every multi-chain structure fails.
 - `multi.gtest` writes its three `.out` and `.pttrn` pairs, but `cladereport.py` on more than one `.out` file fails with `ValueError` in `report.table_multi`.
 - `web.pair.hypg` returns status 500 with `KeyError`: the web application's strategy table lacks hypg.
@@ -211,7 +217,7 @@ A port that fixes one of them differs from the reference by design, and the test
   Standard error and the web logs come from logging with the format `%(module)s [@%(lineno)s]`, so editing a module above a logging call changes them without changing behavior.
   The legacy cases log in the default format of the root logger instead (`WARNING:root:...`) and record no `INFO` lines.
   Three messages of the current code also differ in wording: the duplicate-sequence message names the set (`Purging N identical sequences from the foreground` or `from the background`, where this reference has `from the alignment`), and the strategy lines read `Using ball-in-urn model of consensus residue conservation` and `Using urn model for phosphorylatable residues (S/T/Y)`, where this reference has `Using ball-in-urn statistical model` and `Using urn model for phosphorylatable residues`.
-  One message is new: with `-w`, `single.urn.w` logs `This strategy does not weight the sequences of one alignment`, which the reference does not record.
+  One message is new: with `-w`, `single.urn.w` and `single.phospho.w` log `This strategy does not weight the sequences of one alignment`, which the reference does not record.
   At both captured commits, `pairlogo.py` looked for the DejaVu font first under `/usr/share/fonts/truetype/ttf-dejavu/` and then for a bundled copy, and used Courier if it found neither.
   `e265b1f` added that copy as `data/DejaVuSansMono-Bold.ttf` and pointed the fallback at it; at the legacy commit the fallback pointed inside `cladecomparelib/`, where no font was ever committed.
   On the capture host the system path did not exist either, so at the legacy commit `pairlogo.py` warned while being imported, and that first call configured logging before `cladecompare.py` could.

@@ -27,7 +27,7 @@ from wsgiref.simple_server import WSGIRequestHandler
 
 import bottle
 import pytest
-from test_cli_cases import expected_text
+from test_cli_cases import expected_text, reference_text
 
 import cladecomparelib.cladeweb  # registers the routes
 from cladecomparelib import core, report
@@ -43,7 +43,6 @@ CASES = {
     "web.pair.jsd": [],
     "web.pair.urn": [],
     "web.pdb.1HCK.gtest": ["hmmalign"],
-    "web.single.gtest": [],
     "web.single.jsd": [],
     "web.single.urn": [],
 }
@@ -59,7 +58,12 @@ SPOOLED = {"web.hmm.pair.gtest", "web.pdb.1HCK.gtest"}
 ERRORS = {"web.pdb.1HCK.gtest": "InputError"}
 
 # Recorded submissions with a test of their own below.
-OWN_TESTS = {"web.pair.hypg", "web.pair.phospho", "web.single.phospho"}
+OWN_TESTS = {
+    "web.pair.hypg",
+    "web.pair.phospho",
+    "web.single.gtest",
+    "web.single.phospho",
+}
 
 BOUNDARY = "cladecompare-test-boundary"
 
@@ -201,6 +205,29 @@ def test_weighted_submission_matches_the_command_line(tmp_path, monkeypatch):
     _workdir, _tmpdir, status, response, errors = submit(record, tmp_path, monkeypatch)
     assert status == "200 OK", errors
     assert_matches_cli_report(response, "pair.gtest.w", "web-pair-gtest")
+
+
+def test_single_gtest_submission_matches_the_command_line(tmp_path, monkeypatch):
+    """Single-alignment gtest gives the report of the command line.
+
+    The form submits the alignment of single.gtest.a.001 in FASTA form with
+    alpha 0.005, and the reference records the report of that case, apart
+    from the title, because the Benjamini-Hochberg search stops at the same
+    50 sites at both alphas. The p-values have since moved with the expected
+    counts of single-mode gtest, and the response follows the case.
+    """
+    recorded = (REFERENCE / "web.single.gtest" / "response.html").read_bytes()
+    report_html = reference_text("single.gtest.a.001", "single.gtest.a.001.html")
+    assert recorded == report_html.replace(
+        b"single.gtest.a.001.out", b"web-single-gtest"
+    )
+    workdir, tmpdir, status, response, errors = submit(
+        load("web.single.gtest"), tmp_path, monkeypatch
+    )
+    assert status == "200 OK", errors
+    assert_matches_cli_report(response, "single.gtest.a.001", "web-single-gtest")
+    assert os.listdir(workdir) == []
+    assert os.listdir(tmpdir) == []
 
 
 def test_submission_name_is_escaped(tmp_path, monkeypatch):

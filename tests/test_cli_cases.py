@@ -70,15 +70,21 @@ CASES = {
     "unequal.gtest": ["muscle"],
 }
 
-# SciPy 1.2.1, which computed the reference, gave three hypergeometric tails
-# of pair.hypg less accurately than later releases do; exact rational
-# arithmetic agrees with the later values. Each (reference, current, count)
-# replaces a p-value printed at `count` sites, in the .out and .html files.
+# Printed p-values that differ from the reference because the reference
+# computed them less accurately. SciPy 1.2.1 gave three hypergeometric tails
+# of pair.hypg less accurately than later releases do, and exact rational
+# arithmetic agrees with the later values; biofrills' chisqprob, which gtest
+# called until October 2026, gave one chi-squared tail of multi.gtest less
+# accurately than SciPy does. Each (reference, current, counts) replaces a
+# p-value printed at the number of sites that `counts` gives for each file.
 SUBSTITUTIONS = {
+    "multi.gtest": [
+        ("0.528722", "0.528721", {"cdc2-b.aln.fasta.out": 1}),
+    ],
     "pair.hypg": [
-        ("6.8898e-10", "6.88977e-10", 5),
-        ("5.74155e-11", "5.74147e-11", 5),
-        ("2.12435e-09", "2.12434e-09", 3),
+        ("6.8898e-10", "6.88977e-10", {"pair.hypg.out": 5, "pair.hypg.html": 5}),
+        ("5.74155e-11", "5.74147e-11", {"pair.hypg.out": 5, "pair.hypg.html": 5}),
+        ("2.12435e-09", "2.12434e-09", {"pair.hypg.out": 3, "pair.hypg.html": 3}),
     ],
 }
 
@@ -104,14 +110,19 @@ RETURNCODES = {
 # from its record for the reason that "SciPy version" in tests/data/README.md
 # gives. The two urn cases moved because urn now weights the sequences as
 # CHAIN does ("CHAIN's weighting in urn" in tests/data/README.md). The
-# phospho cases fail in the reference.
+# phospho cases fail in the reference. The three single-alignment gtest cases
+# moved because single-mode gtest now scales its expected counts to the
+# column total ("The G-test" in tests/data/README.md); single.gtest.w.a.001
+# moved for that reason and with the weights.
 REGENERATED = {
+    "hmm.single.gtest",
     "pair.gtest.w",
     "pair.hypg.w",
     "pair.jsd.w.a.2",
     "pair.phospho",
     "pair.phospho.w",
     "pair.urn.w",
+    "single.gtest.a.001",
     "single.gtest.w.a.001",
     "single.hypg.w.a.2",
     "single.phospho",
@@ -189,11 +200,10 @@ def assert_pdfs(workdir, pdfs, expected):
 def reference_text(case, name):
     """The recorded bytes of a file, with the SUBSTITUTIONS applied."""
     expected = (REFERENCE / case / name).read_bytes()
-    if name.endswith((".out", ".html")):
-        for old, new, count in SUBSTITUTIONS.get(case, []):
-            old, new = b"=" + old.encode(), b"=" + new.encode()
-            assert expected.count(old) == count, (name, old)
-            expected = expected.replace(old, new)
+    for old, new, counts in SUBSTITUTIONS.get(case, []):
+        old, new = b"=" + old.encode(), b"=" + new.encode()
+        assert expected.count(old) == counts.get(name, 0), (name, old)
+        expected = expected.replace(old, new)
     return expected
 
 

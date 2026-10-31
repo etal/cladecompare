@@ -1,11 +1,9 @@
 """Tests of each strategy's column statistics against hand computations.
 
 The expected values are computed here from the definitions, in exact rational
-arithmetic where the statistic is a sum of probabilities, so that a test does
-not share its numerical method with the code it checks. The G-test is the
-exception: its tail probability comes from the same chisqprob that the code
-uses, because SciPy's chi-squared tail differs from it by up to 2.4e-9
-relative at the values tested here, far above the tolerance of 1e-12.
+arithmetic where the statistic is a sum of probabilities, and for the G-test
+with the closed form of the chi-squared tail at odd degrees of freedom, so that
+a test does not share its numerical method with the code it checks.
 """
 
 import math
@@ -13,7 +11,6 @@ from fractions import Fraction
 from math import comb, log2
 
 import pytest
-from biofrills.stats.chisq import chisqprob
 
 from cladecomparelib import gtest, hypg, jsd, phospho, urn
 
@@ -38,6 +35,19 @@ def hypergeom_tail(k, M, n, N):
         sum(comb(n, i) * comb(M - n, N - i) for i in range(k, min(n, N) + 1)),
         comb(M, N),
     )
+
+
+def chisq_tail(x, df):
+    """P(X >= x) for X ~ chi-squared with odd df >= 3 (Abramowitz & Stegun 26.4.5)."""
+    chi = math.sqrt(x)
+    term = chi
+    terms = [term]
+    for r in range(2, (df - 1) // 2 + 1):
+        term *= x / (2 * r - 1)
+        terms.append(term)
+    return math.erfc(chi / math.sqrt(2)) + 2 * math.exp(-x / 2) / math.sqrt(
+        2 * math.pi
+    ) * math.fsum(terms)
 
 
 def pair(module, fg_col, bg_col, fg_weights=None, bg_weights=None):
@@ -197,16 +207,27 @@ def test_gtest_pair_compares_with_the_scaled_background():
         o * math.log(o / expected[aa]) for aa, o in {"D": 4, "E": 1}.items()
     )
     assert pair(gtest, "DDDDE", "DEEEEEAA") == pytest.approx(
-        chisqprob(G, 19), rel=1e-12
+        chisq_tail(G, 19), rel=1e-12
     )
 
 
-def test_gtest_single_compares_with_overall_frequencies():
+def test_gtest_single_compares_with_overall_frequencies_at_the_column_total():
+    # Observed: the column's counts plus pseudocounts, 5 + 0.5 in total;
+    # expected: the overall frequencies scaled to that total.
     col = "DDDEA"
     observed = {
         aa: {"D": 3, "E": 1, "A": 1}.get(aa, 0) + f * PSEUDO for aa, f in FREQS.items()
     }
-    G = 2 * math.fsum(o * math.log(o / FREQS[aa]) for aa, o in observed.items())
+    G = 2 * math.fsum(o * math.log(o / (5.5 * FREQS[aa])) for aa, o in observed.items())
     assert gtest.compare_one(col, "D", 5.0, ones(col), FREQS, PSEUDO) == pytest.approx(
-        chisqprob(G, 19), rel=1e-12
+        chisq_tail(G, 19), rel=1e-12
+    )
+
+
+def test_gtest_single_column_with_the_overall_composition_is_not_significant():
+    """A column whose composition equals the alignment's gives G = 0, p = 1,
+    however many sequences it holds."""
+    col = "AAAADDEEEEEEEESSSSTY"
+    assert gtest.compare_one(col, "E", 20.0, ones(col), FREQS, PSEUDO) == pytest.approx(
+        1.0, rel=1e-12
     )

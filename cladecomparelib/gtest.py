@@ -24,13 +24,20 @@ Formula::
         G = 2 * sum_i( O_i * ln(Oi/Ei) )
 
 The test statistic G follows the chi-squared distribution with 19 degrees of
-freedom (20 amino acids, 2 compared sets -> (20-1)x(2-1) = 19).
+freedom (20 amino acids, 2 compared sets -> (20-1)x(2-1) = 19), and the p-value
+is its upper tail, scipy.stats.chi2.sf(G, 19).
+
+For a single alignment, the observed counts are each column's weighted residue
+counts plus the same pseudocounts, and the expected counts are the amino acid
+frequencies of the whole alignment scaled to the column's observed total, so
+that the test compares the column's composition with the alignment's on 19
+degrees of freedom.
 
 """
 
 import math
 
-from biofrills.stats.chisq import chisqprob
+from scipy.stats import chi2
 
 from .shared import count_col
 
@@ -58,15 +65,18 @@ def compare_cols(
     observed = count_col(fg_col, fg_weights)
     G = 2 * sum(obsv * math.log(obsv / expected[aa]) for aa, obsv in observed.items())
     # 4. Calculate the Chi-squared p-value of G
-    pvalue = chisqprob(G, 19)
+    pvalue = chi2.sf(G, 19)
     return pvalue
 
 
 def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
     """Compare column amino acid frequencies to overall via G-test."""
     observed = count_col(col, weights, aa_freqs, pseudo_size)
+    # Scale the expected counts to the observed total, pseudocounts included
+    total = math.fsum(observed.values())
     G = 2 * sum(
-        obsv * math.log(obsv / aa_freqs.get(aa, 0.0)) for aa, obsv in observed.items()
+        obsv * math.log(obsv / (total * aa_freqs.get(aa, 0.0)))
+        for aa, obsv in observed.items()
     )
-    pvalue = chisqprob(G, 19)
+    pvalue = chi2.sf(G, 19)
     return pvalue

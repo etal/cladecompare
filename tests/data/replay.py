@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """Write the current output of every command-line case that departs from py27.
 
-Each case of tests/test_cli_cases.py that needs no external program is
-replayed with the installed cladecompare and cladereport commands, as that
-module replays it, and must give the return codes that the module expects.
+Each case of tests/test_cli_cases.py is replayed with the installed
+cladecompare and cladereport commands, as that module replays it, and must
+give the return codes that the module expects.
 Where the text files written, their contents or the names
 of the pair-logo PDFs differ from the reference in py27/cli, with the
 substitutions that module declares applied, the case's directory under
 current/ is rewritten: the text files the commands wrote, and a run.json
 holding the names of those files ("written_files") and of the PDFs ("pdfs"),
 with the meaning those keys have in the reference.  Where they no longer
-differ, the directory is removed.  The cases that need hmmalign or MUSCLE are
-not replayed, and their directories, of which there are none, are left alone.
+differ, the directory is removed.  A case that needs hmmalign or MUSCLE is
+replayed only when the program is on PATH, as it is under ``pixi run``;
+otherwise the script names the case and leaves its directory alone.
 
 The files under current/ are generated; regenerate them with this script and
 review the change rather than editing them.  tests/test_cli_cases.py expects
@@ -24,7 +25,10 @@ not a checkout on that path.
 
 Usage, from the repository root:
 
-    uv run python tests/data/replay.py
+    pixi run python tests/data/replay.py
+
+or ``uv run python tests/data/replay.py``, which skips the cases that need
+hmmalign or MUSCLE unless those are installed.
 """
 
 import json
@@ -75,7 +79,9 @@ def main():
     if os.environ.get("PYTHONPATH"):
         sys.exit("PYTHONPATH is set; unset it so that the installed packages run")
     for case in sorted(CASES):
-        if CASES[case]:
+        missing = [program for program in CASES[case] if not shutil.which(program)]
+        if missing:
+            print("skipped", case, "for want of", ", ".join(missing), file=sys.stderr)
             continue
         current = replay(case)
         outdir = CURRENT / case

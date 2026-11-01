@@ -41,15 +41,17 @@ Before the registry, the strategies were listed in four places, and `hypg` reach
 One rule remains outside the registry: under `-w`, a strategy's module may name the `sequence_weights` scalings of the foreground and the background in `WEIGHT_SCALINGS`, with `None` for unweighted, and `urn` and `phospho` do so to follow CHAIN, which weights the background only; every other strategy weights both sets with the `none` scaling (`DEFAULT_WEIGHT_SCALINGS` in `core.py`).
 `process_one` gives a single alignment the foreground's scaling, and every size is the sum of the weights.
 
-## `.out` p-values are raw; Benjamini–Hochberg only selects the pattern
+## `.out` values are raw; Benjamini–Hochberg only selects the pattern
 
-The `.out` file holds each column's unadjusted p-value.
+The `.out` file holds each column's unadjusted value of the statistic: a p-value for gtest, urn, phospho and paired hypg, and a score that is not a p-value for jsd and for hypg with a single alignment, which nonetheless receive asterisks and pass through the same selection of sites.
 `write_pvalues` in `cladecomparelib/core.py` writes the value as the statistic returned it, and its asterisks compare that raw value with `-a/--alpha`, one asterisk per order of magnitude.
 `cladereport` and the cladeweb result page color each column from the same raw value (`p2class` in `cladecomparelib/report.py`), at fixed cut points that do not depend on alpha.
 
 The multiple-testing correction exists only in `top_hits` in `core.py`: a Benjamini–Hochberg step-up procedure at false discovery rate alpha, with m equal to the number of columns in `hits`, including the columns that `process_pair` and `process_one` skip as gaps and assign p = 1.
 In paired mode that count is taken after `clean_alignments` has dropped the columns that are gaps in every sequence of both sets; the column numbers in `.out` and `.pttrn` refer to that cleaned alignment.
 Its result is the set of significant sites, which becomes the `.pttrn` file when `-p` is given, names the pair logos, and lists the residues highlighted in the PyMOL script.
+`make_residues` in `cladecomparelib/pmlscript.py` looks each site up with its 1-based column number in a 0-based list, so the script highlights the residue of the following column, and a significant last column would raise `IndexError`.
+This is a defect, not intended behavior: in `tests/data/py27/cli/pdb.1HCK.gtest/1HCK.pdb.pml` the site `C165` is drawn as `T165`, and `D34` as the unresolved residue `X38`, and in `tests/data/current/pdb.1HCK.gtest/1HCK.pdb.pml` the site `L147` is drawn as `G147`.
 The step-up search examines only the 50 most significant columns, so at most 50 sites are selected, and where the full procedure would accept more than 50, the result can be smaller than 50.
 
 The consequence for a local change: altering how many columns enter `hits`, for instance with a filter that drops columns before scoring, does not rescale any value in `.out`, but it changes m and therefore every threshold `alpha * k / m` (k being a column's rank by p-value).

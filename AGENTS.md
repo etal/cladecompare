@@ -96,6 +96,23 @@ Replacing MUSCLE 3 with another profile-profile aligner would change the output 
 No missing program is checked for at the start of a run.
 `call_quiet` names a program that is not on the PATH when it is first run: for `hmmalign` and `muscle` that is the probe preceding each alignment, and for MAPGAPS it is the `run_gaps` call itself.
 
+## Letter case: uppercase is aligned, lowercase is inserted
+
+CladeCompare follows the convention of HMMER's a2m output and of MAPGAPS and CHAIN's CMA files: an uppercase residue occupies a match state of the profile, a lowercase residue is an insertion relative to the profile, and `-` is a deletion.
+In a2m, `.` may pad an insert column, but HMMER 3.4 omits it, so the rows of its a2m output differ in length until the lowercase residues are removed.
+The convention is applied in three places.
+For `--hmm`, `hmm_align_and_read` in `cladecomparelib/core.py` drops the lowercase residues of hmmalign's rows, and for a CMA file `cma_blocks` drops those of the aligned part of each sequence line, so in both cases only match columns are compared.
+For `--pdb`, the lowercase residues of the structure's own alignment are kept, because they are residues of the chain.
+`aln_resnums_inserts` numbers each uppercase residue and records each run of lowercase residues as an insert, `get_aln_offset` locates the whole run of residues, inserts included, in the chain sequence, and `choose_best_aligned` ranks the chains by their uppercase residues, although for more than one aligned chain it currently fails with `KeyError` (`tests/data/README.md`).
+
+An alignment read in any other format, through `read_aln` and Biopython's `AlignIO`, keeps its letter case, and nothing applies the convention to it.
+Measured on small constructed FASTA pairs: a column holding only lowercase residues and gaps has a gap consensus and is reported with p = 1, but it is still numbered and still counted among the columns of the Benjamini–Hochberg selection.
+Lowercase residues enter the alignment-wide frequencies, and with them the pseudocounts, as types of their own.
+In a column that mixes `c` and `C`, biofrills warns and takes the consensus as if the column were uppercase, while the statistics count `c` and `C` as two types: paired gtest gave 0.809672 for a column that holds only Cys in both sets, where the same column in uppercase gives 1.
+Two sequences of such an input that differ only in their inserts are not purged as duplicates.
+The a2m output of hmmalign cannot be read as a FASTA alignment through `AlignIO`, because its rows differ in length, but its default Stockholm output, read with `-f stockholm`, can, and Biopython reads its `.` padding as `-`: `test/cdc2-domain.fasta` aligned to `CDK.hmm` then gives 451 columns, 162 of them insert columns, beside the 289 match states.
+Such an alignment is compared with its insert columns in place, which changes the column numbers, the selection threshold and the pseudocounts of every column.
+
 ## biofrills is a dependency, pinned to a git commit until 0.4.0
 
 CladeCompare calls five names from three pure-Python [biofrills](https://github.com/etal/biofrills) modules, in `core.py`, `shared.py` and `pairlogo.py`: `alnutils.sequence_weights`, `alnutils.aa_frequencies`, `alnutils.remove_empty_cols`, `consensus.consensus` and `logoutils.aln2logodata`.

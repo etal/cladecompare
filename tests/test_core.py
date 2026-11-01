@@ -216,6 +216,51 @@ def test_top_hits_returns_50_sites_when_more_pass():
     assert positions(core.top_hits(hits_from(pvalues), 0.05)) == expected
 
 
+# --- Structure residue numbering ---
+
+
+def test_aln_offset_matches_the_whole_segment_including_x():
+    # The chain also begins with AGS, so the residues before the X alone
+    # have no unique place.
+    assert core.get_aln_offset("AGSAGSXKLMN", "AGSXKL", "1XYZ:A") == 3
+
+
+def test_aln_offset_ignores_case_deletions_and_insert_padding():
+    assert core.get_aln_offset("QQACDEFGHQQ", "ac-D.EfGH", "1XYZ:A") == 2
+
+
+@pytest.mark.parametrize(
+    "full, aln, message",
+    [
+        ("ACDACD", "ACD", "more than one place"),
+        # Overlapping repeats, which str.count does not count twice.
+        ("KAKAK", "KAK", "more than one place"),
+        ("MXXXK", "XX", "more than one place"),
+        ("ACDEFG", "WWWW", "do not occur"),
+        ("ACDEFG", "--", "No residues"),
+    ],
+)
+def test_aln_offset_rejects_a_segment_it_cannot_place(full, aln, message):
+    with pytest.raises(InputError, match=message) as excinfo:
+        core.get_aln_offset(full, aln, "1XYZ:A")
+    assert "chain 1XYZ:A " in str(excinfo.value)
+
+
+def test_pdb_ref_resnums_numbers_residues_from_the_chain_start():
+    # Q101 Q102 A103 C104 D105 E106 F107 G108 H109 Q110 Q111
+    chain = SeqRecord(Seq("QQACDEFGHQQ"), id="1XYZ:A", annotations={"start": 101})
+    ref, resnums, inserts = core.pdb_ref_resnums({"1XYZ:A": "ac-DEfGH"}, [chain])
+    assert ref.id == "1XYZ:A"
+    assert resnums == [("-", None), ("D", 105), ("E", 106), ("G", 108), ("H", 109)]
+    assert inserts == [(103, 104), (107, 107)]
+
+
+def test_pdb_ref_resnums_names_the_chain_it_cannot_place():
+    chain = SeqRecord(Seq("ACDACD"), id="1XYZ:A", annotations={"start": 1})
+    with pytest.raises(InputError, match=r"chain 1XYZ:A .*more than one place"):
+        core.pdb_ref_resnums({"1XYZ:A": "ACD"}, [chain])
+
+
 # --- External programs ---
 
 

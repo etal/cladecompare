@@ -654,11 +654,33 @@ def choose_best_aligned(aligned):
     return ref_id, ref_aln
 
 
-def get_aln_offset(full, aln):
-    aln_trim = aln.replace("-", "").replace(".", "").upper()
-    if "X" in aln_trim:
-        aln_trim = aln_trim[: aln_trim.index("X")]
-    return full.index(aln_trim)
+def get_aln_offset(full, aln, ref_id):
+    """Locate the profile-aligned residues of a chain in the chain sequence.
+
+    The aligned residues form a contiguous run of the chain sequence, and the
+    index of that run's first residue is returned. Residues missing from the
+    structure are 'X' in the chain sequence and in the aligned sequence alike,
+    and are matched as themselves. A run that is empty, absent from the chain
+    sequence, or present in more than one place raises InputError naming the
+    chain, since the aligned sequence carries no residue numbers with which
+    to choose a place.
+    """
+    residues = aln.replace("-", "").replace(".", "").upper()
+    if not residues:
+        raise InputError("No residues of chain %s were aligned to the profile" % ref_id)
+    start = full.find(residues)
+    if start == -1:
+        raise InputError(
+            "The aligned residues of chain %s do not occur in its sequence: %s"
+            % (ref_id, residues)
+        )
+    # Searching again from the next index also finds an overlapping repeat.
+    if full.find(residues, start + 1) != -1:
+        raise InputError(
+            "The aligned residues of chain %s occur in more than one place "
+            "in its sequence: %s" % (ref_id, residues)
+        )
+    return start
 
 
 def aln_resnums_inserts(aln, offset):
@@ -705,7 +727,7 @@ def pdb_ref_resnums(aligned, seqs):
     # Calculate aligned residue numbers & insert ranges
     offset = (
         ref_record.annotations["start"]
-        + get_aln_offset(str(ref_record.seq), ref_aln)
+        + get_aln_offset(str(ref_record.seq), ref_aln, ref_id)
         - 1
     )
     resnums, inserts = aln_resnums_inserts(ref_aln, offset)

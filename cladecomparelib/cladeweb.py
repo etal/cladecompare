@@ -89,13 +89,13 @@ FORM_HTML = """\
 <hr />
 
 <p>Project page: <a
-href="http://github.com/etal/cladecompare">http://github.com/etal/cladecompare</a></p>
+href="https://github.com/etal/cladecompare">https://github.com/etal/cladecompare</a></p>
 
 <p>If you use this software in a publication, please cite our paper that
 describes it:</p>
 
 <blockquote>Talevich, E. & Kannan, N. (2013)
-<a href="http://www.biomedcentral.com/1471-2148/13/117">Structural and
+<a href="https://doi.org/10.1186/1471-2148-13-117">Structural and
 evolutionary adaptation of rhoptry kinases and pseudokinases, a family of
 coccidian virulence factors</a>.
 <i>BMC Evolutionary Biology</i> 13:117 doi:10.1186/1471-2148-13-117

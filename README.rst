@@ -97,9 +97,9 @@ Usage
 
 The examples below use the two alignments of protein kinase domains in this
 repository's ``test`` directory, which come from Talevich, Mirza & Kannan
-(2011). Where an example names a file that the repository does not hold,
-such as ``fg.fasta`` or ``subfam1.aln``, the name stands for a file of your
-own. ``cladecompare --help`` lists every option.
+(2011). Where an example names an input file that the repository does not
+hold, such as ``fg.fasta`` or ``subfam1.aln``, the name stands for a file of
+your own. ``cladecompare --help`` lists every option.
 
 Comparing two alignments
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -129,14 +129,14 @@ Each line of the result, the ``.out`` file, describes one column::
 The fields are the consensus residue of the foreground column, that of the
 background column in parentheses, the column number, and the value of the
 statistic, which for most strategies is a p-value. A consensus of ``-``
-marks a gap column, as Methods_ defines it, which is not tested and is given
-the value 1. The asterisks, after a tab, show one per order of magnitude of
-the value where it is below the significance threshold alpha (``-a``,
-between 0 and 1, default 0.005). These values are not adjusted for multiple
-testing, so among hundreds of columns some fall below alpha by chance; the
-correction applies to the significant sites described below. Methods_ also
-describes how CladeCompare prepares the alignments, and so which columns
-the numbers refer to.
+marks a gap column, as `Consensus residues and untested columns`_ defines
+it, which is not tested and is given the value 1. The asterisks, after a
+tab, show one per order of magnitude of the value where it is below the
+significance threshold alpha (``-a``, between 0 and 1, default 0.005).
+These values are not adjusted for multiple testing, so among hundreds of
+columns some fall below alpha by chance; the correction applies to the
+significant sites described below. `Preparing the alignments`_ describes
+which columns the numbers refer to.
 
 ``-s`` chooses the statistic, as described under Strategies_, and ``-w``
 weights the sequences, so that a group of closely related sequences counts
@@ -153,17 +153,17 @@ significant columns, and PDF files of paired sequence logos around them::
     cladecompare test/scttlre-domain.fasta_aln.cma test/cdc2-domain.fasta_aln.cma \
         -o scttlre-v-cdc2.out -p scttlre-v-cdc2.pttrn
 
-The pattern file holds one line in the style of the pattern files of
-mcBPPS (Neuwald 2010): ``1:`` and the significant columns, most significant
-first, each written as the foreground consensus residue followed by the
-column number::
+The pattern file holds one line in a format modeled on the pattern files of
+mcBPPS (Neuwald 2010): ``1:`` and the significant columns, most
+significant first, each written as the foreground consensus residue
+followed by the column number::
 
     1:L135,V1,L158,M123,Y154,L47,G9,I153,...
 
 The significant columns are those that pass the Benjamini-Hochberg
 procedure at a false discovery rate of alpha, taken over all columns of the
 alignment, and at most 50 columns are selected, even where the procedure
-accepts more, as `Significant sites`_ under Methods explains. Each logo
+would accept more, as `Significant sites`_ under Methods explains. Each logo
 file shows the foreground above the background for a group of significant
 columns that lie at most 10 columns apart, with up to 10 columns on either
 side, and is named after the pattern file and the columns it highlights,
@@ -215,8 +215,8 @@ draw; it is named in a warning and left out of the script. Two
 limitations apply in this release: a file holding more than one protein
 chain, such as a kinase in complex with a cyclin, stops the run with an
 error, so keep only the chain of interest in the file; and ``--pdb`` given
-more than once stops the run with an error after the ``.out`` file is
-written.
+more than once stops the run with an error, after the ``.out`` file and,
+with ``-p``, the pattern file and any logos are written.
 
 .. _PyMOL: https://pymol.org/
 
@@ -243,8 +243,9 @@ All the alignments must have the same width. For each alignment, the result,
 the pattern file and the logos are written to the current directory, named
 after the alignment file, as in ``subfam1.aln.out``, ``subfam1.aln.pttrn``
 and ``subfam1.aln-12,15.pdf``. ``-o`` and ``-p`` are ignored, with a warning.
-With ``--pdb``, each comparison writes its PyMOL script to the same file,
-so the file holds the script of the last alignment.
+With ``--pdb``, every comparison writes its PyMOL script to the same file,
+the one named after the structure or by ``--pmlout``, so that the file holds
+only the script of the last alignment on the command line.
 
 Viewing the results
 ~~~~~~~~~~~~~~~~~~~

@@ -49,7 +49,7 @@ automatically, BioFrills included, from the commit recorded in
 
 With pip, install that BioFrills commit first, then CladeCompare::
 
-    pip install "biofrills[logo] @ git+https://github.com/etal/biofrills.git@4aa8b57a5192b79707dc11ed8cdaf14b548fc257"
+    pip install "biofrills[logo] @ git+https://github.com/etal/biofrills.git@54c6e70bcdb70b172bc9ec51564930c726d0316f"
     pip install .
 
 .. _Biopython: https://biopython.org/
@@ -391,13 +391,16 @@ The consensus residue of a column in one set is the type ``a`` that maximizes
 the relative entropy term ``q_a ln(q_a / b_a)``, where ``q_a`` is the
 unweighted frequency of ``a`` in the column and ``b_a`` the weighted frequency
 of ``a`` over all columns of the same set; ties go to the alphabetically first
-type. A column whose weighted fraction of ``-`` characters is 0.8 or more has
-a gap as its consensus, except where such columns form a run at the start or
-the end of the alignment: those receive a residue consensus however many gaps
-they hold. A column with no uppercase residue at all has a gap as its
-consensus. A column whose foreground or background consensus is a gap is not
-tested and is reported with p = 1. Below, ``c*`` is the foreground consensus
-residue and ``c = n_c*`` its count in the foreground column.
+type. A column whose weighted fraction of gap characters, ``-`` or ``.``, is
+0.8 or more has a gap as its consensus, except where such columns form a run
+at the start or the end of the alignment: those receive a residue consensus
+if they hold any aligned residue, however many gaps accompany it. Where an
+alignment contains uppercase residues, its lowercase residues are insertions,
+and a column with no uppercase residue has a gap as its consensus; an
+alignment without any uppercase residue marks nothing by case and is read as
+if it were uppercase. A column whose foreground or background consensus is a
+gap is not tested and is reported with p = 1. Below, ``c*`` is the foreground
+consensus residue and ``c = n_c*`` its count in the foreground column.
 
 G-test (gtest)
 ~~~~~~~~~~~~~~

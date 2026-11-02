@@ -48,7 +48,7 @@ The `.out` file holds each column's unadjusted value of the statistic: a p-value
 `cladereport` and the cladeweb result page color each column from the same raw value (`p2class` in `cladecomparelib/report.py`), at fixed cut points that do not depend on alpha.
 
 The multiple-testing correction exists only in `top_hits` in `core.py`: a Benjamini–Hochberg step-up procedure at false discovery rate alpha, with m equal to the number of columns in `hits`, including the columns that `process_pair` and `process_one` skip as gaps and assign p = 1.
-In paired mode that count is taken after `clean_alignments` has dropped the columns that are gaps in every sequence of both sets, except when both sets were aligned to a profile with `--hmm` or `--mapgaps`, where every match state keeps its column; the column numbers in `.out` and `.pttrn` refer to that cleaned alignment.
+In paired mode that count is taken after `clean_alignments` has dropped the columns that are gaps, `-` or `.`, in every sequence of both sets, except when both sets were aligned to a profile with `--hmm` or `--mapgaps`, where every match state keeps its column; the column numbers in `.out` and `.pttrn` refer to that cleaned alignment.
 Its result is the set of significant sites, which becomes the `.pttrn` file when `-p` is given, names the pair logos, and lists the residues highlighted in the PyMOL script.
 `make_residues` in `cladecomparelib/pmlscript.py` draws the structure's residue at each site's column, from the first list that `aln_resnums_inserts` returns, which holds one entry per match state of the profile, and logs and leaves out a site whose column is a deletion in the structure.
 Site N is entry N - 1 of that list because, under a profile, column N is match state N: `process_args` and the cladeweb application pass `profile_aligned` to `process_pair`, so that `clean_alignments` keeps a match state that no sequence of either set occupies.
@@ -87,7 +87,7 @@ The PyMOL script of `pdb.1HCK.gtest` draws the residue at each site's own column
 `web.pair.hypg` returns status 200 with the report that the command line writes for the same alignments, because the web form now takes its strategies from the same registry as the command line; the reference records status 500.
 `web.pdb.1HCK.gtest` still returns status 500, with `InputError` in place of `AssertionError`.
 Standard error and logs differ in the line numbers that the log format prints, in the wording of the duplicate-sequence message and of the strategy line for `urn` and `phospho`, and in the temporary file names that the web logs show, and tracebacks take Python 3's own form; `tests/data/README.md` lists these and the few differences that come from the bottle and Biopython versions.
-biofrills `ff11246` and `4aa8b57` declare `biopython>=1.86`, so the run with Biopython 1.83 installed biofrills without its dependencies; CladeCompare's own code needs no Biopython newer than 1.83.
+Every biofrills commit that CladeCompare has pinned declares `biopython>=1.86`, so the run with Biopython 1.83 installed biofrills without its dependencies; CladeCompare's own code needs no Biopython newer than 1.83.
 
 ## External aligners: any HMMER 3, and MUSCLE 3 only
 
@@ -107,15 +107,24 @@ No missing program is checked for at the start of a run.
 
 CladeCompare follows the convention of HMMER's a2m output and of MAPGAPS and CHAIN's CMA files: an uppercase residue occupies a match state of the profile, a lowercase residue is an insertion relative to the profile, and `-` is a deletion.
 In a2m, `.` may pad an insert column, but HMMER 3.4 omits it, so the rows of its a2m output differ in length until the lowercase residues are removed.
-The convention is applied in three places.
+biofrills counts `.` as a gap wherever it counts `-`, in the gap threshold of the consensus and in `remove_empty_cols`, as `count_col` in `cladecomparelib/shared.py` and the alignment-wide frequencies already did: on the example pair written with `.` for every gap, every strategy in both modes writes the output of the pair written with `-`, where before biofrills `95c29b6` the 7 columns of `.` alone survived `clean_alignments` and raised m from 242 to 249.
+Three places in `cladecomparelib` apply the convention to an alignment made with a profile.
 For `--hmm`, `hmm_align_and_read` in `cladecomparelib/core.py` drops the lowercase residues of hmmalign's rows, and for a CMA file `cma_blocks` drops those of the aligned part of each sequence line, so in both cases only match columns are compared.
 For `--pdb`, the lowercase residues of the structure's own alignment are kept, because they are residues of the chain.
 `aln_resnums_inserts` numbers each uppercase residue and records each run of lowercase residues as an insert, `get_aln_offset` locates the whole run of residues, inserts included, in the chain sequence, and `choose_best_aligned` ranks the chains by their uppercase residues, although for more than one aligned chain it currently fails with `KeyError` (`tests/data/README.md`).
 
-An alignment read in any other format, through `read_aln` and Biopython's `AlignIO`, keeps its letter case, and nothing applies the convention to it.
+An alignment read in any other format goes through `read_aln` and Biopython's `AlignIO`, and the convention applies to it only where its letter case can mark anything; biofrills' consensus then applies it, as described below.
+An alignment without any uppercase residue, such as the lowercase output of some aligners, marks no inserts: biofrills' consensus reads such an alignment without regard to case, and `uppercase_if_unmarked` in `cladecomparelib/core.py` uppercases it, so that the consensus residue and the residues counted in its column share one case.
+It does so in `read_aln` for each file, so that a lowercase sequence identical to an uppercase one in the other set is purged as a duplicate and the multi-alignment mode can combine a lowercase file with uppercase ones, and again in `process_pair` for each set after `clean_alignments`, which can remove the only uppercase rows of a set.
+Without it, the consensus would be uppercase while the counts and the pseudocounts held lowercase types.
+Measured on the example pair: with the foreground file lowercased, single-alignment urn, phospho and hypg raised `KeyError` and jsd wrote values above 1; with both files lowercased, paired jsd raised `ZeroDivisionError`; and every paired result, apart from gtest on two lowercase files, differed from that of the uppercase files.
+With it, every strategy in both modes, weighted or not, writes the uppercase files' output byte for byte.
+
+An alignment that holds any uppercase residue keeps its letter case.
 Measured on small constructed FASTA pairs: a column holding only lowercase residues and gaps has a gap consensus and is reported with p = 1, but it is still numbered and still counted among the columns of the Benjamini–Hochberg selection.
 Lowercase residues enter the alignment-wide frequencies, and with them the pseudocounts, as types of their own.
 In a column that mixes `c` and `C`, biofrills warns and takes the consensus as if the column were uppercase, while the statistics count `c` and `C` as two types: paired gtest gave 0.809672 for a column that holds only Cys in both sets, where the same column in uppercase gives 1.
+Where the consensus type of such a column occurs nowhere in the alignment in uppercase, single-alignment urn and hypg look it up in the alignment-wide frequencies, which hold it only in lowercase, and raise `KeyError`.
 Two sequences of such an input that differ only in their inserts are not purged as duplicates.
 The a2m output of hmmalign cannot be read as a FASTA alignment through `AlignIO`, because its rows differ in length, but its default Stockholm output, read with `-f stockholm`, can, and Biopython reads its `.` padding as `-`: `test/cdc2-domain.fasta` aligned to `CDK.hmm` then gives 451 columns, 162 of them insert columns, beside the 289 match states.
 Such an alignment is compared with its insert columns in place, which changes the column numbers, the selection threshold and the pseudocounts of every column.
@@ -126,7 +135,7 @@ CladeCompare calls five names from three pure-Python [biofrills](https://github.
 The latest release on PyPI, 0.3.1 from 2013, cannot be installed on a current Python, because its `setup.py` always builds a Cython extension that no longer compiles.
 The biofrills development branch has since removed that extension and been ported to Python 3: it builds as a pure-Python `py3-none-any` wheel for Python 3.12 and later, and all five names import from it on Python 3.12, 3.14 and 3.15.
 The dependency is therefore `biofrills[logo]`, where the `logo` extra supplies WebLogo, which `pairlogo` reaches through `logoutils`.
-Until 0.4.0 is published, `[tool.uv.sources]` takes biofrills from its GitHub repository at a pinned commit, now `4aa8b57`, so that `uv.lock` and `pixi.lock` record exactly which biofrills a result came from; moving to a newer commit is a deliberate change of that pin.
+Until 0.4.0 is published, `[tool.uv.sources]` takes biofrills from its GitHub repository at a pinned commit, now `54c6e70`, so that `uv.lock` and `pixi.lock` record exactly which biofrills a result came from; moving to a newer commit is a deliberate change of that pin.
 A path source to a checkout beside this one was the alternative, but the lock then records only the path, and the checkout may hold unpushed or uncommitted changes.
 The pinned commit's version, `0.4.0.dev0`, sorts below `0.4` under PEP 440, so the floor is declared as `>=0.4.0.dev0`: with `>=0.4`, no installer that checks the floor could install the built wheel before 0.4.0 exists.
 Raise the floor to `0.4.0` with that release.
@@ -144,6 +153,9 @@ The `.out` file prints p-values to six significant digits, so differences of thi
 On the reference cases none did: with `ff11246`, the code of that time reproduced every `.out` file of the reference that does not call SciPy's `hypergeom` exactly.
 Later biofrills releases can move numbers here, for instance through changes to consensus gap decisions or to frequency summation, so judge a biofrills upgrade against the reference outputs like any other change.
 Moving the pin from `ff11246` to `4aa8b57` moved seven weighted outputs and no unweighted one: the weights kept their ratios and changed only their sum, and CladeCompare of that time, run against biofrills `ff11246` with weights rescaled to the new sums, wrote the new outputs byte for byte; it still does for the three of those cases that remain on the `none` scaling and do not run gtest, while `single.gtest.w.a.001` and `pair.gtest.w` have since moved with the G-test and the two `urn` cases with CHAIN's weighting.
+Moving the pin from `4aa8b57` to `54c6e70` moved no reference output.
+The one change in that range that reaches CladeCompare, biofrills `95c29b6`, applies the HMMER and CHAIN case convention in `consensus` and `remove_empty_cols`: both count `.` as a gap, and `consensus` reads an alignment without uppercase residues regardless of case, which `uppercase_if_unmarked` now matches (see "Letter case").
+`sequence_weights`, `aa_frequencies` and `aln2logodata` are unchanged and still count `a` and `A` as different types; the other commits in the range change pairwise identity and command-line tools and remove `biofrills.stats`, none of which CladeCompare calls.
 
 gtest takes the upper tail of the chi-squared distribution from `scipy.stats.chi2.sf`.
 Until October 2026 it called `chisqprob` from biofrills, adapted from Cephes to avoid a SciPy dependency, whose convergence tolerance `MACHEP = 1e-7` leaves a relative error of up to 3.6e-7 at 1 degree of freedom and 4.1e-8 at 19, enough to change the sixth significant digit of a printed p-value and the ranking that the Benjamini–Hochberg selection depends on.
@@ -152,7 +164,7 @@ On the reference cases the change moved one value, with the paired test of that 
 ## Packaging and the two development workflows
 
 `pyproject.toml` is the only build configuration, with setuptools as the backend.
-The floors of biopython, bottle, reportlab and scipy are the versions Ubuntu 26.04 ships; biopython's floor is also the one that biofrills `ff11246` and `4aa8b57` declare, although CladeCompare's own code needs no Biopython newer than 1.83.
+The floors of biopython, bottle, reportlab and scipy are the versions Ubuntu 26.04 ships; biopython's floor is also the one that every biofrills commit CladeCompare has pinned declares, although CladeCompare's own code needs no Biopython newer than 1.83.
 The pair-logo font, DejaVu Sans Mono Bold 2.33, ships as package data in `cladecomparelib/data/` together with its license, which is the reason the license expression names `Bitstream-Vera`.
 `pairlogo` loads that copy unconditionally; it consults no system font directory and has no fallback font, so every installation draws the logos with the same font and line height.
 

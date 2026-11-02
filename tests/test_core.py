@@ -124,13 +124,19 @@ def test_clean_forgets_sequences_between_calls():
     assert rows(second[0]) == [("a", "ACDE")]
 
 
-def test_clean_drops_columns_that_are_gaps_in_both_sets():
-    # Column 2 is a gap everywhere; column 4 only in the foreground.
+@pytest.mark.parametrize("gap", ["-", "."])
+def test_clean_drops_columns_that_are_gaps_in_both_sets(gap):
+    # Column 2 is a gap everywhere; column 4 only in the foreground. '.', the
+    # gap of an insert column, counts as a gap as '-' does.
+    def with_gap(*rows_):
+        return [(id_, seq.replace("-", gap)) for id_, seq in rows_]
+
     fg, bg = core.clean_alignments(
-        aln(("a", "A-C-E"), ("b", "A-D-E")), aln(("c", "A-CGE"), ("d", "K-D-E"))
+        aln(*with_gap(("a", "A-C-E"), ("b", "A-D-E"))),
+        aln(*with_gap(("c", "A-CGE"), ("d", "K-D-E"))),
     )
-    assert rows(fg) == [("a", "AC-E"), ("b", "AD-E")]
-    assert rows(bg) == [("c", "ACGE"), ("d", "KD-E")]
+    assert rows(fg) == with_gap(("a", "AC-E"), ("b", "AD-E"))
+    assert rows(bg) == with_gap(("c", "ACGE"), ("d", "KD-E"))
 
 
 def test_clean_keeps_profile_columns_that_are_gaps_in_both_sets():
@@ -158,6 +164,80 @@ def test_clean_keeps_profile_columns_that_are_gaps_in_both_sets():
 def test_clean_rejects_empty_sets(fg, bg, message):
     with pytest.raises(InputError, match=message):
         core.clean_alignments(aln(*fg), aln(*bg))
+
+
+# --- Letter case ---
+
+
+def write_fasta(path, rows_):
+    path.write_text("".join(f">{id_}\n{seq}\n" for id_, seq in rows_))
+    return str(path)
+
+
+def lowercased(src, dest):
+    """Copy a FASTA alignment with its sequence lines in lowercase."""
+    lines = Path(src).read_text().splitlines()
+    dest.write_text(
+        "".join((ln if ln.startswith(">") else ln.lower()) + "\n" for ln in lines)
+    )
+    return str(dest)
+
+
+@pytest.mark.parametrize("strategy", sorted(core.STRATEGIES))
+def test_alignment_without_uppercase_gives_the_results_of_uppercase(tmp_path, strategy):
+    """A wholly lowercase file marks no inserts, so it is compared as aligned,
+    alone and against an uppercase background."""
+    module = core.STRATEGIES[strategy][1]
+    fg = str(INPUTS / "scttlre-domain.aln.fasta")
+    bg = str(INPUTS / "cdc2-domain.aln.fasta")
+    fg_lower = lowercased(fg, tmp_path / "fg.fasta")
+
+    _, expected = core.process_one(core.read_aln(fg, "fasta"), module, False)
+    _, hits = core.process_one(core.read_aln(fg_lower, "fasta"), module, False)
+    assert hits == expected
+
+    *_, expected = core.process_pair(
+        core.read_aln(fg, "fasta"), core.read_aln(bg, "fasta"), module, False
+    )
+    *_, hits = core.process_pair(
+        core.read_aln(fg_lower, "fasta"), core.read_aln(bg, "fasta"), module, False
+    )
+    assert hits == expected
+
+
+def test_lowercase_copy_of_a_foreground_sequence_is_purged(tmp_path):
+    fg = write_fasta(tmp_path / "fg.fasta", [("a", "ACDE"), ("b", "ACDF")])
+    bg = write_fasta(tmp_path / "bg.fasta", [("x", "acdf"), ("y", "kcdh")])
+    _, bg_clean = core.clean_alignments(
+        core.read_aln(fg, "fasta"), core.read_aln(bg, "fasta")
+    )
+    assert rows(bg_clean) == [("y", "KCDH")]
+
+
+@pytest.mark.parametrize("strategy", sorted(core.STRATEGIES))
+def test_set_left_without_uppercase_is_compared_as_aligned(strategy):
+    """The background's only uppercase row duplicates a foreground ID and is
+    removed, so its other rows no longer mark anything by case."""
+    module = core.STRATEGIES[strategy][1]
+    fg = [("a", "SCDEF"), ("b", "SCDEW"), ("c", "TCDEF")]
+    bg = [("x", "scdkf"), ("y", "gcdew"), ("z", "acdkf")]
+    *_, expected = core.process_pair(
+        aln(*fg), aln(*[(id_, seq.upper()) for id_, seq in bg]), module, False
+    )
+    *_, hits = core.process_pair(aln(*fg), aln(("a", "SCDEF"), *bg), module, False)
+    assert hits == expected
+
+
+def test_lowercase_beside_uppercase_marks_an_insert_column(tmp_path):
+    """A file with uppercase residues keeps its case, and a column of
+    lowercase residues alone is an insert column, reported with p = 1."""
+    fname = write_fasta(
+        tmp_path / "aln.fasta", [("a", "SCdEF"), ("b", "SCeEW"), ("c", "TC-EF")]
+    )
+    alignment = core.read_aln(fname, "fasta")
+    assert rows(alignment)[0] == ("a", "SCdEF")
+    _, hits = core.process_one(alignment, core.STRATEGIES["urn"][1], False)
+    assert hits[2] == ("-", "_", 1.0)
 
 
 # --- top_hits ---

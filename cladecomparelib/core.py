@@ -185,6 +185,11 @@ def process_pair(fg_aln, bg_aln, module, do_weight, profile_aligned=False):
         for each column position.
     """
     fg_aln, bg_aln = clean_alignments(fg_aln, bg_aln, profile_aligned)
+    # Removing sequences can leave a set with no uppercase residue. The
+    # consensus of biofrills reads such a set without regard to case, so the
+    # counts must as well.
+    fg_aln = uppercase_if_unmarked(fg_aln)
+    bg_aln = uppercase_if_unmarked(bg_aln)
     fg_scaling, bg_scaling = weight_scalings(module, do_weight)
     fg_weights = sequence_weights(fg_aln, fg_scaling)
     bg_weights = sequence_weights(bg_aln, bg_scaling)
@@ -459,6 +464,21 @@ def cma_blocks(cma_fname):
     )
 
 
+def uppercase_if_unmarked(aln):
+    """Uppercase an alignment in which letter case marks nothing.
+
+    In the convention of HMMER and CHAIN, a lowercase residue is an insertion,
+    but only in an alignment that also holds uppercase residues. An alignment
+    without any uppercase residue, such as the lowercase output of some
+    aligners, is therefore read without regard to case, as biofrills'
+    consensus reads it, so that the consensus residue and the residues counted
+    in its column share one case. Any other alignment is returned unchanged.
+    """
+    if any(str(rec.seq) != str(rec.seq).lower() for rec in aln):
+        return aln
+    return MultipleSeqAlignment([rec.upper() for rec in aln])
+
+
 def read_aln(fname, format):
     """Read a sequence alignment."""
     if fname.endswith(".cma") or format == "cma":
@@ -467,7 +487,7 @@ def read_aln(fname, format):
         aln = AlignIO.read(fname, format)
         for rec in aln:
             rec.description = ""
-        return aln
+        return uppercase_if_unmarked(aln)
 
 
 # The program name and version at the start of `muscle -version`, e.g.

@@ -162,6 +162,18 @@ def test_phospho_column_without_ser_thr_tyr_is_not_significant():
     assert phospho.compare_one(col, "D", 5.0, ones(col), FREQS, PSEUDO) == 1.0
 
 
+def test_phospho_single_counts_an_absent_ser_thr_tyr_type_as_frequency_zero():
+    """The alignment-wide frequencies have no entry for an absent type."""
+    col = "DDDEE"
+    freqs = {"A": 0.5, "D": 0.3, "E": 0.2}
+    assert phospho.compare_one(col, "D", 5.0, ones(col), freqs, PSEUDO) == 1.0
+    col = "TTEEE"
+    freqs = {"E": 0.5, "T": 0.3, "Y": 0.2}
+    assert phospho.compare_one(
+        col, "T", 5.0, ones(col), freqs, PSEUDO
+    ) == pytest.approx(binom_tail(2, 5, 0.5), rel=1e-12)
+
+
 # --- jsd ---
 
 

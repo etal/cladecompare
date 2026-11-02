@@ -184,8 +184,13 @@ The tests inherit `PYTHONPATH`, so they import a checkout on that path.
   `hmm.pair.gtest` and `pdb.1HCK.gtest` write the same `.out` file: the median falls from 0.0411 to 0.00905, the smallest p-value rises from 5.38e-32 to 1.13e-11, 135 columns instead of 124 are below 0.005 of 289, and the pattern keeps 33 of its 50 sites, which changes the residues of `1HCK.pdb.pml`.
   In `multi.gtest`, `cdc2-a.aln.fasta` and `cdc2-b.aln.fasta`, each compared with the other two alignments together, have 37 and 39 columns below 0.005 where they had 68 and 76, and smallest p-values of 4.87e-06 and 1.16e-05 where they had 1.58e-16 and 2.31e-15; their patterns fall from 50 sites to the 2 that the Benjamini-Hochberg procedure accepts, T168 and H148 for `cdc2-a`, and N238 and P87 for `cdc2-b`, each of them recorded.
   The pattern of `pair.gtest.w` remains empty, as it has been since the change of weight scale; its smallest p-value, 9.14e-07 in the reference and 0.0744 after that change, is now 0.0165.
+- **The PyMOL residues** (`pdb.1HCK.gtest`).
+  The reference draws the residue of the column after each site (see "Recorded defects").
+  The code now draws the residue at the site's own column, which moves all 50 residues of `1HCK.pdb.pml` and no other file: the site L147 is drawn as F146 where it was G147, C165 as V164 where it was T165, and S2 as Q5 where it was K6.
+  1HCK is human CDK2, a member of the background family, and the residue drawn now equals the background consensus of its column at 40 of the 50 sites, where it did at 2.
+  The sites D34 and N37 fall on residues 37 and 40, which the structure does not resolve, so they select no atoms, as `X38` did in the reference.
 
-Every unweighted case, including those that run hmmalign and MUSCLE, reproduces the reference as before, apart from the phospho cases, which fail in the reference, and the G-test cases above.
+Every unweighted case, including those that run hmmalign and MUSCLE, reproduces the reference as before, apart from the phospho cases, which fail in the reference, the G-test cases above, and the PyMOL script of `pdb.1HCK.gtest`.
 
 ## Recorded defects
 
@@ -200,6 +205,9 @@ A port that fixes one of them differs from the reference by design, and the test
   phospho left the foreground unweighted when it was added on 2013-05-21, until the refactor of the strategy modules dropped that rule on 2013-06-03.
   Weighting both sets with the `none` scaling instead reduced the 11 foreground sequences of `pair.phospho.w` to a sample size of 2.117, which phospho rounded up to 3 and to 4 binomial trials, so that with the legacy pseudocounts no p-value fell below 0.0237, where, with the same pseudocounts, the unweighted foreground gave 4.94e-06.
 - `pdb.1FIN-AB-CA.gtest` fails with `KeyError` in `choose_best_aligned`, which indexes the aligned chains with a (key, value) pair whenever more than one chain aligns to the profile, so every multi-chain structure fails.
+- `make_residues` in `pmlscript` looks up each site's column number, counted from 1, in the list of aligned residues, which is indexed from 0, so the PyMOL script of `pdb.1HCK.gtest` draws the residue of the following column: the site C165 as T165, and D34 as the unresolved residue X38.
+  A significant last column raises `IndexError`, and a site whose following column is a deletion in the structure writes `resi None`, as the reference does for I93 and K254.
+  The code now draws the residue at the site's own column, and logs and leaves out a site whose column is a deletion in the structure, so this case differs from the reference by design, as "The PyMOL residues" under "Regenerated outputs in `current/`" describes.
 - `multi.gtest` writes its three `.out` and `.pttrn` pairs, but `cladereport.py` on more than one `.out` file fails with `ValueError` in `report.table_multi`.
 - `web.pair.hypg` returns status 500 with `KeyError`: the web application's strategy table lacks hypg.
   The form and the web application now take their strategies from the same registry as the command line, so this case differs from the reference by design: it returns status 200, and its report equals `cli/pair.hypg/pair.hypg.html`, with the same SciPy substitutions, apart from the title.
@@ -235,7 +243,7 @@ A port that fixes one of them differs from the reference by design, and the test
   The ported CladeCompare runs against the ported biofrills rather than `36684bb`.
   On the alignments that the biofrills section of `AGENTS.md` lists as measured, the values biofrills returns to CladeCompare are identical or differ by at most a few units in the last place.
   End to end, with `ff11246` and the code of that time, every output file of every command-line case and the response of every successful web submission reproduced this reference, including `multi.gtest` and the cases that align with hmmalign and MUSCLE, under HMMER 3.0 and 3.4 alike, apart from the SciPy and hypg differences above, the deliberate changes to `-s phospho`, `unequal.gtest`, `web.pair.hypg` and `web.pdb.1HCK.gtest` under "Recorded defects", and the differences listed under "Python 3, bottle and Biopython" below.
-  With `4aa8b57`, the commit now pinned, the same holds for every unweighted case, measured with HMMER 3.4, and the seven weighted cases listed under "Scale of the sequence weights" and "CHAIN's weighting in urn" above differ as those items describe; the G-test cases have since moved as "The G-test" describes.
+  With `4aa8b57`, the commit now pinned, the same holds for every unweighted case, measured with HMMER 3.4, and the seven weighted cases listed under "Scale of the sequence weights" and "CHAIN's weighting in urn" above differ as those items describe; the G-test cases have since moved as "The G-test" describes, and the PyMOL script of `pdb.1HCK.gtest` as "The PyMOL residues" describes.
 - **Raw p-values.**
   The `.out` files hold unadjusted p-values, and their stars compare those raw values with alpha.
   The Benjamini-Hochberg procedure, limited to the 50 most significant sites, only selects the sites in the `.pttrn` file, which also name the pair logos and the PyMOL script.

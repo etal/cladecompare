@@ -5,16 +5,21 @@ module), not using the pymol API directly. You generate the script, then you
 load the script in PyMOL and the pretty happens.
 """
 
+import logging
 import os.path
 
 from . import InputError
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------
 # Mapping pattern to PDB sequence alignment
 
 # The builders below take a mapping of alignment columns to PDB residue
 # numbers and a list of insert ranges, both computed by
-# core.aln_resnums_inserts.
+# core.aln_resnums_inserts. build_multi receives a tuple of each, one per
+# structure, and passes the tuples on unchanged, so it fails with more than
+# one structure.
 
 
 # ---------------------------------------------------------
@@ -110,9 +115,23 @@ def make_inserts(inserts, pml_name, chain, color):
 
 
 def make_residues(mapping, patterns, pml_name, chain):
-    """Build residues in PyMOL for the simple cases."""
+    """Draw the structure's residue at each significant column.
+
+    `mapping` is a list with one (residue type, residue number) pair per
+    match state of the profile, in order, as core.aln_resnums_inserts
+    returns it. Each site in `patterns` is an alignment column number counted
+    from 1, so site N is entry N - 1. A site whose match state is a deletion
+    in the structure has no residue to draw; it is logged and left out.
+    """
     for posn in patterns:
-        restype, resid = mapping[posn]
+        restype, resid = mapping[posn - 1]
+        if resid is None:
+            logger.warning(
+                "Column %d is a deletion in chain %s; no residue to show",
+                posn,
+                chain,
+            )
+            continue
         yield mk_residue(pml_name, resid, restype, chain, mol=pml_name, color="magenta")
 
 

@@ -594,6 +594,7 @@ def top_hits(hits, alpha, N=50):
 
     Return a list of triplets, sorted by significance:
         (position, fg_aa, bg_aa)
+    where position is the column number, counted from 1.
     """
     hit_quads = [
         (i + 1, faa_baa_pval[0], faa_baa_pval[1], faa_baa_pval[2])

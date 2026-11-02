@@ -110,7 +110,9 @@ RETURNCODES = {
 # column total, and the paired gtest cases because paired gtest is now the
 # G-test of homogeneity ("The G-test" in tests/data/README.md);
 # single.gtest.w.a.001 and pair.gtest.w moved for that reason and with the
-# weights.
+# weights. The PyMOL script of pdb.1HCK.gtest also moved, because it now draws
+# the residue at each site's own column rather than at the following one ("The
+# PyMOL residues" in tests/data/README.md).
 REGENERATED = {
     "hmm.pair.gtest",
     "hmm.single.gtest",

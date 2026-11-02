@@ -207,7 +207,9 @@ The script is written to the structure's file name with ``.pml`` added
 (here ``1HCK.pdb.pml``), or to the file that ``--pmlout`` names. The file
 name of the structure must give its PDB ID, as in ``1abc.pdb``,
 ``1abcA.pdb``, ``1abc_A.pdb`` or ``pdb1abc.ent``. Without a profile, the
-comparison runs and an error is logged, but no script is written. Two
+comparison runs and an error is logged, but no script is written. A
+significant column that is a deletion in the structure has no residue to
+draw; it is named in a warning and left out of the script. Two
 limitations apply in this release: a file holding more than one protein
 chain, such as a kinase in complex with a cyclin, stops the run with an
 error, so keep only the chain of interest in the file; and ``--pdb`` given

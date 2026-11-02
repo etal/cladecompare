@@ -195,7 +195,7 @@ def compare_submission(tmpdir):
         pdb_rec, pdb_resnums, pdb_inserts = core.pdb_hmm(profname, pdbfname)
         pdb_data = [(pdbfname, pdb_rec, pdb_resnums, pdb_inserts)]
     else:
-        pdb_data = None
+        pdb_data = []
 
     _description, stat_module = core.STRATEGIES[bottle.request.forms.strategy]
     try:
@@ -212,7 +212,7 @@ def compare_submission(tmpdir):
     if seq2fname:
         # Pair mode
         fg_clean, bg_clean, hits = core.process_pair(
-            fg_aln, bg_aln, stat_module, do_weight
+            fg_aln, bg_aln, stat_module, do_weight, bool(profname)
         )
         core.process_output(
             fg_clean, bg_clean, hits, alpha, tmp_output, tmp_pattern, pdb_data

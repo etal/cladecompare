@@ -175,14 +175,16 @@ Aligning sequences to a profile
 Unaligned sequences in FASTA format can be aligned when the comparison
 runs. With ``--hmm``, each set of sequences is aligned to a profile HMM with
 ``hmmalign``, and only the columns of the profile's match states are kept,
-so the two sets share their columns::
+so the two sets share their columns, and column N of the output is match
+state N of the profile, even where no sequence of either set occupies it::
 
     cladecompare test/scttlre-domain.fasta test/cdc2-domain.fasta \
         --hmm test/CDK.hmm -o scttlre-v-cdc2.out
 
 With ``--mapgaps``, each set is aligned with MAPGAPS' ``run_gaps``, which
 writes its alignment beside the input file, named after it with
-``_aln.cma`` added; the profile is named without its file extension::
+``_aln.cma`` added; the profile is named without its file extension, and,
+as with ``--hmm``, column N of the output is match state N::
 
     cladecompare fg.fasta bg.fasta --mapgaps path/to/profile -o fg-v-bg.out
 
@@ -342,11 +344,15 @@ Before comparing a foreground with a background, CladeCompare removes from
 the background every sequence whose ID also occurs in the foreground, removes
 repeated identical sequences (a background sequence identical to a foreground
 sequence is removed from the background), aligns the two sets to each other
-with MUSCLE if they differ in width, and drops the columns in which every
+with MUSCLE if they differ in width, and, unless the sets were aligned to a
+profile with ``--hmm`` or ``--mapgaps``, drops the columns in which every
 sequence of both sets has the gap character ``-``. The column numbers of the
 ``.out`` and pattern files, and of the pair logos, refer to this cleaned
-alignment; the PyMOL script maps them to residues through the structure's own
-alignment to the profile.
+alignment. With a profile, every match state keeps its column, so the PyMOL
+script maps each column to the residue that the structure's own alignment to
+the profile places in the same match state; a structure aligned to a
+different number of match states stops the run with an error before any
+output is written.
 
 Counts, weights and pseudocounts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -573,9 +579,10 @@ The ``.out`` file holds each column's value as computed above, unadjusted.
 The pattern file, the pair logos and the residues highlighted in the PyMOL
 script come from the Benjamini-Hochberg step-up procedure (Benjamini &
 Hochberg 1995) at a false discovery rate of alpha, over all columns of the
-cleaned alignment, including the untested columns with p = 1. The step-up
-search examines only the 50 most significant columns, so at most 50 columns
-are selected, and where the full procedure would accept more than 50, the
+cleaned alignment, including the untested columns with p = 1, among them
+any match state of a profile that neither set occupies. The step-up search
+examines only the 50 most significant columns, so at most 50 columns are
+selected, and where the full procedure would accept more than 50, the
 selection can hold fewer than 50. On the example pair at the default alpha,
 without ``-w``, gtest, urn and hypg accept 102, 67 and 104 columns, and
 each of their pattern files lists 50.

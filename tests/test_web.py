@@ -30,6 +30,7 @@ from wsgiref.simple_server import WSGIRequestHandler
 import bottle
 import pytest
 from test_cli_cases import expected_text, reference_text
+from test_core import aln
 
 import cladecomparelib.cladeweb  # registers the routes
 from cladecomparelib import core, report
@@ -230,6 +231,25 @@ def test_weighted_submission_matches_the_command_line(tmp_path, monkeypatch):
     _workdir, _tmpdir, status, response, errors = submit(record, tmp_path, monkeypatch)
     assert status == "200 OK", errors
     assert response == cli_report("pair.gtest.w", "web-pair-gtest")
+
+
+def test_profile_submission_keeps_unoccupied_match_states(tmp_path, monkeypatch):
+    """With a profile, a match state that no sequence occupies keeps its
+    column, as on the command line."""
+    aligned = [
+        aln(("a", "A-WWK"), ("b", "C-WWK")),
+        aln(("x", "E-GGK"), ("y", "F-GGK")),
+    ]
+    monkeypatch.setattr(core, "hmm_align_and_read", lambda *_args: aligned.pop(0))
+    monkeypatch.setattr(
+        report, "do_single", lambda out, _pattern: (None, Path(out).read_text())
+    )
+    _workdir, _tmpdir, status, response, errors = submit(
+        load("web.hmm.pair.gtest"), tmp_path, monkeypatch
+    )
+    assert status == "200 OK", errors
+    assert b"- (-) 2 : prob=1\t\n" in response
+    assert b" 5 : prob=" in response
 
 
 def test_submission_name_is_escaped(tmp_path, monkeypatch):

@@ -1,5 +1,7 @@
-"""Tests of the input, cleaning and site-selection functions in core."""
+"""Tests of the input, cleaning, site-selection and output functions in core."""
 
+import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -131,6 +133,17 @@ def test_clean_drops_columns_that_are_gaps_in_both_sets():
     assert rows(bg) == [("c", "ACGE"), ("d", "KD-E")]
 
 
+def test_clean_keeps_profile_columns_that_are_gaps_in_both_sets():
+    # Under a profile each column is a match state, occupied or not.
+    fg, bg = core.clean_alignments(
+        aln(("a", "A-C-E"), ("b", "A-D-E")),
+        aln(("c", "A-CGE"), ("d", "K-D-E")),
+        profile_aligned=True,
+    )
+    assert rows(fg) == [("a", "A-C-E"), ("b", "A-D-E")]
+    assert rows(bg) == [("c", "A-CGE"), ("d", "K-D-E")]
+
+
 @pytest.mark.parametrize(
     "fg, bg, message",
     [
@@ -259,6 +272,99 @@ def test_pdb_ref_resnums_names_the_chain_it_cannot_place():
     chain = SeqRecord(Seq("ACDACD"), id="1XYZ:A", annotations={"start": 1})
     with pytest.raises(InputError, match=r"chain 1XYZ:A .*more than one place"):
         core.pdb_ref_resnums({"1XYZ:A": "ACD"}, [chain])
+
+
+# --- Profile-aligned runs ---
+
+# Five match states of a profile, aligned as by --hmm or --mapgaps. State 2
+# is a gap in every sequence of every set, and states 3 and 4 hold W in the
+# first set and G in the others.
+PROFILE_ALIGNED = {
+    "fg.fasta": [("a", "A-WWK"), ("b", "C-WWK"), ("c", "D-WWK")],
+    "bg.fasta": [("x", "E-GGK"), ("y", "F-GGK"), ("z", "H-GGK")],
+    "bg2.fasta": [("p", "I-GGK"), ("q", "L-GGK"), ("r", "M-GGK")],
+}
+# The structure's residue at each of the five match states.
+STRUCTURE = [("M", 10), ("N", 11), ("P", 12), ("Q", 13), ("R", 14)]
+
+
+def profile_run(tmp_path, monkeypatch, option, background):
+    """Run cladecompare with a profile and a structure on the sets above."""
+    chain = SeqRecord(Seq("MNPQR"), id="1abc:A", annotations={"chain": "A"})
+    monkeypatch.setattr(
+        core,
+        "%s_align_and_read" % option,
+        lambda _profile, name: aln(*PROFILE_ALIGNED[name]),
+    )
+    monkeypatch.setattr(
+        core, "pdb_%s" % option, lambda _profile, _pdb: (chain, STRUCTURE, [])
+    )
+    monkeypatch.chdir(tmp_path)
+    core.process_args(
+        argparse.Namespace(
+            foreground="fg.fasta",
+            background=background,
+            format="fasta",
+            hmm="x.hmm" if option == "hmm" else None,
+            mapgaps="x" if option == "mapgaps" else None,
+            pdb=["1abc.pdb"],
+            strategy="gtest",
+            weight=False,
+            alpha=0.05,
+            output="x.out",
+            pattern="x.pttrn",
+            pmlout=None,
+        )
+    )
+
+
+def column_labels(out_file):
+    # Column 1 holds three residue types in each set, so its consensus
+    # depends on how biofrills breaks the tie; only its number is checked.
+    columns = out_file.read_text().splitlines()
+    assert columns[0].split(" : ")[0].endswith(" 1")
+    return [line.split(" : ")[0] for line in columns[1:]]
+
+
+@pytest.mark.parametrize("option", ["hmm", "mapgaps"])
+def test_profile_run_numbers_columns_by_match_state(tmp_path, monkeypatch, option):
+    """A match state that no sequence occupies keeps its column, so each site
+    draws the structure's residue at its own match state."""
+    profile_run(tmp_path, monkeypatch, option, ["bg.fasta"])
+    assert column_labels(tmp_path / "x.out") == [
+        "- (-) 2",
+        "W (G) 3",
+        "W (G) 4",
+        "K (K) 5",
+    ]
+    sites = (tmp_path / "x.pttrn").read_text().strip().split(":")[1].split(",")
+    assert sorted(sites) == ["W3", "W4"]
+    script = (tmp_path / "1abc.pdb.pml").read_text()
+    drawn = re.findall(r"^create (\w+)-1abcA", script, re.MULTILINE)
+    assert sorted(drawn) == ["P12", "Q13"]
+
+
+def test_profile_run_of_three_sets_numbers_columns_by_match_state(
+    tmp_path, monkeypatch
+):
+    """Each set compared with the other two keeps every match state."""
+    background = ["bg.fasta", "bg2.fasta"]
+    profile_run(tmp_path, monkeypatch, "hmm", background)
+    for name in ["fg.fasta"] + background:
+        labels = column_labels(tmp_path / (name + ".out"))
+        assert len(labels) == 4
+        assert labels[0] == "- (-) 2"
+
+
+def test_process_output_rejects_a_structure_of_another_width(tmp_path):
+    """Sites that cannot name match states stop the run before any output."""
+    chain = SeqRecord(Seq("MNPQ"), id="1abc:A", annotations={"chain": "A"})
+    hits = [("W", "G", 1e-6)] * 5
+    pdb_data = [("1abc.pdb", chain, STRUCTURE[:4], [])]
+    output = tmp_path / "x.out"
+    with pytest.raises(InputError, match="1abc.pdb is aligned to 4 match states"):
+        core.process_output(None, None, hits, 0.05, str(output), None, pdb_data)
+    assert not output.exists()
 
 
 # --- External programs ---

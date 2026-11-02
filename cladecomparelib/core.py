@@ -75,7 +75,8 @@ def parse_alpha(text):
 
 def process_args(args):
     """Main."""
-    if (args.mapgaps or args.hmm) and args.format != "fasta":
+    profile_aligned = bool(args.hmm or args.mapgaps)
+    if profile_aligned and args.format != "fasta":
         # run_gaps requires FASTA input
         raise InputError("Sequences to align with a profile must be in FASTA format.")
 
@@ -127,7 +128,7 @@ def process_args(args):
         )
     elif len(all_alns) == 2:
         fg_clean, bg_clean, hits = process_pair(
-            all_alns[0], all_alns[1], module, args.weight
+            all_alns[0], all_alns[1], module, args.weight, profile_aligned
         )
         process_output(
             fg_clean,
@@ -157,7 +158,7 @@ def process_args(args):
             for otra in _other_alns[1:]:
                 bg_aln.extend(deepcopy(otra))
             fg_clean, bg_clean, hits = process_pair(
-                deepcopy(fg_aln), bg_aln, module, args.weight
+                deepcopy(fg_aln), bg_aln, module, args.weight, profile_aligned
             )
             outfname, ptnfname = outfnames_ptnfnames[idx]
             process_output(
@@ -173,14 +174,17 @@ def process_args(args):
             logger.info("Wrote %s and %s", outfname, ptnfname)
 
 
-def process_pair(fg_aln, bg_aln, module, do_weight):
+def process_pair(fg_aln, bg_aln, module, do_weight, profile_aligned=False):
     """Calculate a mapping of alignment column positions to "contrast".
+
+    With profile_aligned, both sets were aligned to one profile, and each
+    column, occupied or not, is a match state.
 
     Return a list of tuples:
         (foreground consensus aa, background consensus aa, p-value)
         for each column position.
     """
-    fg_aln, bg_aln = clean_alignments(fg_aln, bg_aln)
+    fg_aln, bg_aln = clean_alignments(fg_aln, bg_aln, profile_aligned)
     fg_scaling, bg_scaling = weight_scalings(module, do_weight)
     fg_weights = sequence_weights(fg_aln, fg_scaling)
     bg_weights = sequence_weights(bg_aln, bg_scaling)
@@ -253,6 +257,15 @@ def process_output(
     fg_aln, bg_aln, hits, alpha, output, pattern, pdb_data, pml_output=None
 ):
     """Generate the output files from the processed data."""
+    # A structure's residues are listed per match state of the profile, and
+    # sites number the columns, so the two must count the same positions.
+    for pdb_fname, _rec, pdb_resnums, _inserts in pdb_data:
+        if len(pdb_resnums) != len(hits):
+            raise InputError(
+                "%s is aligned to %d match states of the profile, but the "
+                "compared alignment has %d columns"
+                % (pdb_fname, len(pdb_resnums), len(hits))
+            )
     with as_handle(output, "w+") as outfile:
         write_pvalues(hits, outfile, alpha)
     tophits = top_hits(hits, alpha)
@@ -496,12 +509,13 @@ def combine_alignments(fg_aln, bg_aln):
     return full_aln
 
 
-def clean_alignments(fg_aln, bg_aln):
+def clean_alignments(fg_aln, bg_aln, profile_aligned=False):
     """Fix simple issues in the alignments:
 
     - Remove duplicated sequences and IDs from the background
     - Ensure alignments are the same width (if not, align to each other)
-    - Remove all-gap columns from the full alignment
+    - Remove all-gap columns from the full alignment, unless both sets were
+      aligned to a profile, so that each column stays one match state
     """
     if not len(fg_aln):
         raise InputError("Foreground set is empty")
@@ -566,14 +580,15 @@ def clean_alignments(fg_aln, bg_aln):
         full_aln = deepcopy(fg_aln)
         full_aln.extend(bg_aln)
 
-    # Remove columns that are all gaps in both fg and bg (full_aln)
-    seqstrs = [str(rec.seq) for rec in full_aln]
-    clean_cols = [
-        col for col in zip(*seqstrs, strict=True) if not all(c == "-" for c in col)
-    ]
-    clean_seqs = ["".join(row) for row in zip(*clean_cols, strict=True)]
-    for rec, clean_seq in zip(full_aln, clean_seqs, strict=True):
-        rec.seq = Seq(clean_seq)
+    if not profile_aligned:
+        # Remove columns that are all gaps in both fg and bg (full_aln)
+        seqstrs = [str(rec.seq) for rec in full_aln]
+        clean_cols = [
+            col for col in zip(*seqstrs, strict=True) if not all(c == "-" for c in col)
+        ]
+        clean_seqs = ["".join(row) for row in zip(*clean_cols, strict=True)]
+        for rec, clean_seq in zip(full_aln, clean_seqs, strict=True):
+            rec.seq = Seq(clean_seq)
 
     # Split the full alignment back into FG and BG sets
     fg_labels = set([seq.id for seq in fg_aln])

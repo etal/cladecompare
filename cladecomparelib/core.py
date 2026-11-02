@@ -581,14 +581,7 @@ def clean_alignments(fg_aln, bg_aln, profile_aligned=False):
         full_aln.extend(bg_aln)
 
     if not profile_aligned:
-        # Remove columns that are all gaps in both fg and bg (full_aln)
-        seqstrs = [str(rec.seq) for rec in full_aln]
-        clean_cols = [
-            col for col in zip(*seqstrs, strict=True) if not all(c == "-" for c in col)
-        ]
-        clean_seqs = ["".join(row) for row in zip(*clean_cols, strict=True)]
-        for rec, clean_seq in zip(full_aln, clean_seqs, strict=True):
-            rec.seq = Seq(clean_seq)
+        full_aln = list(alnutils.remove_empty_cols(full_aln))
 
     # Split the full alignment back into FG and BG sets
     fg_labels = set([seq.id for seq in fg_aln])

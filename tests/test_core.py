@@ -240,6 +240,27 @@ def test_lowercase_beside_uppercase_marks_an_insert_column(tmp_path):
     assert hits[2] == ("-", "_", 1.0)
 
 
+@pytest.mark.parametrize("weight", [False, True])
+@pytest.mark.parametrize("strategy", sorted(core.STRATEGIES))
+def test_mixed_case_column_gives_the_results_of_uppercase(strategy, weight):
+    """A column that mixes cases is counted as uppercase, as its consensus is
+    read. K occurs nowhere else in the foreground in uppercase; the c in
+    column 2 moves the sequence weights unless it is uppercased first; and in
+    column 6 the stop, *, is the aligned character beside lowercase s."""
+    module = core.STRATEGIES[strategy][1]
+    fg = [("a", "kCDEFs"), ("b", "kcDEWs"), ("c", "ACsEF*"), ("d", "SCDEFs")]
+    bg = [("x", "GCDKFS"), ("y", "ACDEWA"), ("z", "TCDKFS")]
+    fg_upper = [(id_, seq.upper()) for id_, seq in fg]
+
+    _, expected = core.process_one(aln(*fg_upper), module, weight)
+    _, hits = core.process_one(aln(*fg), module, weight)
+    assert hits == expected
+
+    *_, expected = core.process_pair(aln(*fg_upper), aln(*bg), module, weight)
+    *_, hits = core.process_pair(aln(*fg), aln(*bg), module, weight)
+    assert hits == expected
+
+
 # --- top_hits ---
 
 

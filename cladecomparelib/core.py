@@ -186,10 +186,10 @@ def process_pair(fg_aln, bg_aln, module, do_weight, profile_aligned=False):
     """
     fg_aln, bg_aln = clean_alignments(fg_aln, bg_aln, profile_aligned)
     # Removing sequences can leave a set with no uppercase residue. The
-    # consensus of biofrills reads such a set without regard to case, so the
-    # counts must as well.
-    fg_aln = uppercase_if_unmarked(fg_aln)
-    bg_aln = uppercase_if_unmarked(bg_aln)
+    # consensus of biofrills reads such a set without regard to case, and it
+    # reads a column that mixes cases as uppercase; the counts must do both.
+    fg_aln = uppercase_mixed_columns(uppercase_if_unmarked(fg_aln), "foreground")
+    bg_aln = uppercase_mixed_columns(uppercase_if_unmarked(bg_aln), "background")
     fg_scaling, bg_scaling = weight_scalings(module, do_weight)
     fg_weights = sequence_weights(fg_aln, fg_scaling)
     bg_weights = sequence_weights(bg_aln, bg_scaling)
@@ -235,6 +235,10 @@ def process_pair(fg_aln, bg_aln, module, do_weight, profile_aligned=False):
 
 def process_one(aln, module, do_weight):
     """Calculate a mapping of alignment column positions to "contrast"."""
+    # read_aln has already uppercased an alignment without uppercase residues,
+    # cma_blocks and the profile paths drop lowercase residues outright, and
+    # no sequence is removed here, so only mixed columns remain to fold.
+    aln = uppercase_mixed_columns(aln, "alignment")
     # A single alignment takes the foreground's weighting.
     scaling = weight_scalings(module, do_weight)[0]
     if do_weight and scaling is None:
@@ -477,6 +481,54 @@ def uppercase_if_unmarked(aln):
     if any(str(rec.seq) != str(rec.seq).lower() for rec in aln):
         return aln
     return MultipleSeqAlignment([rec.upper() for rec in aln])
+
+
+def uppercase_mixed_columns(aln, label):
+    """Uppercase each column that holds a lowercase residue beside an aligned
+    character.
+
+    biofrills' consensus counts as aligned any non-gap character that is not
+    lowercase. It reads a column that holds a lowercase residue beside one as
+    uppercase, with a warning, and a column whose residues are all lowercase
+    as an insert column. Counting the mixed column in the same way keeps the
+    consensus residue, the counts, the sequence weights and the pseudocounts
+    in one alphabet; insert columns are left as they are. label names the set
+    in the logged warning.
+    """
+    rows = [str(rec.seq) for rec in aln]
+    # The gap characters of biofrills' consensus; X counts there as a residue.
+    mixed = [
+        idx
+        for idx, col in enumerate(zip(*rows, strict=True))
+        if any(c.islower() for c in col)
+        and any(not c.islower() for c in col if c not in "-.")
+    ]
+    if not mixed:
+        return aln
+    logger.warning(
+        "Counting as uppercase the columns of the %s that hold lowercase "
+        "residues beside aligned characters: %s",
+        label,
+        ", ".join(str(idx + 1) for idx in mixed),
+    )
+    folded = []
+    for rec, row in zip(aln, rows, strict=True):
+        chars = list(row)
+        for idx in mixed:
+            chars[idx] = chars[idx].upper()
+        folded.append(
+            SeqRecord(
+                Seq("".join(chars)),
+                id=rec.id,
+                name=rec.name,
+                description=rec.description,
+                dbxrefs=list(rec.dbxrefs),
+                features=list(rec.features),
+                annotations=dict(rec.annotations),
+                letter_annotations=dict(rec.letter_annotations),
+            )
+        )
+    return MultipleSeqAlignment(folded)
 
 
 def read_aln(fname, format):

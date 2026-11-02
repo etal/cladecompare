@@ -396,11 +396,13 @@ type. A column whose weighted fraction of gap characters, ``-`` or ``.``, is
 at the start or the end of the alignment: those receive a residue consensus
 if they hold any aligned residue, however many gaps accompany it. Where an
 alignment contains uppercase residues, its lowercase residues are insertions,
-and a column with no uppercase residue has a gap as its consensus; an
-alignment without any uppercase residue marks nothing by case and is read as
-if it were uppercase. A column whose foreground or background consensus is a
-gap is not tested and is reported with p = 1. Below, ``c*`` is the foreground
-consensus residue and ``c = n_c*`` its count in the foreground column.
+and a column with no uppercase residue has a gap as its consensus, while a
+column that mixes uppercase and lowercase residues is read, consensus and
+counts alike, as if it were uppercase; an alignment without any uppercase
+residue marks nothing by case and is read as if it were uppercase. A column
+whose foreground or background consensus is a gap is not tested and is
+reported with p = 1. Below, ``c*`` is the foreground consensus residue and
+``c = n_c*`` its count in the foreground column.
 
 G-test (gtest)
 ~~~~~~~~~~~~~~

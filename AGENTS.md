@@ -87,7 +87,7 @@ The PyMOL script of `pdb.1HCK.gtest` draws the residue at each site's own column
 `web.pair.hypg` returns status 200 with the report that the command line writes for the same alignments, because the web form now takes its strategies from the same registry as the command line; the reference records status 500.
 `web.pdb.1HCK.gtest` still returns status 500, with `InputError` in place of `AssertionError`.
 Standard error and logs differ in the line numbers that the log format prints, in the wording of the duplicate-sequence message and of the strategy line for `urn` and `phospho`, and in the temporary file names that the web logs show, and tracebacks take Python 3's own form; `tests/data/README.md` lists these and the few differences that come from the bottle and Biopython versions.
-Every biofrills commit that CladeCompare has pinned declares `biopython>=1.86`, so the run with Biopython 1.83 installed biofrills without its dependencies; CladeCompare's own code needs no Biopython newer than 1.83.
+The run with Biopython 1.83 installed biofrills without its dependencies, because biofrills declares a higher floor (see "Packaging and the two development workflows").
 
 ## External aligners: any HMMER 3, and MUSCLE 3 only
 
@@ -108,7 +108,7 @@ No missing program is checked for at the start of a run.
 CladeCompare follows the convention of HMMER's a2m output and of MAPGAPS and CHAIN's CMA files: an uppercase residue occupies a match state of the profile, a lowercase residue is an insertion relative to the profile, and `-` is a deletion.
 In a2m, `.` may pad an insert column, but HMMER 3.4 omits it, so the rows of its a2m output differ in length until the lowercase residues are removed.
 biofrills counts `.` as a gap wherever it counts `-`, in the gap threshold of the consensus and in `remove_empty_cols`, as `count_col` in `cladecomparelib/shared.py` and the alignment-wide frequencies already did: on the example pair written with `.` for every gap, every strategy in both modes writes the output of the pair written with `-`, where before biofrills `95c29b6` the 7 columns of `.` alone survived `clean_alignments` and raised m from 242 to 249.
-Three places in `cladecomparelib` apply the convention to an alignment made with a profile.
+Three input paths in `cladecomparelib` apply the convention to an alignment made with a profile.
 For `--hmm`, `hmm_align_and_read` in `cladecomparelib/core.py` drops the lowercase residues of hmmalign's rows, and for a CMA file `cma_blocks` drops those of the aligned part of each sequence line, so in both cases only match columns are compared.
 For `--pdb`, the lowercase residues of the structure's own alignment are kept, because they are residues of the chain.
 `aln_resnums_inserts` numbers each uppercase residue and records each run of lowercase residues as an insert, `get_aln_offset` locates the whole run of residues, inserts included, in the chain sequence, and `choose_best_aligned` ranks the chains by their uppercase residues, although for more than one aligned chain it currently fails with `KeyError` (`tests/data/README.md`).

@@ -395,14 +395,17 @@ type. A column whose weighted fraction of gap characters, ``-`` or ``.``, is
 0.8 or more has a gap as its consensus, except where such columns form a run
 at the start or the end of the alignment: those receive a residue consensus
 if they hold any aligned residue, however many gaps accompany it. Where an
-alignment contains uppercase residues, its lowercase residues are insertions,
-and a column with no uppercase residue has a gap as its consensus, while a
-column that mixes uppercase and lowercase residues is read, consensus and
-counts alike, as if it were uppercase; an alignment without any uppercase
-residue marks nothing by case and is read as if it were uppercase. A column
-whose foreground or background consensus is a gap is not tested and is
-reported with p = 1. Below, ``c*`` is the foreground consensus residue and
-``c = n_c*`` its count in the foreground column.
+alignment contains uppercase residues, its lowercase residues are insertions:
+a column of lowercase residues and gaps alone has a gap as its consensus,
+while a column that holds lowercase residues beside aligned characters, which
+are uppercase residues and other characters such as ``*``, is read,
+consensus, counts and sequence weights alike, as if it were uppercase. An
+alignment without any uppercase residue marks nothing by case and is read as
+if it were uppercase.
+A column whose foreground or background consensus is a gap, or X, an unknown
+residue that the counts skip, is not tested and is reported with p = 1.
+Below, ``c*`` is the foreground consensus residue and ``c = n_c*`` its count
+in the foreground column.
 
 G-test (gtest)
 ~~~~~~~~~~~~~~

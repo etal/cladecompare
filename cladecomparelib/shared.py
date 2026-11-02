@@ -7,6 +7,11 @@ from biofrills import alnutils
 
 MAX_ENTROPY = log(20, 2)
 
+# Characters that the counts and the alignment-wide frequencies skip: the gaps
+# and X, an unknown residue. A column whose consensus is one of them has no
+# residue type to test.
+NON_RESIDUES = "-.X"
+
 
 def count_col(col, weights, pseudo=None, pseudo_size=1.0):
     """Get a weighted count of the characters in a column, skipping gaps.
@@ -18,7 +23,7 @@ def count_col(col, weights, pseudo=None, pseudo_size=1.0):
     """
     counts = collections.defaultdict(float)
     for char, wt in zip(col, weights, strict=True):
-        if char in "-.X":
+        if char in NON_RESIDUES:
             continue
         counts[char] += wt
     if pseudo:
@@ -41,7 +46,7 @@ def combined_frequencies(fg_aln, fg_weights, bg_aln, bg_weights):
     Returns a dict of characters and their overall frequencies.
     """
     freqs = alnutils.aa_frequencies(
-        list(fg_aln) + list(bg_aln), fg_weights + bg_weights, gap_chars="-.X"
+        list(fg_aln) + list(bg_aln), fg_weights + bg_weights, gap_chars=NON_RESIDUES
     )
     assert abs(fsum(freqs.values()) - 1.0) < 1e-6, "Freqs sum to %s:\n%s" % (
         fsum(freqs.values()),

@@ -261,6 +261,30 @@ def test_mixed_case_column_gives_the_results_of_uppercase(strategy, weight):
     assert hits == expected
 
 
+# --- Untested columns ---
+
+
+@pytest.mark.parametrize("strategy", sorted(core.STRATEGIES))
+def test_consensus_of_unknown_residues_is_not_tested(strategy):
+    """The counts skip X, so a column whose consensus is X, in either set, has
+    no consensus residue to count; it is reported with p = 1, not with a value
+    from the residues beside the X."""
+    module = core.STRATEGIES[strategy][1]
+    fg = [("a", "XDAKS"), ("b", "XDARS"), ("c", "SEAKT")]
+    bg = [
+        ("p", "GDAKX"),
+        ("q", "ADARX"),
+        ("r", "SEAKX"),
+        ("s", "TDCKA"),
+        ("u", "ADAWA"),
+    ]
+    _, hits = core.process_one(aln(*fg), module, False)
+    assert hits[0] == ("X", "_", 1.0)
+    *_, hits = core.process_pair(aln(*fg), aln(*bg), module, False)
+    assert (hits[0][0], hits[0][2]) == ("X", 1.0)
+    assert (hits[4][1], hits[4][2]) == ("X", 1.0)
+
+
 # --- top_hits ---
 
 

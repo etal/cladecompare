@@ -220,7 +220,10 @@ A port that fixes one of them differs from the reference by design, and the test
   The log names those files by fixed names inside that directory, such as `seqfile1.seq` and `cladecompare-<sites>.pdf`, where this reference has `tmpXXXXXX` names.
   The files that bottle 0.13 spools (see "Python 3, bottle and Biopython" below) are bottle's own, outside that directory.
 - `single.hypg` cases record the fraction of the column that matches the consensus, not a hypergeometric probability.
-  A column whose consensus is X raises `KeyError`, as in the reference code; no recorded case has such a column.
+  A column whose foreground or single-alignment consensus is X makes single-alignment urn and hypg raise `KeyError` in the reference code, and paired urn and hypg give it p = 0, the most significant value, because the counts skip X; jsd divides by zero where that column holds nothing but X and gaps, and otherwise computes its value from the residues beside the X.
+  No strategy reads the background consensus, so a column whose background consensus is X is scored as any other.
+  No recorded case has such a column.
+  The code now reports a column whose consensus is X, in either set, with p = 1 in every strategy and both modes, as it reports a gap column.
 - `unequal.gtest` writes `_cc_combined.seq` into the working directory.
   The code no longer writes that file, so this case differs from the reference by design: `_cc_combined.seq` is absent from the written files, and the log line `Wrote _cc_combined.seq` is gone.
 

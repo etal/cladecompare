@@ -20,7 +20,7 @@ from Bio.SeqRecord import SeqRecord
 from biofrills import alnutils, consensus
 
 from . import InputError, gtest, hypg, jsd, pairlogo, phospho, pmlscript, urn
-from .shared import combined_frequencies
+from .shared import NON_RESIDUES, combined_frequencies
 
 logger = logging.getLogger(__name__)
 
@@ -212,8 +212,9 @@ def process_pair(fg_aln, bg_aln, module, do_weight, profile_aligned=False):
         zip(*bg_aln, strict=True),
         strict=True,
     ):
-        if faa == "-" or baa == "-":
-            # Ignore indel columns -- there are better ways to look at these
+        if faa in NON_RESIDUES or baa in NON_RESIDUES:
+            # Ignore indel columns -- there are better ways to look at these --
+            # and columns of unknown residues, which no count includes
             pvalue = 1.0
         else:
             pvalue = module.compare_cols(
@@ -245,14 +246,14 @@ def process_one(aln, module, do_weight):
         logger.info("This strategy does not weight the sequences of one alignment")
     weights = sequence_weights(aln, scaling)
     aln_size = fsum(weights)
-    aa_freqs = alnutils.aa_frequencies(aln, weights, gap_chars="-.X")
+    aa_freqs = alnutils.aa_frequencies(aln, weights, gap_chars=NON_RESIDUES)
     cons = consensus.consensus(
         aln, weights=weights, trim_ends=False, gap_threshold=GAP_THRESH
     )
     hits = []
     for cons_aa, col in zip(cons, zip(*aln, strict=True), strict=True):
-        if cons_aa == "-":
-            # Ignore indel columns -- there are better ways to look at these
+        if cons_aa in NON_RESIDUES:
+            # Ignore indel columns and columns of unknown residues, as above
             pvalue = 1.0
         else:
             pvalue = module.compare_one(

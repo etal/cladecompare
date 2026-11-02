@@ -49,7 +49,7 @@ automatically, BioFrills included, from the commit recorded in
 
 With pip, install that BioFrills commit first, then CladeCompare::
 
-    pip install "biofrills[logo] @ git+https://github.com/etal/biofrills.git@54c6e70bcdb70b172bc9ec51564930c726d0316f"
+    pip install "biofrills[logo] @ git+https://github.com/etal/biofrills.git@1b96a800e7258ee4d6f8b58a4e6d4a3162d5788f"
     pip install .
 
 .. _Biopython: https://biopython.org/

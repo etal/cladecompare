@@ -479,7 +479,7 @@ def uppercase_if_unmarked(aln):
     consensus reads it, so that the consensus residue and the residues counted
     in its column share one case. Any other alignment is returned unchanged.
     """
-    if any(str(rec.seq) != str(rec.seq).lower() for rec in aln):
+    if alnutils.case_marks_inserts([str(rec.seq) for rec in aln]):
         return aln
     return MultipleSeqAlignment([rec.upper() for rec in aln])
 
@@ -489,20 +489,21 @@ def uppercase_mixed_columns(aln, label):
     character.
 
     biofrills' consensus counts as aligned any non-gap character that is not
-    lowercase. It reads a column that holds a lowercase residue beside one as
-    uppercase, with a warning, and a column whose residues are all lowercase
-    as an insert column. Counting the mixed column in the same way keeps the
-    consensus residue, the counts, the sequence weights and the pseudocounts
-    in one alphabet; insert columns are left as they are. label names the set
-    in the logged warning.
+    lowercase, X included. In an alignment that holds any uppercase residue,
+    it reads a column that holds a lowercase residue beside one as uppercase,
+    with a warning, and a column whose residues are all lowercase as an insert
+    column. Counting the mixed column in the same way keeps the consensus
+    residue, the counts, the sequence weights and the pseudocounts in one
+    alphabet; insert columns are left as they are. label names the set in the
+    logged warning.
     """
     rows = [str(rec.seq) for rec in aln]
-    # The gap characters of biofrills' consensus; X counts there as a residue.
+    marks_inserts = alnutils.case_marks_inserts(rows)
     mixed = [
         idx
         for idx, col in enumerate(zip(*rows, strict=True))
         if any(c.islower() for c in col)
-        and any(not c.islower() for c in col if c not in "-.")
+        and alnutils.has_aligned_residue(col, marks_inserts)
     ]
     if not mixed:
         return aln

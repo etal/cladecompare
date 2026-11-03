@@ -21,6 +21,66 @@ CladeCompare is distributed under the BSD 2-clause license (see
 is under the Bitstream Vera license (see
 ``cladecomparelib/data/LICENSE.DejaVu``).
 
+What CladeCompare is for
+------------------------
+
+The question
+    Given a protein family, which positions of the alignment distinguish
+    one clade of the family, the foreground, from related sequences, the
+    background? A position where the foreground holds residues that the
+    background rarely holds, or rarely holds residues the background
+    commonly holds, is a candidate site of the functional specialization
+    that set the clade apart. CladeCompare answers the question one column
+    at a time and ranks the columns by the strength of the contrast.
+
+Where it comes from
+    The idea is that of CHAIN analysis (Neuwald et al. 2003; Neuwald 2007),
+    which measures how the composition of a column in a subalignment
+    departs from, and thus contrasts with, the composition of the same
+    column in a larger alignment of related sequences. CHAIN works on
+    PSI-BLAST alignments; CladeCompare applies the same contrast to
+    alignments made with HMMER profiles or MAPGAPS (Neuwald 2009), offers
+    several statistics for it, among them CHAIN's ball-in-urn model, and
+    draws the results as reports, sequence logos and PyMOL scripts.
+    CladeCompare was written for Talevich & Kannan (2013), which compared
+    each rhoptry kinase (ROPK) subfamily with the other ROPKs, and the ROPK
+    family with the protein kinase superfamily, to find sites of
+    subfunctionalization and neofunctionalization, and mapped the
+    significant sites onto the structures of ROP2, ROP8 and ROP5.
+
+What it needs
+    The contrast is taken column by column, so column N of the foreground
+    and column N of the background must be the same position of the
+    protein. That holds for two parts of one alignment, and for two sets
+    aligned separately to the same profile, with ``hmmalign`` (``--hmm``)
+    or MAPGAPS (``--mapgaps`` or its CMA files), where column N is match
+    state N of the profile. Two alignments of different widths are first
+    aligned to each other with MUSCLE 3. Choosing the clades, and building
+    the alignments, are done before CladeCompare runs, for instance with
+    MAPGAPS, CHAIN's own partitioning, or a phylogeny.
+
+What it gives
+    For each column, the value of the chosen statistic, unadjusted for
+    multiple testing; the significant columns, selected by the
+    Benjamini-Hochberg procedure at a false discovery rate of alpha and
+    capped at 50; paired foreground and background sequence logos around
+    them; and, given a structure aligned to the same profile, a PyMOL
+    script that highlights them. A column that cannot be tested, because
+    the consensus of either set is a gap or an unknown residue, has the
+    value 1 and still counts among the columns of the selection. Input
+    that CladeCompare recognizes as unusable stops the run with an error
+    message, which names the file where one is at fault, rather than a
+    traceback; a missing external program, or one that fails on its
+    input, still ends with a traceback.
+
+What it does not do
+    It does not define clades, infer a phylogeny or align sequences other
+    than through the programs named above. It tests each column on its
+    own, so it does not detect positions that change together. Its values
+    are meant to be read as p-values only where the strategy computes
+    p-values, which Methods_ records for each strategy, together with the
+    calibration measured where that has been examined.
+
 
 Installation
 ------------
@@ -97,9 +157,13 @@ Usage
 
 The examples below use the two alignments of protein kinase domains in this
 repository's ``test`` directory, which come from Talevich, Mirza & Kannan
-(2011). Where an example names an input file that the repository does not
-hold, such as ``fg.fasta`` or ``subfam1.aln``, the name stands for a file of
-your own. ``cladecompare --help`` lists every option.
+(2011): ``scttlre-domain``, 14 sequences of the apicomplexan subfamily of
+cyclin-dependent kinases whose αC-helix consensus is SCTTLRE and which
+includes Pfcrk-5 (PFF0750w), and ``cdc2-domain``, 37 sequences of the CDC2
+subfamily, with which that paper contrasted it using CHAIN. Where an
+example names an input file that the repository does not hold, such as
+``fg.fasta`` or ``subfam1.aln``, the name stands for a file of your own.
+``cladecompare --help`` lists every option.
 
 Comparing two alignments
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -350,9 +414,8 @@ This section records what each strategy computes, as implemented, and the
 published methods it follows or adapts. CladeCompare belongs to a set of
 projects by the same author, with the libraries BioFrills_ and biocma_ and the
 program fammer_, that implement the central ideas of Andrew Neuwald's CHAIN
-(Neuwald et al. 2003; Neuwald 2007) and MAPGAPS (Neuwald 2009) programs, with
-variations. CHAIN builds on PSI-BLAST alignments; CladeCompare aligns
-sequences to profiles with HMMER, and also accepts alignments from MAPGAPS.
+and MAPGAPS programs with variations, as `What CladeCompare is for`_
+describes.
 
 .. _biocma: https://github.com/etal/biocma
 .. _fammer: https://github.com/etal/fammer

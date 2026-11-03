@@ -274,12 +274,15 @@ row of the page, labeled with the file name without ``.out``::
 
     cladereport subfam1.aln.out subfam2.aln.out subfam3.aln.out -o family.html
 
-The files must number the same columns, as the files of one such run do;
+The files must number the same columns. The files of one such run do, and
+so do the files of separate runs whose sets were aligned to the same profile
+with ``--hmm`` or ``--mapgaps``, since column N of each is match state N;
 otherwise ``cladereport`` stops with an error. The background consensus,
 which differs between those files, is not shown, although each row colors
 yellow the columns where its own background consensus is a gap. With
 ``-p``, the asterisks of the one pattern file given are drawn above all the
-rows.
+rows. Additional file 2 of Talevich & Kannan (2013) is a page of this kind,
+with a row for each of 47 result files.
 
 Web interface
 ~~~~~~~~~~~~~

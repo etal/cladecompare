@@ -2,15 +2,17 @@
 
 If given one file:
     Display foreground and background consensus sequences as 2 rows, wrapped.
-    Color of foreground cells corresponds to p-value (#stars).
 
 If given multiple files:
     Display each file's foreground consensus sequence as one row, wrapped.
-    The files must number the same columns, as the files that cladecompare
-    writes for three or more alignments do.
+    The files must number the same columns. The files that cladecompare
+    writes for three or more alignments do, and so do those of separate runs
+    on sets aligned to one profile with --hmm or --mapgaps.
     The background, which differs between those files, is not shown; a
     column whose background consensus is a gap is colored as an insert.
-    Color of foreground cells corresponds to p-value (#stars).
+
+The color of a foreground cell follows its column's p-value; it does not
+depend on alpha.
 
 """
 

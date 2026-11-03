@@ -33,15 +33,29 @@ The question
     that set the clade apart. CladeCompare answers the question one column
     at a time and ranks the columns by the strength of the contrast.
 
+Why a contrast
+    The reasoning follows Kannan et al. (2007), who compared the families
+    of the protein kinase-like superfamily. Ten key residues are conserved
+    across its families and likely mediate the core functions of the
+    catalytic domain, while "family-specific functions are mediated by
+    features that are highly conserved within families, but that are
+    divergent between families". It follows that conservation within a
+    clade does not by itself separate the two kinds of residue; a contrast
+    with the clade's relatives does, since a residue that the background
+    conserves as well belongs to what the clades share, and one that it
+    does not marks the clade. The same reasoning applies at each level of
+    a hierarchy of families and subfamilies, as in the ROPK comparisons
+    that the next entry describes.
+
 Where it comes from
-    The idea is that of CHAIN analysis (Neuwald et al. 2003; Neuwald 2007),
-    which measures how the composition of a column in a subalignment
-    departs from, and thus contrasts with, the composition of the same
-    column in a larger alignment of related sequences. CHAIN works on
-    PSI-BLAST alignments; CladeCompare applies the same contrast to
-    alignments made with HMMER profiles or MAPGAPS (Neuwald 2009), offers
-    several statistics for it, among them CHAIN's ball-in-urn model, and
-    draws the results as reports, sequence logos and PyMOL scripts.
+    The measurement is that of CHAIN analysis (Neuwald et al. 2003;
+    Neuwald 2007), which measures how the composition of a column in a
+    subalignment departs from, and thus contrasts with, the composition of
+    the same column in a larger alignment of related sequences. CHAIN
+    works on PSI-BLAST alignments; CladeCompare applies the same contrast
+    to alignments made with HMMER profiles or MAPGAPS (Neuwald 2009),
+    offers several statistics for it, among them CHAIN's ball-in-urn model,
+    and draws the results as reports, sequence logos and PyMOL scripts.
     CladeCompare was written for Talevich & Kannan (2013), which compared
     each rhoptry kinase (ROPK) subfamily with the other ROPKs, and the ROPK
     family with the protein kinase superfamily, to find sites of
@@ -758,6 +772,9 @@ References
   coincidence. *Computational Linguistics* 19(1):61-74.
 - Henikoff S, Henikoff JG (1994) Position-based sequence weights. *Journal
   of Molecular Biology* 243(4):574-578. doi:10.1016/0022-2836(94)90032-9
+- Kannan N, Taylor SS, Zhai Y, Venter JC, Manning G (2007) Structural and
+  functional diversity of the microbial kinome. *PLoS Biology* 5(3):e17.
+  doi:10.1371/journal.pbio.0050017
 - Neuwald AF (2007) The CHAIN program: forging evolutionary links to
   underlying mechanisms. *Trends in Biochemical Sciences* 32(11):487-493.
   doi:10.1016/j.tibs.2007.08.009

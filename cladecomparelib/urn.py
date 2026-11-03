@@ -65,8 +65,9 @@ def compare_cols(
     fg_cons_count_i = max(1, int(ceil(fg_cons_count)))
     fg_size_i = int(ceil(fg_size))
     # Probability of fg col conservation vs. the combined/main set
-    # (P_j_LB in the CHAIN publication)
-    pvalue = binom.pmf(range(fg_cons_count_i, fg_size_i + 1), fg_size_i, p_j).sum()
+    # (P_j_LB in the CHAIN publication): the upper tail P(X >= k), computed
+    # directly, since a sum of point probabilities can exceed 1 by rounding
+    pvalue = binom.sf(fg_cons_count_i - 1, fg_size_i, p_j)
     return pvalue
 
 
@@ -76,5 +77,5 @@ def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
     p_j = aa_freqs[cons_aa]
     cons_count_i = int(ceil(cons_count))
     size_i = int(ceil(aln_size))
-    pvalue = binom.pmf(range(cons_count_i, size_i + 1), size_i, p_j).sum()
+    pvalue = binom.sf(cons_count_i - 1, size_i, p_j)
     return pvalue

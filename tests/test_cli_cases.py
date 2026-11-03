@@ -188,7 +188,7 @@ def run_commands(commands, tmp_path, path_prefix=None):
 
 def assert_valid_pvalues(path):
     """Every p-value in a .out file is finite and within [0, 1]; return them."""
-    pvalues = [prob for _fg, _bg, _posn, prob, _stars in report.parse_out(path)]
+    pvalues = [prob for _fg, _bg, _posn, prob in report.parse_out(path)]
     invalid = [p for p in pvalues if not (math.isfinite(p) and 0.0 <= p <= 1.0)]
     assert pvalues and not invalid, f"{path.name}: {invalid[:5]}"
     return pvalues

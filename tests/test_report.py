@@ -24,14 +24,16 @@ def test_parse_out_reads_what_write_pvalues_writes(tmp_path):
     path = tmp_path / "test.out"
     path.write_text(buf.getvalue())
     # One star per order of magnitude below 1, only for 0 < p < alpha.
-    assert list(report.parse_out(str(path))) == [
-        ("A", "C", 1, 0.5, 0),
-        ("D", "-", 2, 0.003, 2),
-        ("-", "E", 3, 1.0, 0),
-        ("F", "G", 4, 2.6e-74, 73),
-        ("H", "I", 5, 0.0, 0),
-        ("K", "L", 6, 0.001, 3),
-        ("M", "N", 7, 0.005, 0),
+    stars = [line.partition("\t")[2] for line in buf.getvalue().splitlines()]
+    assert [len(s) for s in stars] == [0, 2, 0, 73, 0, 3, 0]
+    assert report.parse_out(str(path)) == [
+        ("A", "C", 1, 0.5),
+        ("D", "-", 2, 0.003),
+        ("-", "E", 3, 1.0),
+        ("F", "G", 4, 2.6e-74),
+        ("H", "I", 5, 0.0),
+        ("K", "L", 6, 0.001),
+        ("M", "N", 7, 0.005),
     ]
 
 

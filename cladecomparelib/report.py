@@ -58,10 +58,11 @@ def html_page(title, contents):
 
 
 # A line of a '.out' file as core.write_pvalues writes it, without the
-# surrounding white space, e.g. "Y (Y) 1 : prob=0.00363161\t**".
+# surrounding white space, e.g. "Y (Y) 1 : prob=0.00363161\t**". The
+# asterisks follow from the value and alpha, so they are matched but not read.
 OUT_LINE = re.compile(
     r"(?P<fg>\S) \((?P<bg>\S)\) (?P<posn>\d+) : prob=(?P<prob>[^\s*]+)"
-    r"(?:\s+(?P<stars>\*+))?"
+    r"(?:\s+\*+)?"
 )
 
 # A site of a pattern file: a residue followed by its column number, e.g. D34.
@@ -72,9 +73,8 @@ def parse_out(fname):
     """Read the sites of a '.out' file.
 
     Return a list of (foreground residue, background residue, column number,
-    value, number of asterisks), one for each line. A file without sites, a
-    line of any other shape, or a value that is not a finite number raises
-    InputError.
+    value), one for each line. A file without sites, a line of any other
+    shape, or a value that is not a finite number raises InputError.
     """
     sites = []
     with reading(fname), open(fname) as infile:
@@ -97,8 +97,7 @@ def parse_out(fname):
                     f"{fname}, line {lineno}: the value {match['prob']!r} "
                     "is not a finite number"
                 )
-            nstars = len(match["stars"] or "")
-            sites.append((match["fg"], match["bg"], int(match["posn"]), prob, nstars))
+            sites.append((match["fg"], match["bg"], int(match["posn"]), prob))
     if not sites:
         raise InputError(f"{fname} holds no lines of cladecompare output")
     return sites
@@ -190,36 +189,33 @@ def p2class(fg, bg, pval):
 # Formatting
 
 
-def table_single(pvalues, classes, pattern, foreground, background, positions):
-    assert len(foreground) == len(background) == len(positions)
-    out = "<table>"
-    if any(pattern):
-        out += tr_plain("", pattern)
-    out += tr_class("foreground", foreground, pvalues, classes)
-    out += tr_plain("background", background)
-    out += tr_pos(positions)
-    out += "</table>"
-    return out
+def tables(pattern, posns, rows, width=50):
+    """Draw rows of cells as HTML tables of at most width columns each.
 
-
-def table_multi(labels, rowcells, rowclasses, rowpvalues, pattern, positions):
-    assert len(labels) == len(rowclasses) == len(rowcells) == len(rowpvalues)
-    assert len(positions) == len(rowclasses[0]) == len(rowcells[0])
-    out = "<table>"
-    if any(pattern):
-        out += tr_plain("", pattern)
-    for label, cells, classes, pvals in zip(
-        labels, rowcells, rowclasses, rowpvalues, strict=True
-    ):
-        out += tr_class(label, cells, pvals, classes)
-    out += tr_pos(positions)
-    out += "</table>"
+    pattern holds the mark above each column, and posns the column numbers,
+    of which every tenth is shown below the rows. Each row is (label, cells,
+    values, classes); a row whose classes are None is drawn plain.
+    """
+    shown = [str(p) if not p % 10 else "" for p in posns]
+    out = ""
+    for start in range(0, len(posns), width):
+        cols = slice(start, start + width)
+        out += "<table>"
+        if any(pattern[cols]):
+            out += tr_plain("", pattern[cols])
+        for label, cells, pvalues, classes in rows:
+            if classes is None:
+                out += tr_plain(label, cells[cols])
+            else:
+                out += tr_class(label, cells[cols], pvalues[cols], classes[cols])
+        out += tr_pos(shown[cols])
+        out += "</table><p />"
     return out
 
 
 def tr_plain(label, cells):
     out = "<tr>\n"
-    out += '<td class="label">%s</td>' % label
+    out += '<td class="label">%s</td>' % html.escape(label)
     out += "".join(["<td>%s</td>" % c for c in cells])
     out += "\n</tr>"
     return out
@@ -248,32 +244,28 @@ def tr_pos(cells):
 # Logic
 
 
-def wrap_data(data, width=50):
-    """list of atoms -> list of lists, chunked at width"""
-    chunks = []
-    curr, remain = None, data
-    while len(remain) > width:
-        curr, remain = remain[:width], remain[width:]
-        chunks.append(curr)
-    chunks.append(remain)
-    return chunks
+def read_columns(fname):
+    """Read the columns of a '.out' file with the cell class of each.
+
+    Return the foreground and background consensus, the column numbers, the
+    values and the classes, each as a sequence over the columns.
+    """
+    fg_seq, bg_seq, posns, probs = zip(*parse_out(fname), strict=True)
+    classes = [
+        p2class(fg, bg, p) for fg, bg, p in zip(fg_seq, bg_seq, probs, strict=True)
+    ]
+    return fg_seq, bg_seq, posns, probs, classes
 
 
 def do_single(fname, patternfname):
     """Build an HTML document for a single '.out' file and optional pattern."""
-    fg_seq, bg_seq, posns, probs, _nstarses = zip(*parse_out(fname), strict=True)
-    classes = [
-        p2class(fg, bg, p) for fg, bg, p in zip(fg_seq, bg_seq, probs, strict=True)
+    fg_seq, bg_seq, posns, probs, classes = read_columns(fname)
+    rows = [
+        ("foreground", fg_seq, probs, classes),
+        ("background", bg_seq, None, None),
     ]
     pattern = pattern_marks(patternfname, posns, fname)
-    posns = [str(p) if not p % 10 else "" for p in posns]
-    # wrap it up
-    contents = ""
-    chunked_data = map(wrap_data, [probs, classes, pattern, fg_seq, bg_seq, posns])
-    for layer in zip(*chunked_data, strict=True):
-        contents += table_single(*layer)
-        contents += "<p />"
-    return fname, contents
+    return fname, tables(pattern, posns, rows)
 
 
 def do_multi(fnames, patternfname):
@@ -282,14 +274,10 @@ def do_multi(fnames, patternfname):
     Each file becomes one row of the table, under one row of column numbers,
     so the files must number the same columns.
     """
-    rowcells = []  # dim = #fnames x #cols
-    rowclasses = []
-    rowpvalues = []
+    rows = []
     posns = None
     for fname in fnames:
-        fg_seq, bg_seq, file_posns, probs, _nstarses = zip(
-            *parse_out(fname), strict=True
-        )
+        fg_seq, _bg_seq, file_posns, probs, classes = read_columns(fname)
         if posns is None:
             posns = file_posns
         elif file_posns != posns:
@@ -298,34 +286,6 @@ def do_multi(fnames, patternfname):
                 "so they cannot be shown in one table"
                 % (fnames[0], fname, len(posns), len(file_posns))
             )
-        rowcells.append(fg_seq)
-        rowclasses.append(
-            [
-                p2class(fg, bg, p)
-                for fg, bg, p in zip(fg_seq, bg_seq, probs, strict=True)
-            ]
-        )
-        rowpvalues.append(probs)
+        rows.append((fname.removesuffix(".out"), fg_seq, probs, classes))
     pattern = pattern_marks(patternfname, posns, fnames[0])
-    posns = [str(p) if not p % 10 else "" for p in posns]
-    # wrap it up
-    contents = ""
-    labels = [fn[: -len(".out")] if fn.endswith(".out") else fn for fn in fnames]
-    chunked_posns = wrap_data(posns)
-    chunked_pattern = wrap_data(pattern)
-    wrapped_row_cells = zip(*map(wrap_data, rowcells), strict=True)
-    wrapped_row_classes = zip(*map(wrap_data, rowclasses), strict=True)
-    wrapped_row_pvalues = zip(*map(wrap_data, rowpvalues), strict=True)
-    for w_rowcells, w_rowclasses, w_rowpvalues, ptnrow, positions in zip(
-        wrapped_row_cells,
-        wrapped_row_classes,
-        wrapped_row_pvalues,
-        chunked_pattern,
-        chunked_posns,
-        strict=True,
-    ):
-        contents += table_multi(
-            labels, w_rowcells, w_rowclasses, w_rowpvalues, ptnrow, positions
-        )
-        contents += "<p />"
-    return ", ".join(fnames), contents
+    return ", ".join(fnames), tables(pattern, posns, rows)

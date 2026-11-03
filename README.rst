@@ -34,30 +34,39 @@ The question
     at a time and ranks the columns by the strength of the contrast.
 
 Why a contrast
-    The reasoning follows Kannan et al. (2007), who compared the families
-    of the protein kinase-like superfamily. Ten key residues are conserved
-    across its families and likely mediate the core functions of the
-    catalytic domain, while "family-specific functions are mediated by
-    features that are highly conserved within families, but that are
-    divergent between families". It follows that conservation within a
-    clade does not by itself separate the two kinds of residue; a contrast
-    with the clade's relatives does, since a residue that the background
-    conserves as well belongs to what the clades share, and one that it
-    does not marks the clade. The same reasoning applies at each level of
-    a hierarchy of families and subfamilies, as in the ROPK comparisons
-    that the next entry describes.
+    The reasoning was developed by Kannan and Neuwald, who categorized the
+    selective constraints on the CMGC group of protein kinases into those
+    common to the group and those specific to each of its subfamilies
+    (Kannan & Neuwald 2004), and traced the regulatory mechanisms of
+    eukaryotic protein kinases to an ancient structural component, on
+    which those kinases acquired features of their own (Kannan & Neuwald
+    2005). Kannan et al. (2007) give its clearest worked example:
+    comparing the families of the protein kinase-like superfamily, they
+    found ten key residues conserved across its families, which likely
+    mediate the core functions of the catalytic domain, while
+    "family-specific functions are mediated by features that
+    are highly conserved within families, but that are divergent between
+    families". It follows that conservation within a clade does not by
+    itself separate the two kinds of residue; a contrast with the clade's
+    relatives does, since a residue that the background conserves as well
+    belongs to what the clades share, and one that it does not marks the
+    clade. The same reasoning applies at each level of a hierarchy of
+    families and subfamilies, and CladeCompare implements it in a general
+    form that applies to any protein family or superfamily.
 
 Where it comes from
-    The measurement is that of CHAIN analysis (Neuwald et al. 2003;
-    Neuwald 2007), which measures how the composition of a column in a
-    subalignment departs from, and thus contrasts with, the composition of
-    the same column in a larger alignment of related sequences. CHAIN
-    works on PSI-BLAST alignments; CladeCompare applies the same contrast
-    to alignments made with HMMER profiles or MAPGAPS (Neuwald 2009),
-    offers several statistics for it, among them CHAIN's ball-in-urn model,
-    and draws the results as reports, sequence logos and PyMOL scripts.
-    CladeCompare was written for Talevich & Kannan (2013), which compared
-    each rhoptry kinase (ROPK) subfamily with the other ROPKs, and the ROPK
+    The column-by-column contrast comes from CHAIN analysis (Neuwald et
+    al. 2003; Neuwald 2007), which measures how the composition of a column
+    in a subalignment departs from, and thus contrasts with, the
+    composition of the same column in a larger alignment of related
+    sequences. CHAIN works on PSI-BLAST alignments; CladeCompare applies
+    the same contrast to alignments made with HMMER profiles or MAPGAPS
+    (Neuwald 2009), offers several statistics for it, among them CHAIN's
+    ball-in-urn model, and draws the results as reports, sequence logos and
+    PyMOL scripts.
+    CladeCompare was written for Talevich & Kannan (2013), its published
+    application, which used profiles built with fammer_ to compare each
+    rhoptry kinase (ROPK) subfamily with the other ROPKs, and the ROPK
     family with the protein kinase superfamily, to find sites of
     subfunctionalization and neofunctionalization, and mapped the
     significant sites onto the structures of ROP2, ROP8 and ROP5.
@@ -772,6 +781,12 @@ References
   coincidence. *Computational Linguistics* 19(1):61-74.
 - Henikoff S, Henikoff JG (1994) Position-based sequence weights. *Journal
   of Molecular Biology* 243(4):574-578. doi:10.1016/0022-2836(94)90032-9
+- Kannan N, Neuwald AF (2004) Evolutionary constraints associated with
+  functional specificity of the CMGC protein kinases MAPK, CDK, GSK, SRPK,
+  DYRK, and CK2α. *Protein Science* 13(8):2059-2077. doi:10.1110/ps.04637904
+- Kannan N, Neuwald AF (2005) Did protein kinase regulatory mechanisms
+  evolve through elaboration of a simple structural component? *Journal of
+  Molecular Biology* 351(5):956-972. doi:10.1016/j.jmb.2005.06.057
 - Kannan N, Taylor SS, Zhai Y, Venter JC, Manning G (2007) Structural and
   functional diversity of the microbial kinome. *PLoS Biology* 5(3):e17.
   doi:10.1371/journal.pbio.0050017

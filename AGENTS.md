@@ -21,7 +21,7 @@ Three console commands share one library of about 2,200 lines under `cladecompar
 |---|---|---|
 | `cladecompare` | `cladecomparelib/cladecompare.py` | command line; the full option surface |
 | `cladeweb` | `cladecomparelib/cladeweb.py` | local browser form, served on localhost (`--port`, default 8080) |
-| `cladereport` | `cladecomparelib/cladereport.py` | renders an existing `.out` file to HTML, no statistics |
+| `cladereport` | `cladecomparelib/cladereport.py` | renders one or more existing `.out` files to HTML, no statistics |
 
 The module names matter: the log format prints `%(module)s`, and the web reference cases record log lines from `cladeweb`.
 
@@ -76,7 +76,7 @@ The port removed `Bio.Alphabet` and `Bio._py3k`, which Biopython dropped in 1.78
 `tests/data/README.md` records the environment and how to regenerate it, the inputs, the defects the reference preserves on purpose, and how to read a mismatch.
 A change should reproduce those outputs, or differ from them only by a documented, deliberate change; the statistics are exactly the kind of output where a wrong answer looks entirely plausible.
 
-With HMMER 3.0 or 3.4 and MUSCLE 3.8.1551, under Python 3.12 with the ported biofrills, the ported code reproduces the `.out`, `.pttrn`, `.html` and PyMOL files of every command-line case and the response of every successful web submission byte for byte, both with Biopython 1.83, SciPy 1.11.4 and bottle 0.12.25 and with Biopython 1.88, SciPy 1.18.1 and bottle 0.13.4, apart from the differences below, which come from SciPy, from the later fixes to phospho, hypg and gtest, from the removal of single-alignment hypg, from the residue that urn, hypg and phospho test or name, from the scale of the sequence weights in later biofrills, from CHAIN's weighting in urn, from the removal of `_cc_combined.seq`, from the fix to the residues of the PyMOL script, from later changes to two failing web cases, or from the form of logs and tracebacks.
+With HMMER 3.0 or 3.4 and MUSCLE 3.8.1551, under Python 3.12 with the ported biofrills, the ported code reproduces the `.out`, `.pttrn`, `.html` and PyMOL files of every command-line case and the response of every successful web submission byte for byte, both with Biopython 1.83, SciPy 1.11.4 and bottle 0.12.25 and with Biopython 1.88, SciPy 1.18.1 and bottle 0.13.4, apart from the differences below, which come from SciPy, from the later fixes to phospho, hypg and gtest, from the removal of single-alignment hypg, from the residue that urn, hypg and phospho test or name, from the scale of the sequence weights in later biofrills, from CHAIN's weighting in urn, from the removal of `_cc_combined.seq`, from the fix to the residues of the PyMOL script, from the repair of `cladereport` on several `.out` files, from later changes to two failing web cases, or from the form of logs and tracebacks.
 Under both SciPy versions, 13 small p-values of `pair.hypg` differ from the reference in the sixth significant digit; the values from both newer releases agree with exact rational arithmetic, and the reference values, computed with SciPy 1.2.1, do not.
 hypg now computes the tail with `hypergeom.sf`, which stays accurate for small tails, rather than as `1 - hypergeom.cdf`; on these inputs the two forms print the same values.
 `pair.hypg.w` differs throughout: SciPy 1.11.4 and later return `nan` for the non-integral count of successes that weights produce, and hypg now rounds that count up, as it rounds the other counts; with SciPy 1.18.1 its p-values are finite and its pattern is empty.
@@ -90,6 +90,7 @@ Paired gtest is now the G-test of homogeneity on the 2 × K table of the two col
 The four gtest web submissions are checked against the reports of the command-line cases that they equal in the reference.
 `unequal.gtest` no longer writes `_cc_combined.seq` into the working directory, nor logs that it did.
 The PyMOL script of `pdb.1HCK.gtest` draws the residue at each site's own column, where the reference drew the residue of the following column, and its expected output is regenerated.
+`cladereport` on the three `.out` files of `multi.gtest` writes one table row per file, where it failed with `ValueError`, and that report is now part of the case's expected output; it raises `InputError` when the files number different columns.
 `web.pair.hypg` returns status 200 with the report that the command line writes for the same alignments, because the web form now takes its strategies from the same registry as the command line; the reference records status 500.
 `web.pdb.1HCK.gtest` still returns status 500, with `InputError` in place of `AssertionError`.
 Standard error and logs differ in the line numbers that the log format prints, in the wording of the duplicate-sequence message and of the strategy line for `urn` and `phospho`, and in the temporary file names that the web logs show, and tracebacks take Python 3's own form; `tests/data/README.md` lists these and the few differences that come from the bottle and Biopython versions.

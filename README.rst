@@ -32,7 +32,7 @@ ReportLab_ and bottle_, and installs three commands:
 ``cladecompare``
     compares alignments and writes the results to text files;
 ``cladereport``
-    renders a result file of ``cladecompare`` as an HTML page;
+    renders one or more result files of ``cladecompare`` as an HTML page;
 ``cladeweb``
     serves a form in your web browser that runs a comparison and shows the
     resulting page.
@@ -266,9 +266,20 @@ for columns that are similar in both sets. Columns whose foreground
 consensus is a gap are gray, and those whose background consensus is a gap
 are yellow. The colors do not depend on alpha. With ``-p``, an asterisk
 above the sequences marks each column of the pattern file. Without ``-o``,
-the page is written to standard output. ``cladereport`` is meant to show
-several ``.out`` files as rows of one page, but in this release it stops
-with an error when given more than one.
+the page is written to standard output.
+
+Given several ``.out`` files, such as those written for `More than two
+alignments`_, ``cladereport`` shows the foreground consensus of each as one
+row of the page, labeled with the file name without ``.out``::
+
+    cladereport subfam1.aln.out subfam2.aln.out subfam3.aln.out -o family.html
+
+The files must number the same columns, as the files of one such run do;
+otherwise ``cladereport`` stops with an error. The background consensus,
+which differs between those files, is not shown, although each row colors
+yellow the columns where its own background consensus is a gap. With
+``-p``, the asterisks of the one pattern file given are drawn above all the
+rows.
 
 Web interface
 ~~~~~~~~~~~~~

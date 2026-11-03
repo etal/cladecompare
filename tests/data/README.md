@@ -202,6 +202,11 @@ The tests inherit `PYTHONPATH`, so they import a checkout on that path.
   In `single.urn`, it accepts 230 columns instead of 237, and the pattern holds the same 50 sites in a different order; `single.urn.w` still writes the files of `single.urn`.
   phospho tests Ser, Thr and Tyr together and its values do not move, but it named each site after the foreground consensus, so that `single.phospho` listed column 112 as F112; it now names a site after the most frequent of the three, here Y112, in `single.phospho` and `single.phospho.w`, and the five sites of `pair.phospho` already carried those names.
   The web submissions `web.pair.urn` and `web.single.urn` each recorded a response equal, apart from the title, to the report of `pair.urn` and of `single.urn`; `tests/test_web.py` checks that the recorded responses still equal those reports and that each response equals the current report of its case.
+- **The multi-file report** (`multi.gtest`).
+  The reference records no report for this case, because `cladereport.py` failed on its three `.out` files (see "Recorded defects").
+  The case now also writes `multi.gtest.html`: five tables of at most 50 columns, each with one row per `.out` file, labeled with the file name without `.out`, above the row of column numbers.
+  No background row is drawn, because each file has a background of its own, the other two alignments.
+  When the file was first written, each of its 726 cells was checked against the three `.out` files: it shows the foreground consensus residue of its column, carries the class that `report.p2class` gives that column, and shows its p-value as its title.
 
 Every unweighted case, including those that run hmmalign and MUSCLE, reproduces the reference as before, apart from the phospho cases, which fail in the reference, the G-test cases above, the hypg and urn cases, and the PyMOL script of `pdb.1HCK.gtest`.
 
@@ -221,7 +226,10 @@ A port that fixes one of them differs from the reference by design, and the test
 - `make_residues` in `pmlscript` looks up each site's column number, counted from 1, in the list of aligned residues, which is indexed from 0, so the PyMOL script of `pdb.1HCK.gtest` draws the residue of the following column: the site C165 as T165, and D34 as the unresolved residue X38.
   A significant last column raises `IndexError`, and a site whose following column is a deletion in the structure writes `resi None`, as the reference does for I93 and K254.
   The code now draws the residue at the site's own column, and logs and leaves out a site whose column is a deletion in the structure, so this case differs from the reference by design, as "The PyMOL residues" under "Regenerated outputs in `current/`" describes.
-- `multi.gtest` writes its three `.out` and `.pttrn` pairs, but `cladereport.py` on more than one `.out` file fails with `ValueError` in `report.table_multi`.
+- `multi.gtest` writes its three `.out` and `.pttrn` pairs, but `cladereport.py` on more than one `.out` file fails with `ValueError` in `report.table_multi`, which unpacks four sequences into three names.
+  Multi-file reports have failed since 2013-06-22, when the p-values were added as cell titles: with `TypeError` until 2014-01-06, because `do_multi` did not yet pass the p-values, and with this `ValueError` since.
+  The code now draws one row per file, so this case differs from the reference by design: `cladereport` returns 0, as `RETURNCODES` in `tests/test_cli_cases.py` declares, and writes the report that "The multi-file report" under "Regenerated outputs in `current/`" describes.
+  It raises `InputError` unless the files number the same columns, as the files of one `cladecompare` run on three or more alignments do; repairing the rows alone would have dropped or misaligned columns of mismatched files without an error.
 - `web.pair.hypg` returns status 500 with `KeyError`: the web application's strategy table lacks hypg.
   The form and the web application now take their strategies from the same registry as the command line, so this case differs from the reference by design: it returns status 200, and its report equals the current report of `pair.hypg`, apart from the title.
 - `web.pdb.1HCK.gtest` returns status 500 with `AssertionError` from `pmlscript.pdbid_from_fname`: the uploaded structure is saved under a temporary name without the `.pdb` suffix that the function asserts.

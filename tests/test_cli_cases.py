@@ -73,9 +73,11 @@ CASES = {
 # longer writes.
 NOT_WRITTEN = {"_cc_combined.seq"}
 
-# The reference records -s phospho failing with TypeError in every case;
+# The reference records -s phospho failing with TypeError in every case, and
+# cladereport failing with ValueError on the three .out files of multi.gtest;
 # each now completes ("Recorded defects" in tests/data/README.md).
 RETURNCODES = {
+    "multi.gtest": [0, 0],
     "pair.phospho": [0],
     "pair.phospho.w": [0],
     "single.phospho": [0],
@@ -102,7 +104,8 @@ RETURNCODES = {
 # because those statistics now test the residue type with the smallest tail,
 # corrected for that choice, and single.phospho and single.phospho.w because
 # phospho names each site after its most frequent Ser, Thr or Tyr ("The
-# residue tested" in tests/data/README.md).
+# residue tested" in tests/data/README.md). multi.gtest also writes the HTML
+# report of its three .out files, which cladereport failed to write.
 REGENERATED = {
     "hmm.pair.gtest",
     "hmm.single.gtest",

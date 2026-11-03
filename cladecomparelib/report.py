@@ -4,6 +4,8 @@ import html
 import logging
 from math import log10
 
+from . import InputError
+
 logger = logging.getLogger(__name__)
 
 html_page_tpl = """\
@@ -137,15 +139,15 @@ def table_single(pvalues, classes, pattern, foreground, background, positions):
 
 
 def table_multi(labels, rowcells, rowclasses, rowpvalues, pattern, positions):
-    assert len(labels) == len(rowclasses) == len(rowcells)
+    assert len(labels) == len(rowclasses) == len(rowcells) == len(rowpvalues)
     assert len(positions) == len(rowclasses[0]) == len(rowcells[0])
     out = "<table>"
     if any(pattern):
         out += tr_plain("", pattern)
-    for label, cells, pvals in zip(
+    for label, cells, classes, pvals in zip(
         labels, rowcells, rowclasses, rowpvalues, strict=True
     ):
-        out += tr_class(label, cells, pvals, rowclasses)
+        out += tr_class(label, cells, pvals, classes)
     out += tr_pos(positions)
     out += "</table>"
     return out
@@ -215,13 +217,26 @@ def do_single(fname, patternfname):
 
 
 def do_multi(fnames, patternfname):
-    """Build an HTML document combining multiple '.out' files."""
+    """Build an HTML document combining multiple '.out' files.
+
+    Each file becomes one row of the table, under one row of column numbers,
+    so the files must number the same columns.
+    """
     rowcells = []  # dim = #fnames x #cols
     rowclasses = []
     rowpvalues = []
+    posns = None
     for fname in fnames:
         sites = list(parse_out(fname))
-        fg_seq, bg_seq, posns, probs, _nstarses = zip(*sites, strict=True)
+        fg_seq, bg_seq, file_posns, probs, _nstarses = zip(*sites, strict=True)
+        if posns is None:
+            posns = file_posns
+        elif file_posns != posns:
+            raise InputError(
+                "%s and %s do not number the same columns (%d and %d columns), "
+                "so they cannot be shown in one table"
+                % (fnames[0], fname, len(posns), len(file_posns))
+            )
         rowcells.append(fg_seq)
         rowclasses.append(
             [
@@ -240,19 +255,16 @@ def do_multi(fnames, patternfname):
     labels = [fn[: -len(".out")] if fn.endswith(".out") else fn for fn in fnames]
     chunked_posns = wrap_data(posns)
     chunked_pattern = wrap_data(pattern)
-    # cladereport on more than one .out file always fails: table_multi unpacks
-    # four zipped sequences into three names, as the multi.gtest reference
-    # case records. The truncation to the shortest .out file is unobservable.
-    wrapped_row_cells = zip(*map(wrap_data, rowcells), strict=False)
-    wrapped_row_classes = zip(*map(wrap_data, rowclasses), strict=False)
-    wrapped_row_pvalues = zip(*map(wrap_data, rowpvalues), strict=False)
+    wrapped_row_cells = zip(*map(wrap_data, rowcells), strict=True)
+    wrapped_row_classes = zip(*map(wrap_data, rowclasses), strict=True)
+    wrapped_row_pvalues = zip(*map(wrap_data, rowpvalues), strict=True)
     for w_rowcells, w_rowclasses, w_rowpvalues, ptnrow, positions in zip(
         wrapped_row_cells,
         wrapped_row_classes,
         wrapped_row_pvalues,
         chunked_pattern,
         chunked_posns,
-        strict=False,
+        strict=True,
     ):
         contents += table_multi(
             labels, w_rowcells, w_rowclasses, w_rowpvalues, ptnrow, positions

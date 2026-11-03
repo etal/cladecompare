@@ -5,7 +5,7 @@ import math
 
 import pytest
 
-from cladecomparelib import core, report
+from cladecomparelib import InputError, core, report
 
 
 def test_parse_out_reads_what_write_pvalues_writes(tmp_path):
@@ -83,10 +83,48 @@ def test_parse_pattern_accepts_an_empty_pattern(tmp_path):
 
 
 def test_tr_class_escapes_the_label():
-    """tr_class escapes the label, which do_multi takes from a file name.
-
-    do_multi draws no table while table_multi fails, as the multi.gtest
-    reference case records.
-    """
+    """tr_class escapes the label, which do_multi takes from a file name."""
     row = report.tr_class("R&D <1>", ["A"], [0.5], ["wt"])
     assert '<td class="label">R&amp;D &lt;1&gt;</td>' in row
+
+
+def test_do_multi_draws_each_file_as_its_own_row(tmp_path, monkeypatch):
+    """Row k of the table holds the residues, classes and p-values of file k.
+
+    The one pattern row marks its columns above all the rows.
+    """
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "a.out").write_text("A (C) 1 : prob=0.5\t\nD (-) 2 : prob=1e-12\t\n")
+    (tmp_path / "b.out").write_text("- (E) 1 : prob=1\t\nF (G) 2 : prob=0.001\t\n")
+    (tmp_path / "a.pttrn").write_text("1:D2")
+    title, contents = report.do_multi(["a.out", "b.out"], "a.pttrn")
+    assert title == "a.out, b.out"
+    pattern = '<tr>\n<td class="label"></td><td></td><td>*</td>\n</tr>'
+    row_a = (
+        '<tr>\n<td class="label">a</td>'
+        '<td class="wt" title="p=0.5">A</td>'
+        '<td class="ins" title="p=1e-12">D</td>\n</tr>'
+    )
+    row_b = (
+        '<tr>\n<td class="label">b</td>'
+        '<td class="del" title="p=1.0">-</td>'
+        '<td class="r2" title="p=0.001">F</td>\n</tr>'
+    )
+    assert contents.count("<table>") == 1
+    assert contents.index(pattern) < contents.index(row_a) < contents.index(row_b)
+
+
+@pytest.mark.parametrize(
+    "other",
+    [
+        "A (C) 1 : prob=0.5\t\n",
+        "A (C) 2 : prob=0.5\t\nA (C) 3 : prob=0.5\t\n",
+    ],
+)
+def test_do_multi_rejects_files_numbering_other_columns(tmp_path, other):
+    first = tmp_path / "a.out"
+    first.write_text("A (C) 1 : prob=0.5\t\nA (C) 2 : prob=0.5\t\n")
+    second = tmp_path / "b.out"
+    second.write_text(other)
+    with pytest.raises(InputError, match="do not number the same columns"):
+        report.do_multi([str(first), str(second)], None)

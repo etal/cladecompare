@@ -310,17 +310,18 @@ def positions(tophits):
 
 @pytest.mark.parametrize("seed", range(20))
 @pytest.mark.parametrize("alpha", [0.005, 0.05, 0.2])
-def test_top_hits_agrees_with_bh_when_at_most_50_pass(seed, alpha):
-    # Up to about 35 strong signals among uniform nulls and gap columns
-    # (p = 1), so that k* stays below 50; the k* > 50 case is tested below.
+@pytest.mark.parametrize("n_signals", [35, 150])
+def test_top_hits_agrees_with_bh(seed, alpha, n_signals):
+    # Up to about n_signals strong signals among uniform nulls and gap columns
+    # (p = 1). k* exceeds the cap of 50 in every draw with n_signals = 150 and
+    # m = 250, and in no other.
     rng = np.random.default_rng(seed)
     m = int(rng.choice([10, 60, 250]))
     pvalues = rng.random(m)
-    signals = rng.random(m) < 35 / m
+    signals = rng.random(m) < n_signals / m
     pvalues[signals] *= 10.0 ** -rng.uniform(2, 8, signals.sum())
     pvalues[rng.random(m) < 0.3] = 1.0
     expected = bh_expected(pvalues, alpha)
-    assert len(expected) < MAX_SITES
     assert positions(core.top_hits(hits_from(pvalues), alpha)) == expected
 
 
@@ -341,14 +342,18 @@ def test_top_hits_accepts_p_equal_to_the_threshold():
     assert positions(core.top_hits(hits_from([0.025, 0.05]), 0.05)) == [1, 2]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="the step-up search examines only the "
-    "50 most significant ranks, so it misses k* > 50",
+@pytest.mark.parametrize(
+    "pvalues",
+    [
+        # k* = 100, and p > alpha * k / m at every rank k <= 50, so a search
+        # confined to those ranks accepts nothing.
+        pytest.param([0.004] * 100 + [0.5] * 900, id="none-in-the-top-50"),
+        # k* = 100 again, and a search confined to ranks k <= 50 stops at
+        # rank 10, accepting 10 of the 50 sites that pass.
+        pytest.param([1e-5] * 10 + [0.004] * 90 + [0.5] * 900, id="ten-in-the-top-50"),
+    ],
 )
-def test_top_hits_returns_50_sites_when_more_pass():
-    # k* = 100, but p > alpha * k / m at every rank k <= 50.
-    pvalues = [0.004] * 100 + [0.5] * 900
+def test_top_hits_returns_50_sites_when_more_pass(pvalues):
     expected = bh_expected(pvalues, 0.05)
     assert len(expected) == MAX_SITES
     assert positions(core.top_hits(hits_from(pvalues), 0.05)) == expected

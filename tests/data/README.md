@@ -172,7 +172,7 @@ The tests inherit `PYTHONPATH`, so they import a checkout on that path.
   With a single alignment, gtest compared each column's counts, pseudocounts included, with the alignment-wide amino-acid frequencies themselves, which sum to 1, while the observed values sum to the column's residues plus the pseudocount total of 0.5.
   G therefore grew with the number of sequences, and nearly every column was significant.
   The expected values are now those frequencies scaled to the column's observed total, so a column with the alignment's composition gives G = 0.
-  In `single.gtest.a.001`, the median p-value rises from 1.21e-67 to 7.83e-15, the columns below 1e-10 fall from 242 to 165 and those below alpha 0.001 from 242 to 237 of 249; the pattern still holds the 50 sites at which the Benjamini-Hochberg search stops, 43 of them recorded.
+  In `single.gtest.a.001`, the median p-value rises from 1.21e-67 to 7.83e-15, the columns below 1e-10 fall from 242 to 165 and those below alpha 0.001 from 242 to 237 of 249; the pattern still holds 50 sites, the cap of the Benjamini-Hochberg selection, 43 of them recorded.
   `hmm.single.gtest` changes in the same way: the median rises from 2.53e-66 to 3.90e-14, the columns below its alpha of 0.005 fall from 288 to 274 of 289, and the pattern keeps 44 of its 50 sites.
   In `single.gtest.w.a.001`, where the weights sum to 7.734, the median rises from 0.00315 in the reference to 0.425, the columns below alpha 0.001 fall from 86 to 8, and the pattern falls to the single site W179, one of the 41 recorded.
   The web submissions of gtest each recorded a response equal, apart from the title, to the report of a command-line case on the same alignments: `web.single.gtest` to that of `single.gtest.a.001`, `web.pair.gtest` and `web.pair-cma.gtest` to that of `pair.gtest`, and `web.hmm.pair.gtest` to that of `hmm.pair.gtest`; `tests/test_web.py` checks that the recorded responses still equal those reports and that each response equals the current report of its case.
@@ -226,6 +226,10 @@ A port that fixes one of them differs from the reference by design, and the test
   The code now reports a column whose consensus is X, in either set, with p = 1 in every strategy and both modes, as it reports a gap column.
 - `unequal.gtest` writes `_cc_combined.seq` into the working directory.
   The code no longer writes that file, so this case differs from the reference by design: `_cc_combined.seq` is absent from the written files, and the log line `Wrote _cc_combined.seq` is gone.
+- `top_hits` searches only the 50 most significant ranks for the largest rank k at which p <= alpha * k / m, so where the Benjamini-Hochberg procedure accepts more than 50 columns but the 50th fails its own threshold, the pattern holds fewer than 50 sites, or none.
+  The reference of `single.hypg.w.a.2` is the one recorded case affected: it accepts 242 of its 249 columns at alpha 0.2 and its pattern is empty.
+  The search now runs over all m ranks and returns the 50 most significant of the accepted columns.
+  No test declares a difference: the expected output of that case, regenerated in `current/` since the change of weight scale, accepts no column, and in every other recorded case that accepts more than 50 columns, the 50th already passes its threshold.
 
 ## Interpreting a mismatch
 
@@ -251,7 +255,7 @@ A port that fixes one of them differs from the reference by design, and the test
   `1b96a80`, the commit now pinned, changes none either, also measured with HMMER 3.4.
 - **Raw p-values.**
   The `.out` files hold unadjusted p-values, and their stars compare those raw values with alpha.
-  The Benjamini-Hochberg procedure, limited to the 50 most significant sites, only selects the sites in the `.pttrn` file, which also name the pair logos and the PyMOL script.
+  The Benjamini-Hochberg procedure, whose selection is capped at the 50 most significant sites, only selects the sites in the `.pttrn` file, which also name the pair logos and the PyMOL script.
 - **Log format.**
   Standard error and the web logs come from logging with the format `%(module)s [@%(lineno)s]`, so editing a module above a logging call changes them without changing behavior.
   The legacy cases log in the default format of the root logger instead (`WARNING:root:...`) and record no `INFO` lines.

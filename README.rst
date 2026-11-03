@@ -590,11 +590,14 @@ script come from the Benjamini-Hochberg step-up procedure (Benjamini &
 Hochberg 1995) at a false discovery rate of alpha, over all columns of the
 cleaned alignment, including the untested columns with p = 1, among them
 any match state of a profile that neither set occupies. The step-up search
-examines only the 50 most significant columns, so at most 50 columns are
-selected, and where the full procedure would accept more than 50, the
-selection can hold fewer than 50. On the example pair at the default alpha,
-without ``-w``, gtest, urn and hypg accept 102, 67 and 104 columns, and
-each of their pattern files lists 50.
+runs over all columns, and at most 50 of the columns it accepts, the most
+significant, are selected, so a selection of fewer than 50 means that the
+procedure accepted fewer. On the example pair at the default alpha, without
+``-w``, gtest, urn and hypg accept 102, 67 and 104 columns, and each of
+their pattern files lists 50. Versions before 0.3.0 confined the search to
+the 50 most significant columns, so where the procedure accepted more than
+50, they could select fewer than 50, or none: with ``-s hypg -w -a 0.245``,
+the example pair accepts 54 columns, of which the earlier search selected 11.
 
 Alignments from MAPGAPS
 ~~~~~~~~~~~~~~~~~~~~~~~

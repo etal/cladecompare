@@ -68,7 +68,8 @@ ERRORS = {"web.pdb.1HCK.gtest": "InputError"}
 # alignments. The G-test has since changed, so each response must equal the
 # current report of its case. web.single.gtest submits alpha 0.005 where
 # single.gtest.a.001 used 0.001, and its report is the same because the
-# Benjamini-Hochberg search stops at the same 50 sites at both.
+# Benjamini-Hochberg procedure accepts more than 50 columns at both (239 at
+# 0.005, 237 at 0.001), and the selection keeps the same 50 most significant.
 REPORTS = {
     "web.hmm.pair.gtest": "hmm.pair.gtest",
     "web.pair-cma.gtest": "pair.gtest",

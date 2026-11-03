@@ -55,7 +55,8 @@ Site N is entry N - 1 of that list because, under a profile, column N is match s
 Such a column has a gap consensus and p = 1 and changes no other column's value, but it counts in m, so a profile much wider than the sequences can select fewer sites than it would without those columns.
 `process_output` raises `InputError` before writing anything when a structure is aligned to a different number of match states than the compared alignment has columns, as with HMMER 3.0 without `--allcol`.
 A `.cma` file read directly, without `--mapgaps`, is not marked as profile-aligned, so its all-gap columns are still dropped: the example pair has 7 such columns of 249, and its paired `.out` files have 242 columns.
-The step-up search examines only the 50 most significant columns, so at most 50 sites are selected, and where the full procedure would accept more than 50, the result can be smaller than 50.
+The step-up search runs over all m ranks, and the 50 most significant of the columns it accepts become the sites, so at most 50 sites are selected and a selection of fewer than 50 means that the procedure accepted fewer; `top_hits` takes the cap as its `N` parameter, which neither the command line nor the web form exposes.
+Before November 2026 the search examined only the 50 most significant ranks, so where the procedure accepted more than 50 columns it could select fewer than 50, or none; no expected output of the tests moved when that was fixed, as "Recorded defects" in `tests/data/README.md` explains.
 
 The consequence for a local change: altering how many columns enter `hits`, for instance with a filter that drops columns before scoring, does not rescale any value in `.out`, but it changes m and therefore every threshold `alpha * k / m` (k being a column's rank by p-value).
 A gap-handling rule that only changes which columns receive p = 1 leaves m unchanged but changes the ranking.

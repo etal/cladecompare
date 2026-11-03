@@ -672,7 +672,10 @@ def clean_alignments(fg_aln, bg_aln, profile_aligned=False):
 
 
 def top_hits(hits, alpha, N=50):
-    """Take the top (up to N) hits with corrected p-value <= alpha.
+    """Take the sites that the Benjamini-Hochberg procedure accepts, at most N.
+
+    The step-up procedure runs at false discovery rate alpha over every column
+    of hits, and the N most significant of the sites it accepts are returned.
 
     Return a list of triplets, sorted by significance:
         (position, fg_aa, bg_aa)
@@ -686,15 +689,12 @@ def top_hits(hits, alpha, N=50):
     def get_pval(ifbp):
         return ifbp[3]
 
-    # Benjamini-Hochberg multiple-testing FDR correction (BH step-up)
     hit_quads.sort(key=get_pval)
     m = len(hit_quads)  # Num. hypotheses tested
-    if m < N:
-        N = m
     tophits = [(posn, faa, baa) for posn, faa, baa, pval in hit_quads]
-    for k, ifbp in list(zip(range(m, 0, -1), reversed(hit_quads), strict=True))[-N:]:
-        if get_pval(ifbp) <= alpha * k / m:
-            return tophits[:k]
+    for k in range(m, 0, -1):
+        if get_pval(hit_quads[k - 1]) <= alpha * k / m:
+            return tophits[: min(k, N)]
     return []
 
 

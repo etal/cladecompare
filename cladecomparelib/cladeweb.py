@@ -20,7 +20,7 @@ from wsgiref.simple_server import WSGIServer
 
 import bottle
 
-from cladecomparelib import configure_logging, core, report
+from cladecomparelib import InputError, configure_logging, core, report
 
 logger = logging.getLogger(__name__)
 
@@ -218,8 +218,11 @@ def compare_submission(tmpdir):
             fg_clean, bg_clean, hits, alpha, tmp_output, tmp_pattern, pdb_data
         )
     else:
-        # Single mode
-        aln, hits = core.process_one(fg_aln, stat_module, do_weight)
+        # Single mode; a strategy that compares two alignments refuses it
+        try:
+            aln, hits = core.process_one(fg_aln, stat_module, do_weight)
+        except InputError as exc:
+            return "Error: %s" % exc
         core.process_output(aln, None, hits, alpha, tmp_output, tmp_pattern, pdb_data)
 
     # Get the HTML report data

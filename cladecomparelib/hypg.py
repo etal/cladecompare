@@ -49,17 +49,3 @@ def compare_cols(
     # tail P(X >= k), computed directly, since 1 - cdf cancels for small tails
     pvalue = hypergeom.sf(fg_cons_count_i - 1, fg_size_i + bg_size_i, p_j_i, fg_size_i)
     return pvalue
-
-
-def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
-    """The fraction of the column that matches the consensus residue.
-
-    The weighted count of the consensus residue is rounded up and divided by
-    the number of sequences, gaps included. A single alignment gives no
-    second set to draw from, so this is not a hypergeometric probability, and
-    not a p-value.
-    """
-    cons_count = count_col(col, weights)[cons_aa]
-    cons_count_i = int(ceil(cons_count))
-    pvalue = float(cons_count_i) / len(col)
-    return pvalue

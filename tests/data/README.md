@@ -144,12 +144,12 @@ Its output is deterministic, so a rerun on unchanged code leaves `current/` unch
 It exits with an error while `PYTHONPATH` is set, because the commands it runs would inherit that path, and the files must record the biofrills that the lock files pin rather than a checkout on the path.
 The tests inherit `PYTHONPATH`, so they import a checkout on that path.
 
-- **Scale of the sequence weights** (`pair.gtest.w`, `pair.hypg.w`, `pair.jsd.w.a.2`, `single.gtest.w.a.001`, `single.hypg.w.a.2`).
+- **Scale of the sequence weights** (`pair.gtest.w`, `pair.hypg.w`, `pair.jsd.w.a.2`, `single.gtest.w.a.001`).
   biofrills `72282be` changed the `none` scaling of `sequence_weights`, which `-w` uses, so that the weights of an alignment sum to an estimate of its effective number of independent sequences; the ratios between the weights did not change.
   The sums moved from 5.004 to 2.117 for the 11 `scttlre-domain` sequences of the paired cases, from 6.146 to 7.734 for the 36 `cdc2-domain` sequences of the paired cases, and from 6.317 to 7.734 for the 37 `cdc2-domain` sequences of the single-alignment cases; the sequence that the paired cases remove from the background is identical to another, so it no longer changes the sum.
   CladeCompare uses the weights as counts and their sum as the sample size, while the pseudocounts have a fixed total of 0.5, so the change of scale moves every weighted value that depends on it.
   The change is exactly this rescaling: the code at biofrills `ff11246`, with each weight vector multiplied to give the new sum, writes every file of these cases byte for byte; `pair.gtest.w` and `single.gtest.w.a.001` have since moved with the G-test (see "The G-test" below).
-  The pattern of `pair.gtest.w` falls from 9 sites to none, so its six pair logos are no longer written; `pair.jsd.w.a.2` selects 32 sites instead of 29, in 7 logos instead of 8; `single.gtest.w.a.001` selected 50 sites instead of 41, until single-mode gtest changed; the pattern of `single.hypg.w.a.2` remains empty.
+  The pattern of `pair.gtest.w` falls from 9 sites to none, so its six pair logos are no longer written; `pair.jsd.w.a.2` selects 32 sites instead of 29, in 7 logos instead of 8; `single.gtest.w.a.001` selected 50 sites instead of 41, until single-mode gtest changed; the pattern of `single.hypg.w.a.2` remained empty until single-alignment hypg was removed.
   For `pair.hypg.w`, see "SciPy version" below.
   `single.jsd.w.a.2` is the one weighted case that still reproduces the reference: single-alignment jsd normalizes the weighted counts of a column and adds no pseudocounts, so the scale cancels.
   The weighted phospho cases, whose reference records a failure, are described below.
@@ -219,8 +219,11 @@ A port that fixes one of them differs from the reference by design, and the test
   Each request now writes its uploads and outputs, the pair-logo PDFs included, into one temporary directory that is removed when the request ends, whether it succeeds, returns an error message or raises, so this count differs from the reference by design: no submission leaves a file of its own, and the `Cleaned up` lines in `stdout` are gone.
   The log names those files by fixed names inside that directory, such as `seqfile1.seq` and `cladecompare-<sites>.pdf`, where this reference has `tmpXXXXXX` names.
   The files that bottle 0.13 spools (see "Python 3, bottle and Biopython" below) are bottle's own, outside that directory.
-- `single.hypg` cases record the fraction of the column that matches the consensus, not a hypergeometric probability.
-  A column whose foreground or single-alignment consensus is X makes single-alignment urn and hypg raise `KeyError` in the reference code, and paired urn and hypg give it p = 0, the most significant value, because the counts skip X; jsd divides by zero where that column holds nothing but X and gaps, and otherwise computes its value from the residues beside the X.
+- `single.hypg.a.2` and `single.hypg.w.a.2` record the fraction of the column that matches the consensus, not a hypergeometric probability: a hypergeometric test draws from two sets, and a single alignment supplies one.
+  Benjamini-Hochberg sorts these fractions in ascending order, so the least conserved columns ranked first; at alpha 0.2 the pattern of `single.hypg.a.2` is empty, with a smallest value of 0.135 and a median of 0.622.
+  hypg now compares two alignments only: given one, `cladecompare` stops with `InputError`, exit status 1 and the message `hypg compares two alignments; give a foreground and a background`, and writes no file, and the web form returns that message.
+  `REJECTED` in `tests/test_cli_cases.py` declares the difference, and `test_single_alignment_hypg_is_rejected` replays the first command of each case and expects the error.
+- A column whose foreground or single-alignment consensus is X makes single-alignment urn and hypg raise `KeyError` in the reference code, and paired urn and hypg give it p = 0, the most significant value, because the counts skip X; jsd divides by zero where that column holds nothing but X and gaps, and otherwise computes its value from the residues beside the X.
   No strategy reads the background consensus, so a column whose background consensus is X is scored as any other.
   No recorded case has such a column.
   The code now reports a column whose consensus is X, in either set, with p = 1 in every strategy and both modes, as it reports a gap column.
@@ -229,7 +232,7 @@ A port that fixes one of them differs from the reference by design, and the test
 - `top_hits` searches only the 50 most significant ranks for the largest rank k at which p <= alpha * k / m, so where the Benjamini-Hochberg procedure accepts more than 50 columns but the 50th fails its own threshold, the pattern holds fewer than 50 sites, or none.
   The reference of `single.hypg.w.a.2` is the one recorded case affected: it accepts 242 of its 249 columns at alpha 0.2 and its pattern is empty.
   The search now runs over all m ranks and returns the 50 most significant of the accepted columns.
-  No test declares a difference: the expected output of that case, regenerated in `current/` since the change of weight scale, accepts no column, and in every other recorded case that accepts more than 50 columns, the 50th already passes its threshold.
+  No test declares a difference: in every recorded case that accepts more than 50 columns, the 50th already passes its threshold, and `single.hypg.w.a.2` no longer runs, since single-alignment hypg stops with an error; before it did, its expected output, regenerated since the change of weight scale, accepted no column.
 
 ## Interpreting a mismatch
 
@@ -241,7 +244,6 @@ A port that fixes one of them differs from the reference by design, and the test
   In 85 of the 242 columns that number is smaller than the foreground count rounded up, so those recorded values are probabilities of drawing more successes than the population holds.
   The code now rounds the number of successes up, as it rounds the other counts, so `pair.hypg.w` differs from this reference by design, and its expected output is regenerated (see "Regenerated outputs in `current/`" above): its p-values are finite, and its pattern, which records 16 sites, is empty.
   The effective foreground and background sizes, 2.117 and 7.734 sequences, each round up separately, to 3 and 8, so 3 sequences are drawn from 11, and across the 242 columns only 24 distinct p-values occur; the smallest, 1 / C(11, 3) or about 6.1e-3, is attained by 11 columns and already exceeds the default alpha of 0.005, so the Benjamini-Hochberg procedure selects no site at any rank.
-  (`single.hypg.w.a.2` does not call `hypergeom`; see the recorded defects.)
 - **Consensus ties.**
   The consensus residue of a tied column comes from Python 2 dictionary order in biofrills.
   Every case was also captured with `PYTHONHASHSEED` set to 1, 2 and 3, with identical outputs each time, so tie-breaking does not affect these inputs; a different consensus letter on other data may originate in biofrills' own tie-breaking rule rather than in CladeCompare.

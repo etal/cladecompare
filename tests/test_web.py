@@ -200,6 +200,19 @@ def test_phospho_submission_completes(mode, tmp_path, monkeypatch):
     assert os.listdir(workdir) == []
 
 
+def test_single_alignment_hypg_submission_is_rejected(tmp_path, monkeypatch):
+    """hypg on one alignment returns an error message and leaves no files."""
+    record = load("web.single.phospho")
+    record["fields"][1] = ["strategy", "hypg"]
+    workdir, tmpdir, status, response, errors = submit(record, tmp_path, monkeypatch)
+    assert status == "200 OK", errors
+    assert response == (
+        b"Error: hypg compares two alignments; give a foreground and a background"
+    )
+    assert os.listdir(workdir) == []
+    assert os.listdir(tmpdir) == []
+
+
 def cli_report(case, title, source=expected_text):
     """The report of a recorded command-line case, whose title names its .out
     file, retitled as the report of a submission."""

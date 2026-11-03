@@ -312,16 +312,14 @@ below gives the formula each one computes and the sources it follows:
     Hypergeometric model: the probability of drawing at least as many
     sequences of the FG consensus amino acid type as the FG column holds,
     when as many sequences as the FG holds are drawn from the FG and BG
-    together. With a single alignment, the fraction of the column that
-    matches the consensus, which is not a p-value.
+    together. hypg compares two alignments; given one, ``cladecompare``
+    stops with an error.
 
-gtest, urn, phospho, and hypg with two alignments report p-values. The jsd
-score, and the value of hypg for a single alignment, are not p-values, but
-in this release they still receive asterisks where they are below alpha and
-pass through the same selection of significant sites. For these, the
-pattern file lists the columns with the smallest values, without the
-meaning of a false discovery rate; for hypg with a single alignment, those
-are the least conserved columns.
+gtest, urn, phospho, and hypg report p-values. The jsd score is not a
+p-value, but in this release it still receives asterisks where it is below
+alpha and passes through the same selection of significant sites. For jsd,
+the pattern file lists the columns with the smallest scores, without the
+meaning of a false discovery rate.
 
 
 Methods
@@ -577,9 +575,11 @@ In paired mode, with every count and size rounded up to an integer,
 p-value is the upper tail ``P(X ≥ k)`` of a hypergeometric variable ``X``
 counting the consensus residues among ``⌈N_F⌉`` sequences drawn without
 replacement from a population of ``M`` that holds ``K`` of them. No
-pseudocounts are added. With a single alignment, the value is ``⌈c⌉`` divided
-by the number of sequences, the fraction of the column that matches the
-consensus, which is not a p-value.
+pseudocounts are added. A hypergeometric test needs two sets to draw from,
+so hypg has no single-alignment mode. Until November 2026, hypg given one
+alignment reported ``⌈c⌉`` divided by the number of sequences, the fraction
+of the column that matches the consensus, which is not a p-value; the
+Benjamini-Hochberg selection then ranked the least conserved columns first.
 
 Significant sites
 ~~~~~~~~~~~~~~~~~

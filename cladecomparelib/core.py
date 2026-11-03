@@ -235,7 +235,16 @@ def process_pair(fg_aln, bg_aln, module, do_weight, profile_aligned=False):
 
 
 def process_one(aln, module, do_weight):
-    """Calculate a mapping of alignment column positions to "contrast"."""
+    """Calculate a mapping of alignment column positions to "contrast".
+
+    A strategy whose module has no compare_one compares two alignments only,
+    and raises InputError here.
+    """
+    if not hasattr(module, "compare_one"):
+        raise InputError(
+            "%s compares two alignments; give a foreground and a background"
+            % module.__name__.rpartition(".")[2]
+        )
     # read_aln has already uppercased an alignment without uppercase residues,
     # cma_blocks and the profile paths drop lowercase residues outright, and
     # no sequence is removed here, so only mixed columns remain to fold.

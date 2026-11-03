@@ -192,9 +192,10 @@ def test_alignment_without_uppercase_gives_the_results_of_uppercase(tmp_path, st
     bg = str(INPUTS / "cdc2-domain.aln.fasta")
     fg_lower = lowercased(fg, tmp_path / "fg.fasta")
 
-    _, expected = core.process_one(core.read_aln(fg, "fasta"), module, False)
-    _, hits = core.process_one(core.read_aln(fg_lower, "fasta"), module, False)
-    assert hits == expected
+    if hasattr(module, "compare_one"):  # hypg compares two alignments only
+        _, expected = core.process_one(core.read_aln(fg, "fasta"), module, False)
+        _, hits = core.process_one(core.read_aln(fg_lower, "fasta"), module, False)
+        assert hits == expected
 
     *_, expected = core.process_pair(
         core.read_aln(fg, "fasta"), core.read_aln(bg, "fasta"), module, False
@@ -252,9 +253,10 @@ def test_mixed_case_column_gives_the_results_of_uppercase(strategy, weight):
     bg = [("x", "GCDKFS"), ("y", "ACDEWA"), ("z", "TCDKFS")]
     fg_upper = [(id_, seq.upper()) for id_, seq in fg]
 
-    _, expected = core.process_one(aln(*fg_upper), module, weight)
-    _, hits = core.process_one(aln(*fg), module, weight)
-    assert hits == expected
+    if hasattr(module, "compare_one"):  # hypg compares two alignments only
+        _, expected = core.process_one(aln(*fg_upper), module, weight)
+        _, hits = core.process_one(aln(*fg), module, weight)
+        assert hits == expected
 
     *_, expected = core.process_pair(aln(*fg_upper), aln(*bg), module, weight)
     *_, hits = core.process_pair(aln(*fg), aln(*bg), module, weight)
@@ -278,11 +280,18 @@ def test_consensus_of_unknown_residues_is_not_tested(strategy):
         ("s", "TDCKA"),
         ("u", "ADAWA"),
     ]
-    _, hits = core.process_one(aln(*fg), module, False)
-    assert hits[0] == ("X", "_", 1.0)
+    if hasattr(module, "compare_one"):  # hypg compares two alignments only
+        _, hits = core.process_one(aln(*fg), module, False)
+        assert hits[0] == ("X", "_", 1.0)
     *_, hits = core.process_pair(aln(*fg), aln(*bg), module, False)
     assert (hits[0][0], hits[0][2]) == ("X", 1.0)
     assert (hits[4][1], hits[4][2]) == ("X", 1.0)
+
+
+def test_process_one_refuses_a_strategy_for_two_alignments():
+    alignment = aln(("a", "ACDE"), ("b", "ACDF"))
+    with pytest.raises(InputError, match="hypg compares two alignments"):
+        core.process_one(alignment, core.STRATEGIES["hypg"][1], False)
 
 
 # --- top_hits ---

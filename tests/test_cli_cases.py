@@ -15,7 +15,8 @@ Where the code departs from the reference by design, as
 substitution in ``SUBSTITUTIONS``, a file in ``NOT_WRITTEN``, a return code
 in ``RETURNCODES``, or a case in ``REGENERATED``, whose expected output is the
 current output that ``tests/data/replay.py`` writes to ``tests/data/current``.
-The cases in ``LEGACY`` are kept as a record and not replayed.
+The cases in ``LEGACY`` are kept as a record and not replayed, and those in
+``REJECTED`` now stop with an error that a test of their own expects.
 
 The cases that run hmmalign or MUSCLE carry the ``integration`` mark and are
 skipped unless the programs are on ``PATH``. ``pixi run test-integration``
@@ -55,8 +56,6 @@ CASES = {
     "pair.urn.w": [],
     "single.gtest.a.001": [],
     "single.gtest.w.a.001": [],
-    "single.hypg.a.2": [],
-    "single.hypg.w.a.2": [],
     "single.jsd.a.2": [],
     "single.jsd.w.a.2": [],
     "single.phospho": [],
@@ -97,7 +96,7 @@ RETURNCODES = {
 }
 
 # Recorded cases whose expected output is the current output in CURRENT,
-# written by tests/data/replay.py. Five weighted cases moved with biofrills
+# written by tests/data/replay.py. Four weighted cases moved with biofrills
 # 72282be, whose sequence weights keep their ratios but sum to an estimate of
 # the effective number of independent sequences; CladeCompare takes that sum
 # as the sample size, while the pseudocounts keep a fixed total, so every
@@ -127,7 +126,6 @@ REGENERATED = {
     "pdb.1HCK.gtest",
     "single.gtest.a.001",
     "single.gtest.w.a.001",
-    "single.hypg.w.a.2",
     "single.phospho",
     "single.phospho.w",
     "single.urn.w",
@@ -137,6 +135,10 @@ REGENERATED = {
 # Recorded at the last commit at which -s phospho ran, with an option that no
 # longer exists; they document that behavior and are not replayed.
 LEGACY = {"legacy.pair.phospho.nw", "legacy.single.phospho.nw"}
+
+# Recorded runs of hypg on a single alignment, which now stops with an error;
+# test_single_alignment_hypg_is_rejected replays their first command.
+REJECTED = {"single.hypg.a.2", "single.hypg.w.a.2"}
 
 
 def load(case, directory=REFERENCE):
@@ -279,7 +281,7 @@ def test_reference_case(case, tmp_path, require):
 
 def test_every_recorded_case_is_tested():
     recorded = {path.name for path in REFERENCE.iterdir()}
-    assert recorded == set(CASES) | LEGACY
+    assert recorded == set(CASES) | LEGACY | REJECTED
 
 
 def test_regenerated_cases_are_declared():
@@ -343,6 +345,20 @@ def test_input_error_prints_a_message_without_traceback(tmp_path):
         "cladecompare: error: Background set is a subset of the foreground. "
         "To fix this, use a background containing sequences not in the "
         "foreground.\n"
+    )
+    assert "Traceback" not in result.stderr
+    assert written == set()
+
+
+@pytest.mark.parametrize("case", sorted(REJECTED))
+def test_single_alignment_hypg_is_rejected(case, tmp_path):
+    """hypg needs a foreground and a background, and writes nothing without."""
+    argv = load(case)["commands"][0]["argv"]
+    _workdir, written, [result], _tmpdir = run_commands([argv], tmp_path)
+    assert result.returncode == 1
+    assert result.stderr.endswith(
+        "cladecompare: error: hypg compares two alignments; give a foreground "
+        "and a background\n"
     )
     assert "Traceback" not in result.stderr
     assert written == set()

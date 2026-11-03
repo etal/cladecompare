@@ -16,7 +16,7 @@ If given multiple files:
 
 import argparse
 
-from cladecomparelib import configure_logging
+from cladecomparelib import InputError, configure_logging
 from cladecomparelib.report import do_multi, do_single, html_page
 
 
@@ -35,10 +35,13 @@ def main():
     AP.add_argument("-o", "--output", help="HTML output file name. (Default: stdout)")
     args = AP.parse_args()
 
-    if len(args.outfiles) == 1:
-        title, contents = do_single(args.outfiles[0], args.pattern)
-    else:
-        title, contents = do_multi(args.outfiles, args.pattern)
+    try:
+        if len(args.outfiles) == 1:
+            title, contents = do_single(args.outfiles[0], args.pattern)
+        else:
+            title, contents = do_multi(args.outfiles, args.pattern)
+    except InputError as exc:
+        AP.exit(1, f"{AP.prog}: error: {exc}\n")
     html_report = html_page(title, contents)
 
     if args.output:

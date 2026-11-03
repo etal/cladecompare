@@ -332,17 +332,29 @@ def test_more_than_two_alignments_ignore_output_options(tmp_path):
     assert written - pdfs == expected - {"multi.gtest.html"}
 
 
-def test_input_error_prints_a_message_without_traceback(tmp_path):
-    _workdir, written, [result], _tmpdir = run_commands(
-        [["cladecompare.py", "cdc2-domain.aln.fasta", "cdc2-domain.aln.fasta"]],
-        tmp_path,
-    )
+@pytest.mark.parametrize(
+    "argv, message",
+    [
+        (
+            ["cladecompare.py", "cdc2-domain.aln.fasta", "cdc2-domain.aln.fasta"],
+            "cladecompare: error: Background set is a subset of the foreground. "
+            "To fix this, use a background containing sequences not in the "
+            "foreground.",
+        ),
+        (
+            ["cladecompare.py", "missing.fasta"],
+            "cladecompare: error: Cannot read missing.fasta: No such file or directory",
+        ),
+        (
+            ["cladereport.py", "missing.out"],
+            "cladereport: error: Cannot read missing.out: No such file or directory",
+        ),
+    ],
+)
+def test_input_error_prints_a_message_without_traceback(argv, message, tmp_path):
+    _workdir, written, [result], _tmpdir = run_commands([argv], tmp_path)
     assert result.returncode == 1
-    assert result.stderr.endswith(
-        "cladecompare: error: Background set is a subset of the foreground. "
-        "To fix this, use a background containing sequences not in the "
-        "foreground.\n"
-    )
+    assert result.stderr.endswith(message + "\n")
     assert "Traceback" not in result.stderr
     assert written == set()
 

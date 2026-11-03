@@ -1,7 +1,6 @@
 """Tests of the .out and .pttrn readers and the heat-map classes."""
 
 import io
-import math
 
 import pytest
 
@@ -36,11 +35,23 @@ def test_parse_out_reads_what_write_pvalues_writes(tmp_path):
     ]
 
 
-def test_parse_out_reads_nan(tmp_path):
+@pytest.mark.parametrize(
+    "text, message",
+    [
+        ("", "holds no lines of cladecompare output"),
+        ("\n\n", "holds no lines of cladecompare output"),
+        ("A (C) 1 : prob=0.5\t\nA (C) 2 : prob=nan\t\n", "line 2: the value 'nan'"),
+        ("A (C) 1 : prob=inf\t\n", "line 1: the value 'inf'"),
+        ("A (C) 1 : prob=0.5\t\ngarbage line\n", "line 2: not a line of"),
+        ("A (C) x : prob=0.5\t\n", "line 1: not a line of"),
+        ("A (C) 1 : prob=0.003**\n", "line 1: not a line of"),
+    ],
+)
+def test_parse_out_rejects_a_file_it_cannot_draw(tmp_path, text, message):
     path = tmp_path / "test.out"
-    path.write_text("A (C) 1 : prob=nan\t\n")
-    [(_fg, _bg, _posn, prob, nstars)] = report.parse_out(str(path))
-    assert math.isnan(prob) and nstars == 0
+    path.write_text(text)
+    with pytest.raises(InputError, match=message):
+        report.parse_out(str(path))
 
 
 @pytest.mark.parametrize(
@@ -80,6 +91,40 @@ def test_parse_pattern_accepts_an_empty_pattern(tmp_path):
     path = tmp_path / "test.pttrn"
     path.write_text("1:")
     assert report.parse_pattern(str(path)) == []
+
+
+@pytest.mark.parametrize(
+    "text, message",
+    [
+        ("", "is not a pattern file"),
+        ("D34,G144", "is not a pattern file"),
+        ("1:D34,G", "the site 'G' has no column number"),
+    ],
+)
+def test_parse_pattern_rejects_what_write_mcbpps_does_not_write(
+    tmp_path, text, message
+):
+    path = tmp_path / "test.pttrn"
+    path.write_text(text)
+    with pytest.raises(InputError, match=message):
+        report.parse_pattern(str(path))
+
+
+def test_pattern_marks_columns_by_their_numbers(tmp_path):
+    path = tmp_path / "test.pttrn"
+    path.write_text("1:D12")
+    assert report.pattern_marks(str(path), (11, 12, 13), "test.out") == ["", "*", ""]
+
+
+@pytest.mark.parametrize("site", ["D0", "D4"])
+def test_pattern_marks_rejects_a_site_outside_the_columns(tmp_path, site):
+    path = tmp_path / "test.pttrn"
+    path.write_text("1:" + site)
+    with pytest.raises(
+        InputError,
+        match="which test.out does not have; its columns are numbered 1 to 3",
+    ):
+        report.pattern_marks(str(path), (1, 2, 3), "test.out")
 
 
 def test_tr_class_escapes_the_label():

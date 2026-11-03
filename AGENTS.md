@@ -49,6 +49,9 @@ Each entry of `hits` is therefore (foreground consensus, background consensus, v
 The `.out` file holds each column's unadjusted value of the statistic: a p-value for gtest, urn, phospho and hypg, and a score that is not a p-value for jsd, which nonetheless receives asterisks and passes through the same selection of sites.
 `write_pvalues` in `cladecomparelib/core.py` writes the value as the statistic returned it, and its asterisks compare that raw value with `-a/--alpha`, one asterisk per order of magnitude.
 `cladereport` and the cladeweb result page color each column from the same raw value (`p2class` in `cladecomparelib/report.py`), at fixed cut points that do not depend on alpha.
+`report.parse_out` reads a `.out` file for both, and raises `InputError` for a file without lines, a line that `write_pvalues` would not write, or a value that is not finite; a finite value outside [0, 1], of which `write_pvalues` warns, is colored as the nearest bound.
+A statistic that returns `nan` writes it to the `.out` file on purpose (`most_significant_type` in `cladecomparelib/shared.py`), so that a numerical failure is not hidden; `cladereport` then names the file and line instead of drawing a report with that column colored as if it had a value.
+A pattern file marks the columns that carry its sites' numbers, and a site that is not among the `.out` file's columns raises `InputError`.
 
 The multiple-testing correction exists only in `top_hits` in `core.py`: a Benjamini–Hochberg step-up procedure at false discovery rate alpha, with m equal to the number of columns in `hits`, including the columns that `process_pair` and `process_one` skip and assign p = 1, those whose consensus is a gap or X (`NON_RESIDUES` in `cladecomparelib/shared.py`, the characters that no count includes).
 In paired mode that count is taken after `clean_alignments` has dropped the columns that are gaps, `-` or `.`, in every sequence of both sets, except when both sets were aligned to a profile with `--hmm` or `--mapgaps`, where every match state keeps its column; the column numbers in `.out` and `.pttrn` refer to that cleaned alignment.
@@ -92,7 +95,7 @@ The four gtest web submissions are checked against the reports of the command-li
 The PyMOL script of `pdb.1HCK.gtest` draws the residue at each site's own column, where the reference drew the residue of the following column, and its expected output is regenerated.
 `cladereport` on the three `.out` files of `multi.gtest` writes one table row per file, where it failed with `ValueError`, and that report is now part of the case's expected output; it raises `InputError` when the files number different columns.
 `web.pair.hypg` returns status 200 with the report that the command line writes for the same alignments, because the web form now takes its strategies from the same registry as the command line; the reference records status 500.
-`web.pdb.1HCK.gtest` still returns status 500, with `InputError` in place of `AssertionError`.
+`web.pdb.1HCK.gtest` returns status 200 with the report that `pdb.1HCK.gtest` writes, apart from the title, because the web application now saves an uploaded structure under its own file name, from which `pmlscript` reads the PDB ID; the reference records status 500.
 Standard error and logs differ in the line numbers that the log format prints, in the wording of the duplicate-sequence message and of the strategy line for `urn` and `phospho`, and in the temporary file names that the web logs show, and tracebacks take Python 3's own form; `tests/data/README.md` lists these and the few differences that come from the bottle and Biopython versions.
 The run with Biopython 1.83 installed biofrills without its dependencies, because biofrills declares a higher floor (see "Packaging and the two development workflows").
 
@@ -213,10 +216,11 @@ The cases that run hmmalign or MUSCLE, and a `--mapgaps` case that replaces MAPG
 - List a formatting-only commit in `.git-blame-ignore-revs`.
 - The trailing spaces inside the PyMOL templates of `pmlscript` are output that `1HCK.pdb.pml` records, so W291 is ignored there rather than fixed.
 - Every `zip()` states `strict=`: `True` where the operands are equal in length by construction, `False` only where truncation is the current behavior, with a comment saying why.
-- Input that CladeCompare cannot use raises `InputError`, a subclass of `ValueError` defined in `cladecomparelib/__init__.py`.
-  `cladecompare.main` catches it, printing the message and exiting with status 1, and two parsers of the significance threshold catch the `InputError` of `core.parse_alpha`: the `-a` parser of `cladecompare` turns it into an argparse usage error, and `cladeweb` returns its own error message.
-  `cladeweb` also returns the message of the `InputError` that `process_one` raises for a strategy that compares two alignments only.
-  Otherwise `cladeweb` and `cladereport` let it propagate, and a missing program or MUSCLE 4 or later still raises `RuntimeError` with a traceback.
+- Input that CladeCompare cannot use raises `InputError`, a subclass of `ValueError` defined in `cladecomparelib/__init__.py`, with a message that names the file and, where it can, the line.
+  Each reader of an input file opens it inside `reading`, defined beside `InputError`, which turns an `OSError`, bytes that are not UTF-8 text and, given the form the file should have, a parser's `ValueError` into `InputError`; `core.check_readable` only opens a file that an external program will read, so that a missing or unreadable file is reported before the program runs, while a file the program cannot parse still ends with the program's `RuntimeError`.
+  `cladecompare.main` and `cladereport.main` catch it, printing `<command>: error: <message>` and exiting with status 1; the `-a` parser of `cladecompare` turns the `InputError` of `core.parse_alpha` into an argparse usage error.
+  `cladeweb` catches it around the whole submission and returns `Error: <message>` with status 200, naming each upload by its file name, as bottle normalizes it, rather than by its temporary path.
+  A missing program or MUSCLE 4 or later still raises `RuntimeError`, which, like any other exception, ends a command with a traceback and gives status 500 in `cladeweb`.
 - Every module that logs uses `logger = logging.getLogger(__name__)`, and the three commands configure logging through `configure_logging` in `cladecomparelib/__init__.py`.
 - The files under `tests/data/py27/` are generated but committed deliberately, as the reference; regenerate them with `tests/data/capture_py27.py`, for instance through `pixi run -e py27-oracle capture`, rather than editing them.
 - The files under `tests/data/current/` are generated from the current code and committed as the expected output of the cases that depart from `tests/data/py27/` by design; regenerate them with `tests/data/replay.py`, review the change against `tests/data/README.md`, and never edit them by hand.

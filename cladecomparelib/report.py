@@ -2,9 +2,10 @@
 
 import html
 import logging
-from math import log10
+import re
+from math import isfinite, log10, nan
 
-from . import InputError
+from . import InputError, reading
 
 logger = logging.getLogger(__name__)
 
@@ -56,33 +57,96 @@ def html_page(title, contents):
     return html_page_tpl % dict(title=html.escape(title), contents=contents)
 
 
+# A line of a '.out' file as core.write_pvalues writes it, without the
+# surrounding white space, e.g. "Y (Y) 1 : prob=0.00363161\t**".
+OUT_LINE = re.compile(
+    r"(?P<fg>\S) \((?P<bg>\S)\) (?P<posn>\d+) : prob=(?P<prob>[^\s*]+)"
+    r"(?:\s+(?P<stars>\*+))?"
+)
+
+# A site of a pattern file: a residue followed by its column number, e.g. D34.
+PATTERN_SITE = re.compile(r"\D*(?P<posn>\d+)")
+
+
 def parse_out(fname):
-    """Iterate over the data for each site in the '.output' file."""
-    with open(fname) as infile:
-        for line in infile:
-            if not line.strip():
+    """Read the sites of a '.out' file.
+
+    Return a list of (foreground residue, background residue, column number,
+    value, number of asterisks), one for each line. A file without sites, a
+    line of any other shape, or a value that is not a finite number raises
+    InputError.
+    """
+    sites = []
+    with reading(fname), open(fname) as infile:
+        for lineno, line in enumerate(infile, 1):
+            line = line.strip()
+            if not line:
                 continue
-            tokens = line.split()
-            fg_aa = tokens[0]
-            bg_aa = tokens[1][1]
-            posn = int(tokens[2])
-            prob = float(tokens[4].split("=")[1])
-            nstars = len(tokens[5]) if len(tokens) == 6 else 0
-            yield (fg_aa, bg_aa, posn, prob, nstars)
+            match = OUT_LINE.fullmatch(line)
+            if match is None:
+                raise InputError(
+                    f"{fname}, line {lineno}: not a line of cladecompare output: "
+                    f"{line!r}"
+                )
+            try:
+                prob = float(match["prob"])
+            except ValueError:
+                prob = nan
+            if not isfinite(prob):
+                raise InputError(
+                    f"{fname}, line {lineno}: the value {match['prob']!r} "
+                    "is not a finite number"
+                )
+            nstars = len(match["stars"] or "")
+            sites.append((match["fg"], match["bg"], int(match["posn"]), prob, nstars))
+    if not sites:
+        raise InputError(f"{fname} holds no lines of cladecompare output")
+    return sites
 
 
 def parse_pattern(fname):
-    with open(fname) as infile:
+    """Read the column numbers of the first pattern in a '.pttrn' file, sorted.
+
+    A first line without the ':' that follows the pattern's number, or a site
+    without a column number, raises InputError.
+    """
+    with reading(fname), open(fname) as infile:
         # NB: only reading the first pattern, ignoring any others
         line = infile.readline()
-        _idx, site_ln = map(str.strip, line.split(":"))
-        if not site_ln:
-            logger.warning("Empty pattern file: %s", fname)
-            return []
-        sites = site_ln.split(",")
-        # Convert to number...
-        posns = sorted(int("".join(filter(str.isdigit, site))) for site in sites)
-        return list(posns)
+    _idx, colon, site_ln = line.partition(":")
+    if not colon:
+        raise InputError(f"{fname} is not a pattern file: its first line has no ':'")
+    site_ln = site_ln.strip()
+    if not site_ln:
+        logger.warning("Empty pattern file: %s", fname)
+        return []
+    posns = []
+    for site in site_ln.split(","):
+        match = PATTERN_SITE.fullmatch(site.strip())
+        if match is None:
+            raise InputError(f"{fname}: the site {site!r} has no column number")
+        posns.append(int(match["posn"]))
+    return sorted(posns)
+
+
+def pattern_marks(patternfname, posns, outfname):
+    """An asterisk for each column in posns that the pattern file names.
+
+    Without a pattern file, no column is marked. A site that is not among the
+    columns of the '.out' file outfname raises InputError.
+    """
+    marks = [""] * len(posns)
+    if patternfname:
+        index = {posn: i for i, posn in enumerate(posns)}
+        for posn in parse_pattern(patternfname):
+            if posn not in index:
+                raise InputError(
+                    f"{patternfname} names column {posn}, which {outfname} does "
+                    f"not have; its columns are numbered {min(posns)} to "
+                    f"{max(posns)}"
+                )
+            marks[index[posn]] = "*"
+    return marks
 
 
 def p2class(fg, bg, pval):
@@ -197,16 +261,12 @@ def wrap_data(data, width=50):
 
 def do_single(fname, patternfname):
     """Build an HTML document for a single '.out' file and optional pattern."""
-    sites = list(parse_out(fname))
-    fg_seq, bg_seq, posns, probs, _nstarses = zip(*sites, strict=True)
+    fg_seq, bg_seq, posns, probs, _nstarses = zip(*parse_out(fname), strict=True)
     classes = [
         p2class(fg, bg, p) for fg, bg, p in zip(fg_seq, bg_seq, probs, strict=True)
     ]
+    pattern = pattern_marks(patternfname, posns, fname)
     posns = [str(p) if not p % 10 else "" for p in posns]
-    pattern = [""] * len(posns)
-    if patternfname:
-        for posn in parse_pattern(patternfname):
-            pattern[posn - 1] = "*"
     # wrap it up
     contents = ""
     chunked_data = map(wrap_data, [probs, classes, pattern, fg_seq, bg_seq, posns])
@@ -227,8 +287,9 @@ def do_multi(fnames, patternfname):
     rowpvalues = []
     posns = None
     for fname in fnames:
-        sites = list(parse_out(fname))
-        fg_seq, bg_seq, file_posns, probs, _nstarses = zip(*sites, strict=True)
+        fg_seq, bg_seq, file_posns, probs, _nstarses = zip(
+            *parse_out(fname), strict=True
+        )
         if posns is None:
             posns = file_posns
         elif file_posns != posns:
@@ -245,11 +306,8 @@ def do_multi(fnames, patternfname):
             ]
         )
         rowpvalues.append(probs)
+    pattern = pattern_marks(patternfname, posns, fnames[0])
     posns = [str(p) if not p % 10 else "" for p in posns]
-    pattern = [""] * len(posns)
-    if patternfname:
-        for posn in parse_pattern(patternfname):
-            pattern[posn - 1] = "*"
     # wrap it up
     contents = ""
     labels = [fn[: -len(".out")] if fn.endswith(".out") else fn for fn in fnames]

@@ -82,6 +82,63 @@ def test_cma_blocks_match_consensus_column_fasta(name):
     ]
 
 
+# --- Unreadable input ---
+
+
+@pytest.mark.parametrize(
+    "name, content, fmt, message",
+    [
+        ("aln.fasta", None, "fasta", ": No such file or directory"),
+        ("aln.cma", None, "fasta", ": No such file or directory"),
+        ("aln.fasta", b"\xca\xfe\n", "fasta", ": it is not a text file"),
+        ("aln.cma", b">a\n\xca\xfe\n", "fasta", ": it is not a text file"),
+        ("aln.fasta", b"", "fasta", " as a fasta alignment: No records found"),
+        (
+            "aln.fasta",
+            b">a\nACDE\n>b\nACD\n",
+            "fasta",
+            " as a fasta alignment: Sequences must all be the same length",
+        ),
+        ("aln.fasta", b">a\nACDE\n", "stockholm", " as a stockholm alignment: "),
+        ("aln.fasta", b"hello world\n", "fasta", " as a fasta alignment: "),
+    ],
+)
+def test_read_aln_names_a_file_it_cannot_read(tmp_path, name, content, fmt, message):
+    """The message names the file, and keeps a parser's own message to one
+    line."""
+    path = tmp_path / name
+    if content is not None:
+        path.write_bytes(content)
+    with pytest.raises(InputError) as excinfo:
+        core.read_aln(str(path), fmt)
+    assert str(excinfo.value).startswith(f"Cannot read {path}{message}")
+    assert "\n" not in str(excinfo.value)
+
+
+# Biopython warns about each record of these files that it does not recognize.
+@pytest.mark.filterwarnings("ignore::Bio.BiopythonWarning")
+@pytest.mark.parametrize("text", ["", "HEADER    KINASE\n", "not a structure\n"])
+def test_read_pdb_seq_rejects_a_file_without_atoms(tmp_path, text):
+    path = tmp_path / "1abc.pdb"
+    path.write_text(text)
+    with pytest.raises(InputError, match="as a PDB file"):
+        with core.read_pdb_seq(str(path)):
+            pass
+
+
+def test_hmmalign_names_a_missing_profile_before_running(tmp_path, monkeypatch):
+    """hmmalign is not run on a file that cannot be read."""
+
+    def run(*args):
+        raise AssertionError(f"ran {args}")
+
+    monkeypatch.setattr(core, "call_quiet", run)
+    seqs = tmp_path / "seqs.fasta"
+    seqs.write_text(">a\nACDE\n")
+    with pytest.raises(InputError, match="Cannot read missing.hmm: No such file"):
+        core.hmmalign_a2m("missing.hmm", str(seqs))
+
+
 # --- clean_alignments ---
 
 

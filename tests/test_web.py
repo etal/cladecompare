@@ -7,9 +7,10 @@ directories. The response status must be the recorded one; a successful
 response must equal the recorded body, or, for the submissions in
 ``REPORTS``, the current report of the command-line case whose report the
 reference records it equal to; and a failed one must have logged the
-recorded exception, or the one that ``ERRORS`` names. No case may write into
-the working directory or leave a file of its own in the temporary directory,
-which the reference records it doing.
+recorded exception. A recorded failure in ``REPAIRED`` now succeeds, and its
+response must equal the current report of the command-line case given
+there. No case may write into the working directory or leave a file of its
+own in the temporary directory, which the reference records it doing.
 
 The cases that run hmmalign carry the ``integration`` mark; see
 ``test_cli_cases.py``.
@@ -58,10 +59,12 @@ CASES = {
 # 100 KiB; they are bottle's own, outside the request's directory.
 SPOOLED = {"web.hmm.pair.gtest", "web.pdb.1HCK.gtest"}
 
-# Recorded failures that now raise a different exception by design, and the
-# exception each raises: pmlscript reports a file name it cannot read with
-# InputError instead of an assertion.
-ERRORS = {"web.pdb.1HCK.gtest": "InputError"}
+# Recorded failures that now succeed, and the command-line case whose current
+# report, apart from the title, each response must equal. The application saved
+# an uploaded structure under the fixed name pdbfile, from which pmlscript
+# could not read a PDB ID; it now keeps the name the structure was uploaded
+# with.
+REPAIRED = {"web.pdb.1HCK.gtest": "pdb.1HCK.gtest"}
 
 # Recorded submissions whose response the reference records equal, apart from
 # the title, to the report of a recorded command-line case on the same
@@ -152,12 +155,14 @@ def test_reference_submission(case, tmp_path, monkeypatch, require):
     require(*CASES[case])
     record = load(case)
     workdir, tmpdir, status, response, errors = submit(record, tmp_path, monkeypatch)
-    assert status == record["status"], errors
-    if record["error"]:
+    assert status == ("200 OK" if case in REPAIRED else record["status"]), errors
+    title = dict(record["fields"])["name"]
+    if case in REPAIRED:
+        assert response == cli_report(REPAIRED[case], title)
+    elif record["error"]:
         error = record["error"].strip().splitlines()[-1].split(":")[0]
-        assert ERRORS.get(case, error) in errors
+        assert error in errors
     elif case in REPORTS:
-        title = dict(record["fields"])["name"]
         assert response == cli_report(REPORTS[case], title)
     else:
         assert response == (REFERENCE / case / "response.html").read_bytes()
@@ -296,13 +301,37 @@ def test_a_failing_submission_leaves_no_temporary_files(tmp_path, monkeypatch, c
     assert os.listdir(tmpdir) == []
 
 
-def test_a_rejected_submission_leaves_no_temporary_files(tmp_path, monkeypatch):
-    """A submission rejected with an error message removes its uploads."""
+@pytest.mark.parametrize(
+    "field, value, message",
+    [
+        ("alpha", "1.5", b"Error: alpha must be a number between 0 and 1, not '1.5'"),
+        (
+            "strategy",
+            "nosuch",
+            b"Error: Unknown strategy 'nosuch'; choose one of "
+            + ", ".join(core.STRATEGIES).encode(),
+        ),
+        (
+            "seqfile1",
+            "scttlre-domain.fasta",
+            b"Error: Cannot read scttlre-domain.fasta as a fasta alignment: "
+            b"Sequences must all be the same length",
+        ),
+    ],
+)
+def test_a_rejected_submission_leaves_no_temporary_files(
+    tmp_path, monkeypatch, field, value, message
+):
+    """A submission rejected with an error message removes its uploads, and
+    the message names an upload by its file name."""
     record = load("web.pair.gtest")
-    record["fields"][2] = ["alpha", "1.5"]
+    for entries in record["fields"], record["uploads"]:
+        for entry in entries:
+            if entry[0] == field:
+                entry[1] = value
     _workdir, tmpdir, status, response, errors = submit(record, tmp_path, monkeypatch)
     assert status == "200 OK", errors
-    assert response == b"Error: alpha must be a number between 0 and 1"
+    assert response == message
     assert os.listdir(tmpdir) == []
 
 

@@ -19,7 +19,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from biofrills import alnutils, consensus
 
-from . import InputError, gtest, hypg, jsd, pairlogo, phospho, pmlscript, urn
+from . import InputError, gtest, hypg, jsd, pairlogo, phospho, pmlscript, reading, urn
 from .shared import NON_RESIDUES, combined_frequencies
 
 logger = logging.getLogger(__name__)
@@ -387,6 +387,17 @@ def call_quiet(*args):
     return proc.stdout
 
 
+def check_readable(*fnames):
+    """Raise InputError for an input file that cannot be opened for reading.
+
+    An external program given such a file fails with a message of its own,
+    which call_quiet reports as RuntimeError.
+    """
+    for fname in fnames:
+        with reading(fname), open(fname):
+            pass
+
+
 def hmmalign_a2m(hmm_profile, seq_fname):
     """Align sequences to an HMM profile and return hmmalign's a2m output.
 
@@ -396,6 +407,7 @@ def hmmalign_a2m(hmm_profile, seq_fname):
     such columns and reject the --allcol option; HMMER 3.0 keeps them only
     with --allcol, so the option is given when hmmalign's help lists it.
     """
+    check_readable(hmm_profile, seq_fname)
     allcol = ["--allcol"] if "--allcol" in call_quiet("hmmalign", "-h") else []
     return call_quiet(
         "hmmalign",
@@ -422,6 +434,9 @@ def hmm_align_and_read(hmm_profile, fasta_fname):
 
 def mapgaps_align_and_read(mapgaps_profile, fasta_fname):
     """Align a FASTA file with MAPGAPS and read the CMA alignment."""
+    # The profile argument is a name that run_gaps expands into the files of
+    # the profile, so only the sequence file can be checked here.
+    check_readable(fasta_fname)
     call_quiet("run_gaps", mapgaps_profile, fasta_fname)
     aln = cma_blocks(fasta_fname + "_aln.cma")
     return aln
@@ -449,7 +464,7 @@ def cma_records(cma_fname):
     expected shape raises InputError.
     """
     records = []
-    with open(cma_fname) as infile:
+    with reading(cma_fname), open(cma_fname) as infile:
         lines = iter(infile)
         for line in lines:
             if line.startswith(">"):
@@ -551,11 +566,12 @@ def uppercase_mixed_columns(aln, label):
 
 
 def read_aln(fname, format):
-    """Read a sequence alignment."""
+    """Read a sequence alignment; one that cannot be read raises InputError."""
     if fname.endswith(".cma") or format == "cma":
         return cma_blocks(fname)
     else:
-        aln = AlignIO.read(fname, format)
+        with reading(fname, f"a {format} alignment"):
+            aln = AlignIO.read(fname, format)
         for rec in aln:
             rec.description = ""
         return uppercase_if_unmarked(aln)
@@ -723,7 +739,15 @@ def read_pdb_seq(pdb_fname):
     Context manager: on exit, the directory is removed together with any files
     that an aligner wrote beside the FASTA file.
     """
-    pdbseqs = list(SeqIO.parse(pdb_fname, "pdb-atom"))
+    with reading(pdb_fname, "a PDB file"):
+        try:
+            pdbseqs = list(SeqIO.parse(pdb_fname, "pdb-atom"))
+        except KeyError:
+            # Biopython looks up the first model, which a file without ATOM
+            # records lacks.
+            pdbseqs = []
+        if not pdbseqs:
+            raise ValueError("it has no atoms")
     with tempfile.TemporaryDirectory() as tmpdir:
         pdbseqfname = os.path.join(tmpdir, "pdbseq")
         SeqIO.write(pdbseqs, pdbseqfname, "fasta")

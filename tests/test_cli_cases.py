@@ -314,16 +314,22 @@ def test_output_defaults_to_standard_output(tmp_path):
 
 
 def test_more_than_two_alignments_ignore_output_options(tmp_path):
-    """multi.gtest given -o and -p writes what it recorded, and says so."""
+    """multi.gtest given -o and -p writes the files of its first command, and
+    says that it ignores the options.
+
+    The case's expected files include the report of its second command,
+    cladereport, which this test does not run.
+    """
     argv = load("multi.gtest")["commands"][0]["argv"]
-    _workdir, written, [result], _tmpdir = run_commands(
+    workdir, written, [result], _tmpdir = run_commands(
         [argv + ["-o", "x.out", "-p", "x.pttrn"]], tmp_path
     )
     assert result.returncode == 0, result.stderr
     assert "ignoring -o and -p" in result.stderr
-    assert written - {name for name in written if name.endswith(".pdf")} == set(
-        load("multi.gtest")["written_files"]
-    )
+    expected, expected_pdfs = expectation("multi.gtest")
+    pdfs = {name for name in written if name.endswith(".pdf")}
+    assert_pdfs(workdir, pdfs, expected_pdfs)
+    assert written - pdfs == expected - {"multi.gtest.html"}
 
 
 def test_input_error_prints_a_message_without_traceback(tmp_path):

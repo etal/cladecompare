@@ -126,7 +126,7 @@ The random part of a temporary file name is replaced by `tmpXXXXXX`.
 
 ## Regenerated outputs in `current/`
 
-`current/<case>/` holds the expected output of each command-line case whose output now differs from `py27/` by a deliberate change that a substitution of a few values cannot express.
+`current/<case>/` holds the expected output of each command-line case whose output now differs from `py27/` by a deliberate change.
 It holds the text files the case writes and a `run.json` with only the two fields that can move, `written_files` and `pdfs`, which mean what they mean in `py27/`; the commands and the count of leftover temporary files remain those of the reference, and so do the return codes, except where `RETURNCODES` in `tests/test_cli_cases.py` declares that a command recorded failing now succeeds.
 `tests/test_cli_cases.py` lists these cases in `REGENERATED`, and fails if that list and the directories disagree or if a regenerated case no longer differs from its reference.
 
@@ -157,8 +157,8 @@ The tests inherit `PYTHONPATH`, so they import a checkout on that path.
   Under `-w`, urn now weights the sequences as CHAIN does (Neuwald et al. 2003, Methods): the foreground, CHAIN's query family, is not weighted, and the background is weighted with CHAIN's robust weights, which the `andy` scaling of `sequence_weights` gives from biofrills `205e1d1` on: normalized to a mean of one-half, with weights greater than one truncated to one.
   The reference instead weighted both sets with the `none` scaling while taking the number of foreground sequences as the number of trials, so that the foreground count was understated against it.
   These outputs no longer depend on the `none` scaling.
-  `pair.urn.w` had no p-value below 0.06 and an empty pattern; its smallest p-value is now 2.08e-05, and it selects 24 sites, in 8 pair logos.
-  `single.urn.w` analyzes CHAIN's query family alone, which is not weighted, so it writes the `.out` and `.pttrn` files that the reference records for `single.urn`, and its pattern has 50 sites instead of 3.
+  `pair.urn.w` had no p-value below 0.06 and an empty pattern; its smallest p-value is now 2.08e-05, and it selected 24 sites, in 8 pair logos, until the residue tested changed (see "The residue tested" below).
+  `single.urn.w` analyzes CHAIN's query family alone, which is not weighted, so it writes the `.out` and `.pttrn` files that `single.urn` writes, and its pattern has 50 sites instead of 3.
 - **phospho** (`pair.phospho`, `pair.phospho.w`, `single.phospho`, `single.phospho.w`).
   The reference records a failure for every phospho case (see "Recorded defects"), so these files are the first expected output of the current code; `legacy.pair.phospho.nw` and `legacy.single.phospho.nw` record the output of the last commit at which phospho ran.
   phospho now follows urn's pseudocounts: the foreground count has none, the pooled frequency's denominator adds the pseudocount size `π` = 0.5, and the binomial tail runs over the `N` foreground sequences, from the observed count, so that a column without Ser, Thr or Tyr gives exactly 1.
@@ -189,8 +189,21 @@ The tests inherit `PYTHONPATH`, so they import a checkout on that path.
   The code now draws the residue at the site's own column, which moves all 50 residues of `1HCK.pdb.pml` and no other file: the site L147 is drawn as F146 where it was G147, C165 as V164 where it was T165, and S2 as Q5 where it was K6.
   1HCK is human CDK2, a member of the background family, and the residue drawn now equals the background consensus of its column at 40 of the 50 sites, where it did at 2.
   The sites D34 and N37 fall on residues 37 and 40, which the structure does not resolve, so they select no atoms, as `X38` did in the reference.
+- **The residue tested** (`pair.hypg`, `pair.hypg.w`, `pair.urn`, `pair.urn.w`, `single.urn`, `single.urn.w`, `single.phospho`, `single.phospho.w`).
+  urn and hypg tested the foreground consensus residue of each column, which is itself chosen from that column, without correcting for the choice.
+  They now compute their tail probability for each residue type of the foreground column, report the smallest multiplied by the number of types, at most 1, and name the site in the pattern file after that type (README.rst, "The residue tested"); the `.out` file still names the consensus.
+  A column of a single residue type keeps its value; 141 of the 242 printed values move in each paired hypg and urn case, and 230 of the 249 in `single.urn`.
+  The smallest p-value of each case is unchanged.
+  In `pair.hypg`, the Benjamini-Hochberg procedure accepts 91 columns instead of 104 and the pattern holds the same 50 sites in a different order; column 180, where hypg now tests C rather than the consensus A, is accepted with p = 6.02e-04 but is not among the 50.
+  The three p-values that the SciPy version changed (see "SciPy version" below) are in columns of a single residue type, so the regenerated file prints the newer values.
+  The pattern of `pair.hypg.w` remains empty.
+  In `pair.urn`, the procedure accepts 62 columns instead of 67, and the pattern keeps 48 of its 50 sites, losing C41 and N109 and gaining C78 and N226, which adds the pair logo `pair.urn-226.pdf` and renames two others.
+  In `pair.urn.w`, it accepts 23 columns instead of 24, and the pattern loses E140, which splits the logo of sites 123 to 151 in two.
+  In `single.urn`, it accepts 230 columns instead of 237, and the pattern holds the same 50 sites in a different order; `single.urn.w` still writes the files of `single.urn`.
+  phospho tests Ser, Thr and Tyr together and its values do not move, but it named each site after the foreground consensus, so that `single.phospho` listed column 112 as F112; it now names a site after the most frequent of the three, here Y112, in `single.phospho` and `single.phospho.w`, and the five sites of `pair.phospho` already carried those names.
+  The web submissions `web.pair.urn` and `web.single.urn` each recorded a response equal, apart from the title, to the report of `pair.urn` and of `single.urn`; `tests/test_web.py` checks that the recorded responses still equal those reports and that each response equals the current report of its case.
 
-Every unweighted case, including those that run hmmalign and MUSCLE, reproduces the reference as before, apart from the phospho cases, which fail in the reference, the G-test cases above, and the PyMOL script of `pdb.1HCK.gtest`.
+Every unweighted case, including those that run hmmalign and MUSCLE, reproduces the reference as before, apart from the phospho cases, which fail in the reference, the G-test cases above, the hypg and urn cases, and the PyMOL script of `pdb.1HCK.gtest`.
 
 ## Recorded defects
 
@@ -210,7 +223,7 @@ A port that fixes one of them differs from the reference by design, and the test
   The code now draws the residue at the site's own column, and logs and leaves out a site whose column is a deletion in the structure, so this case differs from the reference by design, as "The PyMOL residues" under "Regenerated outputs in `current/`" describes.
 - `multi.gtest` writes its three `.out` and `.pttrn` pairs, but `cladereport.py` on more than one `.out` file fails with `ValueError` in `report.table_multi`.
 - `web.pair.hypg` returns status 500 with `KeyError`: the web application's strategy table lacks hypg.
-  The form and the web application now take their strategies from the same registry as the command line, so this case differs from the reference by design: it returns status 200, and its report equals `cli/pair.hypg/pair.hypg.html`, with the same SciPy substitutions, apart from the title.
+  The form and the web application now take their strategies from the same registry as the command line, so this case differs from the reference by design: it returns status 200, and its report equals the current report of `pair.hypg`, apart from the title.
 - `web.pdb.1HCK.gtest` returns status 500 with `AssertionError` from `pmlscript.pdbid_from_fname`: the uploaded structure is saved under a temporary name without the `.pdb` suffix that the function asserts.
   The function now raises `InputError` for a file name it cannot read, so that the check also runs under `python -O`, and this case fails with `InputError` instead, still with status 500.
 - Every paired web submission leaves files in the temporary directory (`leftover_temp_files`, between 2 and 17 per case), as does `web.single.phospho`, which fails in the reference; the successful single-alignment submissions leave none.
@@ -239,7 +252,7 @@ A port that fixes one of them differs from the reference by design, and the test
 - **SciPy version.**
   The reference computed hypg as `1 - hypergeom.cdf(...)`, which loses precision for small probabilities, and SciPy releases differ there: under SciPy 1.11.4 and 1.18.1 alike, 13 of the small p-values in `pair.hypg` differ from this reference in the sixth significant digit.
   The newer values are the accurate ones: exact rational arithmetic for the three hypergeometric tails behind those 13 sites gives 6.88977e-10, 5.74147e-11 and 2.12434e-09, as both newer releases do, where this reference has 6.8898e-10, 5.74155e-11 and 2.12435e-09.
-  The code now computes the tail directly with `hypergeom.sf`: on the 242 columns of `pair.hypg` under SciPy 1.18.1, its largest relative error against exact arithmetic is 6e-16, against 2e-7 for `1 - cdf`, and at the six significant digits of the `.out` file both print the newer values, which `tests/test_cli_cases.py` substitutes for the recorded ones.
+  The code now computes the tail directly with `hypergeom.sf`: on the 242 columns of `pair.hypg` under SciPy 1.18.1, its largest relative error against exact arithmetic is 6e-16, against 2e-7 for `1 - cdf`, and at the six significant digits of the `.out` file both print the newer values, which `tests/test_cli_cases.py` substituted for the recorded ones until the expected output of `pair.hypg` was regenerated (see "The residue tested" above).
   urn likewise computes its binomial tail with `binom.sf`, where it summed `binom.pmf` over the tail, a sum that can exceed 1 by rounding; on the example pair, weighted and unweighted, the two forms differ by at most 6e-15 relatively and print the same values.
   The values recorded for `pair.hypg.w` come from SciPy 1.2.1, which accepted the non-integral number of successes that weighted counts supply; SciPy 1.11.4 and 1.18.1 return `nan` for it.
   In 85 of the 242 columns that number is smaller than the foreground count rounded up, so those recorded values are probabilities of drawing more successes than the population holds.
@@ -262,7 +275,7 @@ A port that fixes one of them differs from the reference by design, and the test
 - **Log format.**
   Standard error and the web logs come from logging with the format `%(module)s [@%(lineno)s]`, so editing a module above a logging call changes them without changing behavior.
   The legacy cases log in the default format of the root logger instead (`WARNING:root:...`) and record no `INFO` lines.
-  Three messages of the current code also differ in wording: the duplicate-sequence message names the set (`Purging N identical sequences from the foreground` or `from the background`, where this reference has `from the alignment`), and the strategy lines read `Using ball-in-urn model of consensus residue conservation` and `Using urn model for phosphorylatable residues (S/T/Y)`, where this reference has `Using ball-in-urn statistical model` and `Using urn model for phosphorylatable residues`.
+  Three messages of the current code also differ in wording: the duplicate-sequence message names the set (`Purging N identical sequences from the foreground` or `from the background`, where this reference has `from the alignment`), and the strategy lines read `Using ball-in-urn model of residue conservation` and `Using urn model for phosphorylatable residues (S/T/Y)`, where this reference has `Using ball-in-urn statistical model` and `Using urn model for phosphorylatable residues`.
   One message is new: with `-w`, `single.urn.w` and `single.phospho.w` log `This strategy does not weight the sequences of one alignment`, which the reference does not record.
   At both captured commits, `pairlogo.py` looked for the DejaVu font first under `/usr/share/fonts/truetype/ttf-dejavu/` and then for a bundled copy, and used Courier if it found neither.
   `e265b1f` added that copy as `data/DejaVuSansMono-Bold.ttf` and pointed the fallback at it; at the legacy commit the fallback pointed inside `cladecomparelib/`, where no font was ever committed.

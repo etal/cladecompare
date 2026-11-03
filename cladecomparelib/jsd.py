@@ -28,6 +28,8 @@ def compare_cols(
     """1 - Jensen-Shannon divergence between the column.
 
     JSD(P,Q) = H(0.5*P + 0.5*Q) - (0.5*H(P) + 0.5*H(Q))
+
+    Return the foreground consensus, which names the site, and the score.
     """
     # ENH: choose \pi weights according to size of each set (after weighting)?
     fg_counts = scale_counts(count_col(fg_col, fg_weights))
@@ -38,15 +40,18 @@ def compare_cols(
     jsd = entropy(mix.values()) - 0.5 * (
         entropy(fg_counts.values()) + entropy(bg_counts.values())
     )
-    return (1 - jsd) ** 2
+    return fg_cons, (1 - jsd) ** 2
 
 
 def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
-    """1 - Jensen-Shannon divergence of column from equal aa frequencies."""
+    """1 - Jensen-Shannon divergence of column from equal aa frequencies.
+
+    Return the consensus residue, which names the site, and the score.
+    """
     # XXX use equal freqs or aa_freqs as background?
     counts = scale_counts(count_col(col, weights))
     mix = {}
     for aa in "ACDEFGHIKLMNPQRSTVWY":
         mix[aa] = 0.5 * counts.get(aa, 0.0) + 0.5 * 0.05
     jsd = entropy(mix.values()) - 0.5 * (entropy(counts.values()) + MAX_ENTROPY)
-    return (1 - jsd) ** 2
+    return cons_aa, (1 - jsd) ** 2

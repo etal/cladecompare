@@ -65,16 +65,18 @@ ERRORS = {"web.pdb.1HCK.gtest": "InputError"}
 
 # Recorded submissions whose response the reference records equal, apart from
 # the title, to the report of a recorded command-line case on the same
-# alignments. The G-test has since changed, so each response must equal the
-# current report of its case. web.single.gtest submits alpha 0.005 where
-# single.gtest.a.001 used 0.001, and its report is the same because the
+# alignments. The G-test and urn have since changed, so each response must
+# equal the current report of its case. web.single.gtest submits alpha 0.005
+# where single.gtest.a.001 used 0.001, and its report is the same because the
 # Benjamini-Hochberg procedure accepts more than 50 columns at both (239 at
 # 0.005, 237 at 0.001), and the selection keeps the same 50 most significant.
 REPORTS = {
     "web.hmm.pair.gtest": "hmm.pair.gtest",
     "web.pair-cma.gtest": "pair.gtest",
     "web.pair.gtest": "pair.gtest",
+    "web.pair.urn": "pair.urn",
     "web.single.gtest": "single.gtest.a.001",
+    "web.single.urn": "single.urn",
 }
 
 # Recorded submissions with a test of their own below.
@@ -226,8 +228,8 @@ def test_hypg_submission_matches_the_command_line(tmp_path, monkeypatch):
     """hypg, which the reference records failing with KeyError, runs.
 
     The form now offers every strategy that the command line accepts. The
-    report equals the one that the recorded command-line case pair.hypg
-    wrote from the same alignments in CMA form, apart from the title.
+    report equals the current report of the command-line case pair.hypg, on
+    the same alignments in CMA form, apart from the title.
     """
     workdir, _tmpdir, status, response, errors = submit(
         load("web.pair.hypg"), tmp_path, monkeypatch

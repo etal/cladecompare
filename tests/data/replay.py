@@ -4,9 +4,8 @@
 Each case of tests/test_cli_cases.py is replayed with the installed
 cladecompare and cladereport commands, as that module replays it, and must
 give the return codes that the module expects.
-Where the text files written, their contents or the names
-of the pair-logo PDFs differ from the reference in py27/cli, with the
-substitutions that module declares applied, the case's directory under
+Where the text files written, their contents or the names of the pair-logo
+PDFs differ from the reference in py27/cli, the case's directory under
 current/ is rewritten: the text files the commands wrote, and a run.json
 holding the names of those files ("written_files") and of the PDFs ("pdfs"),
 with the meaning those keys have in the reference.  Where they no longer

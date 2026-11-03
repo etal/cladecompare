@@ -9,14 +9,16 @@ from cladecomparelib import core, report
 
 
 def test_parse_out_reads_what_write_pvalues_writes(tmp_path):
+    # The .out file names the consensus residues, whichever residue names the
+    # site in the pattern file.
     hits = [
-        ("A", "C", 0.5),
-        ("D", "-", 0.003),
-        ("-", "E", 1.0),
-        ("F", "G", 2.6e-74),
-        ("H", "I", 0.0),
-        ("K", "L", 0.001),
-        ("M", "N", 0.005),
+        ("A", "C", 0.5, "A"),
+        ("D", "-", 0.003, "S"),
+        ("-", "E", 1.0, "-"),
+        ("F", "G", 2.6e-74, "F"),
+        ("H", "I", 0.0, "H"),
+        ("K", "L", 0.001, "K"),
+        ("M", "N", 0.005, "M"),
     ]
     buf = io.StringIO()
     core.write_pvalues(hits, buf, 0.005)

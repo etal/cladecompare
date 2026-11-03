@@ -11,12 +11,12 @@ only, so those must have the recorded names and embed the font that
 CladeCompare bundles. Every p-value written must be finite and within [0, 1].
 
 Where the code departs from the reference by design, as
-``tests/data/README.md`` lists, the difference is declared here: a value
-substitution in ``SUBSTITUTIONS``, a file in ``NOT_WRITTEN``, a return code
-in ``RETURNCODES``, or a case in ``REGENERATED``, whose expected output is the
-current output that ``tests/data/replay.py`` writes to ``tests/data/current``.
-The cases in ``LEGACY`` are kept as a record and not replayed, and those in
-``REJECTED`` now stop with an error that a test of their own expects.
+``tests/data/README.md`` lists, the difference is declared here: a file in
+``NOT_WRITTEN``, a return code in ``RETURNCODES``, or a case in
+``REGENERATED``, whose expected output is the current output that
+``tests/data/replay.py`` writes to ``tests/data/current``. The cases in
+``LEGACY`` are kept as a record and not replayed, and those in ``REJECTED``
+now stop with an error that a test of their own expects.
 
 The cases that run hmmalign or MUSCLE carry the ``integration`` mark and are
 skipped unless the programs are on ``PATH``. ``pixi run test-integration``
@@ -69,19 +69,6 @@ CASES = {
     "unequal.gtest": ["muscle"],
 }
 
-# SciPy 1.2.1, which computed the reference, gave three hypergeometric tails
-# of pair.hypg less accurately than later releases do; exact rational
-# arithmetic agrees with the later values. Each (reference, current, counts)
-# replaces a p-value printed at the number of sites that `counts` gives for
-# each file.
-SUBSTITUTIONS = {
-    "pair.hypg": [
-        ("6.8898e-10", "6.88977e-10", {"pair.hypg.out": 5, "pair.hypg.html": 5}),
-        ("5.74155e-11", "5.74147e-11", {"pair.hypg.out": 5, "pair.hypg.html": 5}),
-        ("2.12435e-09", "2.12434e-09", {"pair.hypg.out": 3, "pair.hypg.html": 3}),
-    ],
-}
-
 # The reference case unequal.gtest also wrote this file, which the code no
 # longer writes.
 NOT_WRITTEN = {"_cc_combined.seq"}
@@ -102,32 +89,39 @@ RETURNCODES = {
 # as the sample size, while the pseudocounts keep a fixed total, so every
 # weighted value that depends on the scale moved. pair.hypg.w also departs
 # from its record for the reason that "SciPy version" in tests/data/README.md
-# gives. The two urn cases moved because urn now weights the sequences as
-# CHAIN does ("CHAIN's weighting in urn" in tests/data/README.md). The
-# phospho cases fail in the reference. The three single-alignment gtest cases
-# moved because single-mode gtest now scales its expected counts to the
+# gives. The two weighted urn cases moved because urn now weights the
+# sequences as CHAIN does ("CHAIN's weighting in urn" in tests/data/README.md).
+# The phospho cases fail in the reference. The three single-alignment gtest
+# cases moved because single-mode gtest now scales its expected counts to the
 # column total, and the paired gtest cases because paired gtest is now the
 # G-test of homogeneity ("The G-test" in tests/data/README.md);
 # single.gtest.w.a.001 and pair.gtest.w moved for that reason and with the
 # weights. The PyMOL script of pdb.1HCK.gtest also moved, because it now draws
 # the residue at each site's own column rather than at the following one ("The
-# PyMOL residues" in tests/data/README.md).
+# PyMOL residues" in tests/data/README.md). The hypg and urn cases moved
+# because those statistics now test the residue type with the smallest tail,
+# corrected for that choice, and single.phospho and single.phospho.w because
+# phospho names each site after its most frequent Ser, Thr or Tyr ("The
+# residue tested" in tests/data/README.md).
 REGENERATED = {
     "hmm.pair.gtest",
     "hmm.single.gtest",
     "multi.gtest",
     "pair.gtest",
     "pair.gtest.w",
+    "pair.hypg",
     "pair.hypg.w",
     "pair.jsd.w.a.2",
     "pair.phospho",
     "pair.phospho.w",
+    "pair.urn",
     "pair.urn.w",
     "pdb.1HCK.gtest",
     "single.gtest.a.001",
     "single.gtest.w.a.001",
     "single.phospho",
     "single.phospho.w",
+    "single.urn",
     "single.urn.w",
     "unequal.gtest",
 }
@@ -204,13 +198,8 @@ def assert_pdfs(workdir, pdfs, expected):
 
 
 def reference_text(case, name):
-    """The recorded bytes of a file, with the SUBSTITUTIONS applied."""
-    expected = (REFERENCE / case / name).read_bytes()
-    for old, new, counts in SUBSTITUTIONS.get(case, []):
-        old, new = b"=" + old.encode(), b"=" + new.encode()
-        assert expected.count(old) == counts.get(name, 0), (name, old)
-        expected = expected.replace(old, new)
-    return expected
+    """The recorded bytes of a file."""
+    return (REFERENCE / case / name).read_bytes()
 
 
 def expectation(case, directory=None):
@@ -288,7 +277,6 @@ def test_regenerated_cases_are_declared():
     """CURRENT holds exactly the REGENERATED cases, each unlike its record."""
     assert {path.name for path in CURRENT.iterdir()} == REGENERATED
     assert REGENERATED <= set(CASES)
-    assert REGENERATED.isdisjoint(SUBSTITUTIONS)
     for case in sorted(REGENERATED):
         written, pdfs = expectation(case)
         assert (written, pdfs) != expectation(case, REFERENCE) or any(

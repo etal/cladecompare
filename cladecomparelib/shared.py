@@ -1,7 +1,7 @@
 """Numerical functions shared by multiple CladeCompare modules."""
 
 import collections
-from math import fsum, log
+from math import fsum, isnan, log, nan
 
 from biofrills import alnutils
 
@@ -31,6 +31,32 @@ def count_col(col, weights, pseudo=None, pseudo_size=1.0):
         for char, pcount in pseudo.items():
             counts[char] += pcount * pseudo_size
     return counts
+
+
+def most_significant_type(counts, consensus, tail):
+    """The residue type of a column with the smallest tail probability, and
+    that probability multiplied by the number of types, at most 1.
+
+    counts:
+        Counts of the column, as count_col returns them; its keys, the types
+        that the column holds, are the candidates.
+    consensus:
+        The column's consensus residue, which wins a tie.
+    tail:
+        Function of a type that returns its tail probability.
+
+    The consensus residue of a column is itself chosen from the types that the
+    column holds, so a test of a type chosen from the column is one of K tests,
+    K being the number of types; multiplying the smallest of their values by K
+    (Bonferroni) keeps the result a p-value. Ties go to the consensus, then to
+    the alphabetically first type. A tail that is nan makes the result nan, so
+    that it reaches the output rather than losing the comparison.
+    """
+    candidates = [(tail(aa), aa != consensus, aa) for aa in counts]
+    if any(isnan(pvalue) for pvalue, _, _ in candidates):
+        return consensus, nan
+    pvalue, _, residue = min(candidates)
+    return residue, min(1.0, len(counts) * pvalue)
 
 
 def entropy(counts):

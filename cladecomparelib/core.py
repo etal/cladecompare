@@ -31,7 +31,7 @@ PSEUDO_SIZE = 0.5
 # with the description that the help text, the web form and the log show.
 STRATEGIES = {
     "gtest": ("G-test of amino acid frequencies", gtest),
-    "urn": ("ball-in-urn model of consensus residue conservation", urn),
+    "urn": ("ball-in-urn model of residue conservation", urn),
     "phospho": ("urn model for phosphorylatable residues (S/T/Y)", phospho),
     "jsd": ("Jensen-Shannon divergence", jsd),
     "hypg": ("hypergeometric model", hypg),
@@ -180,9 +180,11 @@ def process_pair(fg_aln, bg_aln, module, do_weight, profile_aligned=False):
     With profile_aligned, both sets were aligned to one profile, and each
     column, occupied or not, is a match state.
 
-    Return a list of tuples:
-        (foreground consensus aa, background consensus aa, p-value)
-        for each column position.
+    Return a list of tuples, one for each column position:
+        (foreground consensus aa, background consensus aa, p-value, residue)
+    where residue names the site in the pattern file: the type that urn and
+    hypg tested, the most frequent of Ser, Thr and Tyr for phospho, and the
+    foreground consensus otherwise, as for an untested column.
     """
     fg_aln, bg_aln = clean_alignments(fg_aln, bg_aln, profile_aligned)
     # Removing sequences can leave a set with no uppercase residue. The
@@ -215,9 +217,9 @@ def process_pair(fg_aln, bg_aln, module, do_weight, profile_aligned=False):
         if faa in NON_RESIDUES or baa in NON_RESIDUES:
             # Ignore indel columns -- there are better ways to look at these --
             # and columns of unknown residues, which no count includes
-            pvalue = 1.0
+            residue, pvalue = faa, 1.0
         else:
-            pvalue = module.compare_cols(
+            residue, pvalue = module.compare_cols(
                 fg_col,
                 faa,
                 fg_size,
@@ -229,7 +231,7 @@ def process_pair(fg_aln, bg_aln, module, do_weight, profile_aligned=False):
                 aa_freqs,
                 PSEUDO_SIZE,
             )
-        hits.append((faa, baa, pvalue))
+        hits.append((faa, baa, pvalue, residue))
 
     return fg_aln, bg_aln, hits
 
@@ -237,8 +239,9 @@ def process_pair(fg_aln, bg_aln, module, do_weight, profile_aligned=False):
 def process_one(aln, module, do_weight):
     """Calculate a mapping of alignment column positions to "contrast".
 
-    A strategy whose module has no compare_one compares two alignments only,
-    and raises InputError here.
+    Return the alignment and a list of tuples, as process_pair does, with "_"
+    as the background consensus. A strategy whose module has no compare_one
+    compares two alignments only, and raises InputError here.
     """
     if not hasattr(module, "compare_one"):
         raise InputError(
@@ -263,12 +266,12 @@ def process_one(aln, module, do_weight):
     for cons_aa, col in zip(cons, zip(*aln, strict=True), strict=True):
         if cons_aa in NON_RESIDUES:
             # Ignore indel columns and columns of unknown residues, as above
-            pvalue = 1.0
+            residue, pvalue = cons_aa, 1.0
         else:
-            pvalue = module.compare_one(
+            residue, pvalue = module.compare_one(
                 col, cons_aa, aln_size, weights, aa_freqs, PSEUDO_SIZE
             )
-        hits.append((cons_aa, "_", pvalue))
+        hits.append((cons_aa, "_", pvalue, residue))
     return aln, hits
 
 
@@ -297,7 +300,7 @@ def process_output(
                 fg_aln, bg_aln, tophits, pattern.rsplit(".", 1)[0], 10
             )
     if pdb_data:
-        patterns = [t[0] for t in tophits]
+        patterns = [posn for posn, _residue in tophits]
         if len(pdb_data) == 1:
             # Single-PBD mode
             pdb_fname, pdb_rec, pdb_resnums, pdb_inserts = pdb_data[0]
@@ -333,9 +336,13 @@ def process_output(
 
 
 def write_pvalues(hits, outfile, alpha):
-    """Write p-values & "contrast" stars for each site. (It's noisy.)"""
-    for idx, data in enumerate(hits):
-        fg_char, bg_char, pvalue = data
+    """Write p-values & "contrast" stars for each site. (It's noisy.)
+
+    Each line names the column's consensus residues, whichever residue names
+    the site in the pattern file, because cladereport draws the first field as
+    the consensus sequence.
+    """
+    for idx, (fg_char, bg_char, pvalue, _residue) in enumerate(hits):
         if not (0.0 <= pvalue <= 1.0):
             logger.warning("Out-of-domain p-value at site %s: %s", idx, pvalue)
         stars = "*" * int(-log10(pvalue)) if 0 < pvalue < alpha else ""
@@ -345,9 +352,10 @@ def write_pvalues(hits, outfile, alpha):
 
 
 def write_mcbpps(tophits, ptnfile):
-    """Write a .pttrn file in the style of mcBPPS."""
+    """Write a .pttrn file in the style of mcBPPS, naming each site by the
+    residue that top_hits pairs with its position."""
     ptnfile.write(
-        "1:" + ",".join([("%s%d" % (faa, posn)) for posn, faa, baa in tophits])
+        "1:" + ",".join([("%s%d" % (residue, posn)) for posn, residue in tophits])
     )
 
 
@@ -686,24 +694,19 @@ def top_hits(hits, alpha, N=50):
     The step-up procedure runs at false discovery rate alpha over every column
     of hits, and the N most significant of the sites it accepts are returned.
 
-    Return a list of triplets, sorted by significance:
-        (position, fg_aa, bg_aa)
-    where position is the column number, counted from 1.
+    Return a list of pairs, sorted by significance:
+        (position, residue)
+    where position is the column number, counted from 1, and residue the
+    residue that names the site.
     """
-    hit_quads = [
-        (i + 1, faa_baa_pval[0], faa_baa_pval[1], faa_baa_pval[2])
-        for i, faa_baa_pval in enumerate(hits)
+    ranked = [
+        (pval, i + 1, residue) for i, (_faa, _baa, pval, residue) in enumerate(hits)
     ]
-
-    def get_pval(ifbp):
-        return ifbp[3]
-
-    hit_quads.sort(key=get_pval)
-    m = len(hit_quads)  # Num. hypotheses tested
-    tophits = [(posn, faa, baa) for posn, faa, baa, pval in hit_quads]
+    ranked.sort(key=lambda row: row[0])
+    m = len(ranked)  # Num. hypotheses tested
     for k in range(m, 0, -1):
-        if get_pval(hit_quads[k - 1]) <= alpha * k / m:
-            return tophits[: min(k, N)]
+        if ranked[k - 1][0] <= alpha * k / m:
+            return [(posn, residue) for _pval, posn, residue in ranked[: min(k, N)]]
     return []
 
 

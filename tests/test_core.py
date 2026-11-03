@@ -238,7 +238,7 @@ def test_lowercase_beside_uppercase_marks_an_insert_column(tmp_path):
     alignment = core.read_aln(fname, "fasta")
     assert rows(alignment)[0] == ("a", "SCdEF")
     _, hits = core.process_one(alignment, core.STRATEGIES["urn"][1], False)
-    assert hits[2] == ("-", "_", 1.0)
+    assert hits[2] == ("-", "_", 1.0, "-")
 
 
 @pytest.mark.parametrize("weight", [False, True])
@@ -282,7 +282,7 @@ def test_consensus_of_unknown_residues_is_not_tested(strategy):
     ]
     if hasattr(module, "compare_one"):  # hypg compares two alignments only
         _, hits = core.process_one(aln(*fg), module, False)
-        assert hits[0] == ("X", "_", 1.0)
+        assert hits[0] == ("X", "_", 1.0, "X")
     *_, hits = core.process_pair(aln(*fg), aln(*bg), module, False)
     assert (hits[0][0], hits[0][2]) == ("X", 1.0)
     assert (hits[4][1], hits[4][2]) == ("X", 1.0)
@@ -298,7 +298,7 @@ def test_process_one_refuses_a_strategy_for_two_alignments():
 
 
 def hits_from(pvalues):
-    return [("A", "C", p) for p in pvalues]
+    return [("A", "C", p, "A") for p in pvalues]
 
 
 # The most sites that top_hits returns.
@@ -314,7 +314,7 @@ def bh_expected(pvalues, alpha):
 
 
 def positions(tophits):
-    return [posn for posn, _faa, _baa in tophits]
+    return [posn for posn, _residue in tophits]
 
 
 @pytest.mark.parametrize("seed", range(20))
@@ -334,9 +334,16 @@ def test_top_hits_agrees_with_bh(seed, alpha, n_signals):
     assert positions(core.top_hits(hits_from(pvalues), alpha)) == expected
 
 
-def test_top_hits_breaks_ties_by_position_and_returns_residues():
-    hits = [("A", "C", 0.5), ("D", "E", 0.001), ("F", "G", 0.001), ("H", "I", 0.0)]
-    assert core.top_hits(hits, 0.05) == [(4, "H", "I"), (2, "D", "E"), (3, "F", "G")]
+def test_top_hits_breaks_ties_by_position_and_returns_tested_residues():
+    """Each site is named by the residue that names it in hits, which in column
+    2 is not the foreground consensus."""
+    hits = [
+        ("A", "C", 0.5, "A"),
+        ("D", "E", 0.001, "S"),
+        ("F", "G", 0.001, "F"),
+        ("H", "I", 0.0, "H"),
+    ]
+    assert core.top_hits(hits, 0.05) == [(4, "H"), (2, "S"), (3, "F")]
 
 
 def test_top_hits_counts_every_column_as_a_hypothesis():

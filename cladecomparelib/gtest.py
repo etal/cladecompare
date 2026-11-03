@@ -50,7 +50,11 @@ def compare_cols(
     aa_freqs,
     pseudo_size,
 ):
-    """Compare amino acid frequencies between aligned columns via G-test."""
+    """Compare amino acid frequencies between aligned columns via G-test.
+
+    The test covers the whole composition, so the residue returned with the
+    p-value, which names the site, is the foreground consensus.
+    """
     fg_counts = count_col(fg_col, fg_weights)
     bg_counts = count_col(bg_col, bg_weights)
     # Column totals of the table, over the residue types present in either set
@@ -61,7 +65,7 @@ def compare_cols(
     }
     if len(col_totals) < 2:
         # The compositions cannot differ, and the test has no degrees of freedom
-        return 1.0
+        return fg_cons, 1.0
     fg_total = math.fsum(fg_counts.values())
     bg_total = math.fsum(bg_counts.values())
     total = fg_total + bg_total
@@ -71,12 +75,14 @@ def compare_cols(
         for aa, count in counts.items()
         if count
     )
-    pvalue = chi2.sf(G, len(col_totals) - 1)
-    return pvalue
+    return fg_cons, chi2.sf(G, len(col_totals) - 1)
 
 
 def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
-    """Compare column amino acid frequencies to overall via G-test."""
+    """Compare column amino acid frequencies to overall via G-test.
+
+    Return the consensus residue, which names the site, and the p-value.
+    """
     observed = count_col(col, weights, aa_freqs, pseudo_size)
     # Scale the expected counts to the observed total, pseudocounts included
     total = math.fsum(observed.values())
@@ -84,5 +90,4 @@ def compare_one(col, cons_aa, aln_size, weights, aa_freqs, pseudo_size):
         obsv * math.log(obsv / (total * aa_freqs.get(aa, 0.0)))
         for aa, obsv in observed.items()
     )
-    pvalue = chi2.sf(G, 19)
-    return pvalue
+    return cons_aa, chi2.sf(G, 19)

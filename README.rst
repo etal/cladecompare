@@ -128,15 +128,17 @@ Each line of the result, the ``.out`` file, describes one column::
 
 The fields are the consensus residue of the foreground column, that of the
 background column in parentheses, the column number, and the value of the
-statistic, which for most strategies is a p-value. A consensus of ``-``
-marks a gap column, as `Consensus residues and untested columns`_ defines
-it, which is not tested and is given the value 1. The asterisks, after a
-tab, show one per order of magnitude of the value where it is below the
-significance threshold alpha (``-a``, between 0 and 1, default 0.005).
-These values are not adjusted for multiple testing, so among hundreds of
-columns some fall below alpha by chance; the correction applies to the
-significant sites described below. `Preparing the alignments`_ describes
-which columns the numbers refer to.
+statistic, which for most strategies is a p-value. The value of urn and hypg
+refers to the residue that the pattern file names, which can differ from the
+consensus, and that of phospho to Ser, Thr and Tyr together, as `The residue
+tested`_ explains. A consensus of ``-`` marks a gap column, as `Consensus
+residues and untested columns`_ defines it, which is not tested and is given
+the value 1. The asterisks, after a tab, show one per order of magnitude of
+the value where it is below the significance threshold alpha (``-a``,
+between 0 and 1, default 0.005). These values are not adjusted for multiple
+testing, so among hundreds of columns some fall below alpha by chance; the
+correction applies to the significant sites described below. `Preparing the
+alignments`_ describes which columns the numbers refer to.
 
 ``-s`` chooses the statistic, as described under Strategies_, and ``-w``
 weights the sequences, so that a group of closely related sequences counts
@@ -155,19 +157,22 @@ significant columns, and PDF files of paired sequence logos around them::
 
 The pattern file holds one line in a format modeled on the pattern files of
 mcBPPS (Neuwald 2010): ``1:`` and the significant columns, most
-significant first, each written as the foreground consensus residue
-followed by the column number::
+significant first, each written as the residue that names the site followed
+by the column number::
 
     1:L135,V1,L158,M123,Y154,L47,G9,I153,...
 
-The significant columns are those that pass the Benjamini-Hochberg
-procedure at a false discovery rate of alpha, taken over all columns of the
-alignment, and at most 50 columns are selected, even where the procedure
-would accept more, as `Significant sites`_ under Methods explains. Each logo
-file shows the foreground above the background for a group of significant
-columns that lie at most 10 columns apart, with up to 10 columns on either
-side, and is named after the pattern file and the columns it highlights,
-as in ``scttlre-v-cdc2-31,32,34,37,40,43,47,52,53.pdf``.
+For gtest and jsd, which compare the whole composition of the columns, the
+residue named is the foreground consensus; for urn, hypg and phospho it is
+the residue that `The residue tested`_ describes. The significant columns are
+those that pass the Benjamini-Hochberg procedure at a false discovery rate of
+alpha, taken over all columns of the alignment, and at most 50 columns are
+selected, even where the procedure would accept more, as `Significant sites`_
+under Methods explains. Each logo file shows the foreground above the
+background for a group of significant columns that lie at most 10 columns
+apart, with up to 10 columns on either side, and is named after the pattern
+file and the columns it highlights, as in
+``scttlre-v-cdc2-31,32,34,37,40,43,47,52,53.pdf``.
 
 Aligning sequences to a profile
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -299,7 +304,9 @@ below gives the formula each one computes and the sources it follows:
     of each column's composition against that of the whole alignment.
 :urn:
     Ball-in-urn model (binomial), after CHAIN (Neuwald et al. 2003), for
-    counts of the "consensus" amino acid type in FG and BG.
+    the count in the FG column of the amino acid type with the smallest tail
+    probability, against the frequency of that type in the FG and BG
+    together.
 :phospho:
     Ball-in-urn model, as in "urn", for the combined count of the
     phosphorylatable residues Ser, Thr and Tyr in the FG column, against
@@ -310,10 +317,10 @@ below gives the formula each one computes and the sources it follows:
     score that is smaller for more divergent columns, not a p-value.
 :hypg:
     Hypergeometric model: the probability of drawing at least as many
-    sequences of the FG consensus amino acid type as the FG column holds,
-    when as many sequences as the FG holds are drawn from the FG and BG
-    together. hypg compares two alignments; given one, ``cladecompare``
-    stops with an error.
+    sequences of the amino acid type with the smallest tail probability as
+    the FG column holds, when as many sequences as the FG holds are drawn
+    from the FG and BG together. hypg compares two alignments; given one,
+    ``cladecompare`` stops with an error.
 
 gtest, urn, phospho, and hypg report p-values. The jsd score is not a
 p-value, but in this release it still receives asterisks where it is below
@@ -402,8 +409,58 @@ alignment without any uppercase residue marks nothing by case and is read as
 if it were uppercase.
 A column whose foreground or background consensus is a gap, or X, an unknown
 residue that the counts skip, is not tested and is reported with p = 1.
-Below, ``c*`` is the foreground consensus residue and ``c = n_c*`` its count
-in the foreground column.
+The site of a column is named in the pattern file after its foreground
+consensus residue for gtest and jsd, and after the residue that the next
+section describes for urn, hypg and phospho.
+
+The residue tested
+~~~~~~~~~~~~~~~~~~
+
+urn and hypg each test one residue type ``a`` of the foreground column: is
+its count ``n_a`` larger than the frequency of ``a`` in the two sets together
+makes likely? Each computes the tail probability ``P_a`` that its section
+below gives, for each of the ``K`` residue types that the foreground column
+holds, and reports ::
+
+    P = min(1, K · min_a P_a)
+
+for the type ``a`` with the smallest ``P_a``, which names the site in the
+pattern file; a tie goes to the foreground consensus, then to the
+alphabetically first type. The type is chosen from the same column that is
+then tested, so the smallest ``P_a`` alone is not a p-value; multiplying by
+``K`` is the Bonferroni correction for that choice. A column that holds a
+single residue type has ``K = 1``. With a single alignment, urn does the same
+over the types of each column.
+
+Until November 2026, urn and hypg tested the foreground consensus without
+correction. The consensus is also chosen from the column, so the selection
+was the same, and the values it gave were too small to be read as p-values,
+the more so the more background sequences there were. With columns drawn
+from the compositions of the example pair's own columns, 11 foreground
+sequences against 400 in the background, the consensus test of hypg gave
+7.1% of values below 0.05, 1.5% below 0.01 and 0.16% below 0.001, and that
+of urn 6.7%, 1.3% and 0.13%; with the correction, hypg gives 3.5%, 0.64% and
+0.06%, and urn 3.2%, 0.55% and 0.04%. On the example pair itself, 726,000
+columns from 3,000 random divisions of the 47 pooled sequences into 11
+foreground and 36 background sequences gave, before and after, 4.9% and 1.9%
+below 0.05, 0.82% and 0.28% below 0.01, and 0.06% and 0.02% below 0.001 for
+hypg; urn, whose pooled frequency includes the foreground count, gave 2.9%
+and 0.68%, 0.25% and 0.07%, and 0.007% and 0.002%. The values were smallest
+with a single alignment, where the frequency of the type is that of the whole
+alignment: for columns of 37 sequences drawn from the amino acid frequencies
+of ``cdc2-domain``, urn gave 46% of values below 0.05, 9.5% below 0.01 and
+0.9% below 0.001, and gives 2.9%, 0.6% and 0.09%.
+
+Of the columns that the Benjamini-Hochberg procedure accepts on the example
+pair at the default alpha, 91 for hypg and 62 for urn, the type tested is the
+foreground consensus in all but one, column 180 under hypg: the foreground
+holds 6 A and 5 C, its consensus is A, and the background holds 24 A and no
+C, so hypg tests C, with ``P = 6.0e-04``, where A gave 0.86.
+
+phospho tests Ser, Thr and Tyr together, a set fixed in advance, so it needs
+no correction; it names the site after the most frequent of the three in the
+foreground column, the alphabetically first on a tie, or after the
+consensus where the column holds none of them.
 
 G-test (gtest)
 ~~~~~~~~~~~~~~
@@ -488,23 +545,23 @@ conserved residue in column ``j`` of the superalignment. CHAIN reports
 ``K_j = 1 / P_j``, the expected number of trials needed to observe this
 event; CladeCompare reports ``P_j``.
 
-In paired mode, CladeCompare takes the foreground as the subalignment, the
-foreground consensus residue as the conserved residue, and the foreground and
-background columns together as the superalignment::
+In paired mode, CladeCompare takes the foreground as the subalignment and the
+foreground and background columns together as the superalignment, and for
+each residue type ``a`` of the foreground column computes ::
 
-    p_j = (m_c* + π f_c* + c) / (N_B + N + π)
-    P   = Σ_{i=k..N} C(N, i) p_j^i (1 - p_j)^(N - i)
+    p_a = (m_a + π f_a + n_a) / (N_B + N + π)
+    P_a = Σ_{i=⌈n_a⌉..N} C(N, i) p_a^i (1 - p_a)^(N - i)
 
-with ``k = max(1, ⌈c⌉)`` and ``N`` the number of foreground sequences. With a
-single alignment, ``p_j = f_c*``, ``k = ⌈c⌉`` and ``N`` is the number of
-sequences.
+with ``N`` the number of foreground sequences, from which `The residue
+tested`_ takes the reported value. With a single alignment, ``p_a = f_a``
+and ``N`` is the number of sequences.
 
 Under ``-w``, urn weights the sequences as CHAIN does. The foreground,
 CHAIN's query family, is not weighted, because CHAIN takes its sequences to
-be independent, so ``c`` remains a count. The background is weighted with
+be independent, so ``n_a`` remains a count. The background is weighted with
 CHAIN's robust weights: the position-based weights of Henikoff & Henikoff,
 normalized to a mean of one-half, with weights greater than one truncated to
-one (BioFrills' scaling ``andy``). ``m_c*``, ``N_B`` and the background
+one (BioFrills' scaling ``andy``). ``m_a``, ``N_B`` and the background
 consensus use these weights, and the frequencies ``f_a`` pool the unweighted
 foreground with the weighted background. With a single alignment, which
 takes the part of the query family, ``-w`` changes nothing.
@@ -514,8 +571,10 @@ CladeCompare departs from CHAIN in these respects:
 - **Pseudocounts.** CHAIN adds one pseudocount for each amino acid type;
   CladeCompare adds pseudocounts of total size 0.5, in proportion to ``f_a``.
 - **Conserved residues.** CHAIN counts residues biochemically similar to the
-  conserved residue as conserved; CladeCompare counts only the consensus
-  residue type.
+  conserved residue as conserved, and takes the conserved residue from its
+  query sequence, chosen before the column is examined; CladeCompare counts a
+  single residue type, chosen from the foreground column with the correction
+  that `The residue tested`_ describes.
 - **Superalignment.** CHAIN draws from a separate superalignment;
   CladeCompare pools the foreground and background columns.
 
@@ -523,15 +582,14 @@ Phosphorylatable residues (phospho)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ball-in-urn model is applied to the combined count of Ser, Thr and Tyr
-instead of the consensus residue, with the pseudocounts of urn. With
+instead of a single residue type, with the pseudocounts of urn. With
 ``t_F = Σ n_a``, the observed count, and ``t_B = Σ (m_a + π f_a)``, both
 summed over ``a`` in {S, T, Y}::
 
     p = (t_B + t_F) / (N_B + N_F + π)
     P = Σ_{i=⌈t_F⌉..N} C(N, i) p^i (1 - p)^(N - i),   N = N_F
 
-A foreground column without Ser, Thr or Tyr thus has ``P = 1``; unlike urn,
-phospho does not raise the lower limit of the sum to 1. With a single
+A foreground column without Ser, Thr or Tyr thus has ``P = 1``. With a single
 alignment, ``t = Σ n_a`` over {S, T, Y}, ``p = f_S + f_T + f_Y``, and ``N`` is
 the number of sequences.
 
@@ -570,11 +628,14 @@ a conservation score.
 Hypergeometric model (hypg)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In paired mode, with every count and size rounded up to an integer,
-``k = max(1, ⌈c⌉)``, ``K = ⌈m_c* + c⌉`` and ``M = ⌈N_F⌉ + ⌈N_B⌉``, the
-p-value is the upper tail ``P(X ≥ k)`` of a hypergeometric variable ``X``
-counting the consensus residues among ``⌈N_F⌉`` sequences drawn without
-replacement from a population of ``M`` that holds ``K`` of them. No
+In paired mode, for each residue type ``a`` of the foreground column, with
+every count and size rounded up to an integer, ``k = ⌈n_a⌉``,
+``S = ⌈m_a + n_a⌉`` and ``M = ⌈N_F⌉ + ⌈N_B⌉``, ``P_a`` is the upper tail
+``P(X ≥ k)`` of a hypergeometric variable ``X`` counting the residues of
+type ``a`` among ``⌈N_F⌉`` sequences drawn without replacement from a
+population of ``M`` that holds ``S`` of them: the one-sided Fisher exact
+test of the 2 × 2 table of the two sets against ``a`` and the other types.
+`The residue tested`_ takes the reported value from these. No
 pseudocounts are added. A hypergeometric test needs two sets to draw from,
 so hypg has no single-alignment mode. Until November 2026, hypg given one
 alignment reported ``⌈c⌉`` divided by the number of sequences, the fraction
@@ -593,11 +654,12 @@ any match state of a profile that neither set occupies. The step-up search
 runs over all columns, and at most 50 of the columns it accepts, the most
 significant, are selected, so a selection of fewer than 50 means that the
 procedure accepted fewer. On the example pair at the default alpha, without
-``-w``, gtest, urn and hypg accept 102, 67 and 104 columns, and each of
+``-w``, gtest, urn and hypg accept 102, 62 and 91 columns, and each of
 their pattern files lists 50. Versions before 0.3.0 confined the search to
 the 50 most significant columns, so where the procedure accepted more than
 50, they could select fewer than 50, or none: with ``-s hypg -w -a 0.245``,
-the example pair accepts 54 columns, of which the earlier search selected 11.
+the example pair accepted 54 columns under the hypg of that time, of which
+the earlier search selected 11.
 
 Alignments from MAPGAPS
 ~~~~~~~~~~~~~~~~~~~~~~~

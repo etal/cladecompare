@@ -149,6 +149,7 @@ The tests inherit `PYTHONPATH`, so they import a checkout on that path.
   The sums moved from 5.004 to 2.117 for the 11 `scttlre-domain` sequences of the paired cases, from 6.146 to 7.734 for the 36 `cdc2-domain` sequences of the paired cases, and from 6.317 to 7.734 for the 37 `cdc2-domain` sequences of the single-alignment cases; the sequence that the paired cases remove from the background is identical to another, so it no longer changes the sum.
   CladeCompare uses the weights as counts and their sum as the sample size, while the pseudocounts have a fixed total of 0.5, so the change of scale moves every weighted value that depends on it.
   The change is exactly this rescaling: the code at biofrills `ff11246`, with each weight vector multiplied to give the new sum, writes every file of these cases byte for byte; `pair.gtest.w` and `single.gtest.w.a.001` have since moved with the G-test (see "The G-test" below).
+  Of these four cases, only `pair.jsd.w.a.2` still reproduces under the rescaled weights; `pair.hypg.w` has since moved with the residue that hypg tests and with SciPy, and `single.hypg.w.a.2` no longer runs.
   The pattern of `pair.gtest.w` falls from 9 sites to none, so its six pair logos are no longer written; `pair.jsd.w.a.2` selects 32 sites instead of 29, in 7 logos instead of 8; `single.gtest.w.a.001` selected 50 sites instead of 41, until single-mode gtest changed; the pattern of `single.hypg.w.a.2` remained empty until single-alignment hypg was removed.
   For `pair.hypg.w`, see "SciPy version" below.
   `single.jsd.w.a.2` is the one weighted case that still reproduces the reference: single-alignment jsd normalizes the weighted counts of a column and adds no pseudocounts, so the scale cancels.
@@ -176,7 +177,9 @@ The tests inherit `PYTHONPATH`, so they import a checkout on that path.
   `hmm.single.gtest` changes in the same way: the median rises from 2.53e-66 to 3.90e-14, the columns below its alpha of 0.005 fall from 288 to 274 of 289, and the pattern keeps 44 of its 50 sites.
   In `single.gtest.w.a.001`, where the weights sum to 7.734, the median rises from 0.00315 in the reference to 0.425, the columns below alpha 0.001 fall from 86 to 8, and the pattern falls to the single site W179, one of the 41 recorded.
   The web submissions of gtest each recorded a response equal, apart from the title, to the report of a command-line case on the same alignments: `web.single.gtest` to that of `single.gtest.a.001`, `web.pair.gtest` and `web.pair-cma.gtest` to that of `pair.gtest`, and `web.hmm.pair.gtest` to that of `hmm.pair.gtest`; `tests/test_web.py` checks that the recorded responses still equal those reports and that each response equals the current report of its case.
-  gtest also takes the chi-squared tail probability from `scipy.stats.chi2.sf` in place of `chisqprob` from biofrills, whose convergence tolerance of 1e-7 leaves a relative error of up to 4.1e-8 at 19 degrees of freedom; with the paired test of that time, this moved one printed value of the reference cases, in `multi.gtest`, from 0.528722 to 0.528721.
+  gtest also takes the chi-squared tail probability from `scipy.stats.chi2.sf` in place of `chisqprob` from biofrills, which it called until October 2026 and which was adapted from Cephes to avoid a SciPy dependency.
+  The convergence tolerance of `chisqprob`, `MACHEP = 1e-7`, leaves a relative error of up to 3.6e-7 at 1 degree of freedom and 4.1e-8 at 19, enough to change the sixth significant digit of a printed p-value and the ranking that the Benjamini-Hochberg selection depends on.
+  With the paired test of that time, this moved one printed value of the reference cases, column 153 of `cdc2-b.aln.fasta.out` in `multi.gtest`, from 0.528722, which `chisqprob` gave, to 0.528721, the correctly rounded tail.
   In paired mode, gtest tested the foreground counts for goodness of fit to the background column's composition, pseudocounts included, on 19 degrees of freedom; it is now the G-test of homogeneity on the 2 × K table of the two columns' counts, on K - 1 degrees of freedom, without pseudocounts (README.rst, "G-test (gtest)").
   In `pair.gtest`, the median p-value falls from 0.120 to 0.0138, the smallest p-value rises from 1.69e-28 to 4.55e-11, the columns below 1e-10 fall from 39 to 1, and those below alpha 0.005 rise from 91 to 109 of 242; the pattern holds 50 sites as before, 35 of them recorded.
   Exactly the 12 columns with one residue type across both sets give 1, where the reference gave 1 at 33 columns.
@@ -210,6 +213,10 @@ The tests inherit `PYTHONPATH`, so they import a checkout on that path.
 
 Every unweighted case, including those that run hmmalign and MUSCLE, reproduces the reference as before, apart from the phospho cases, which fail in the reference, the G-test cases above, the hypg and urn cases, and the PyMOL script of `pdb.1HCK.gtest`.
 
+With HMMER 3.0 or 3.4 and MUSCLE 3.8.1551, under Python 3.12 and the pinned biofrills, the current code reproduces the `.out`, `.pttrn`, `.html` and PyMOL files of every command-line case and the response of every successful web submission byte for byte, apart from the differences that this file records.
+This holds both with Biopython 1.83, SciPy 1.11.4 and bottle 0.12.25 and with Biopython 1.88, SciPy 1.18.1 and bottle 0.13.4.
+The run with Biopython 1.83 installed biofrills without its dependencies, because biofrills declares a higher Biopython floor (`AGENTS.md`, "Packaging and the two development workflows").
+
 ## Recorded defects
 
 The reference records the original behavior, defects included.
@@ -232,6 +239,7 @@ A port that fixes one of them differs from the reference by design, and the test
   It raises `InputError` unless the files number the same columns, as the files of one `cladecompare` run on three or more alignments do; repairing the rows alone would have dropped or misaligned columns of mismatched files without an error.
 - `web.pair.hypg` returns status 500 with `KeyError`: the web application's strategy table lacks hypg.
   The form and the web application now take their strategies from the same registry as the command line, so this case differs from the reference by design: it returns status 200, and its report equals the current report of `pair.hypg`, apart from the title.
+  Before the registry, the strategies were listed in four places, and hypg reached the command line but not the web form.
 - `web.pdb.1HCK.gtest` returns status 500 with `AssertionError` from `pmlscript.pdbid_from_fname`: the uploaded structure is saved under a temporary name without the `.pdb` suffix that the function asserts.
   The function now raises `InputError` for a file name it cannot read, so that the check also runs under `python -O`, and this case failed with `InputError` instead, still with status 500, until the change described next.
   The web application now saves an uploaded structure under its uploaded file name, as bottle normalizes it, in a directory of its own, so this case differs from the reference by design: it returns status 200, and its report equals the current report of `pdb.1HCK.gtest`, apart from the title.
@@ -271,14 +279,45 @@ A port that fixes one of them differs from the reference by design, and the test
 - **Consensus ties.**
   The consensus residue of a tied column comes from Python 2 dictionary order in biofrills.
   Every case was also captured with `PYTHONHASHSEED` set to 1, 2 and 3, with identical outputs each time, so tie-breaking does not affect these inputs; a different consensus letter on other data may originate in biofrills' own tie-breaking rule rather than in CladeCompare.
-  The ported biofrills breaks ties by an explicit rule instead, and gives the same consensus as `36684bb` on the alignments that the biofrills section of `AGENTS.md` lists as measured.
+  The ported biofrills breaks ties by an explicit rule instead, and gives the same consensus as `36684bb` on the alignments that "biofrills version" below lists as measured.
 - **biofrills version.**
-  The ported CladeCompare runs against the ported biofrills rather than `36684bb`.
-  On the alignments that the biofrills section of `AGENTS.md` lists as measured, the values biofrills returns to CladeCompare are identical or differ by at most a few units in the last place.
+  The ported CladeCompare runs against the ported biofrills rather than `36684bb`, the commit behind the reference.
+  Moving from `36684bb` to `ff11246`, the first ported commit, whose version is `0.4.0.dev0`, leaves the values that biofrills returns to CladeCompare identical or within a few units in the last place.
+  This was measured on the committed alignments as the program passes them to biofrills, with its weights and gap threshold, under Python 3.12, 3.14 and 3.15: the `scttlre-domain` and `cdc2-domain` pair in both its `.cma` and `.aln.fasta` forms after `clean_alignments`, and the single alignments `cdc2-domain` (both forms), `cdc2-a`, `cdc2-b` and `cdc2-trimmed`.
+  Consensus sequences, sequence weights, the output of `remove_empty_cols`, the pair-logo letter counts and the combined amino-acid frequencies of a pair are identical.
+  Weighted amino-acid frequencies of a single alignment differ by at most 2 units in the last place; the counts code is unchanged apart from `iteritems()` becoming `items()`, so the likely cause is the order in which the normalizing sum is accumulated, together with the compensated `sum()` of Python 3.12, though this was not isolated.
+  `chisqprob` from `biofrills.stats.chisq`, which gtest called until October 2026, differs in 10 of 4,001 sampled values at 19 degrees of freedom, by at most 2 units in the last place; each difference traces to `math.exp`, which rounds differently on the reference's x86_64 Python 2.7 and on arm64 Python 3.
+  The entropies and weights that scale the letters of a pair logo, which WebLogo computes (version 3.6 in the reference environment, 3.9 later), differ by at most 8 units in the last place, and the reference does not record the logos' contents.
+  The `.out` file prints p-values to six significant digits, so differences of this size should change a printed value only where it lies on a rounding boundary.
+  On the reference cases none did: with `ff11246`, the code of that time reproduced exactly every `.out` file of the reference that does not call SciPy's `hypergeom`.
   End to end, with `ff11246` and the code of that time, every output file of every command-line case and the response of every successful web submission reproduced this reference, including `multi.gtest` and the cases that align with hmmalign and MUSCLE, under HMMER 3.0 and 3.4 alike, apart from the SciPy and hypg differences above, the deliberate changes to `-s phospho`, `unequal.gtest`, `web.pair.hypg` and `web.pdb.1HCK.gtest` under "Recorded defects", and the differences listed under "Python 3, bottle and Biopython" below.
-  With `4aa8b57` the same held for every unweighted case, measured with HMMER 3.4, and the seven weighted cases listed under "Scale of the sequence weights" and "CHAIN's weighting in urn" above differ as those items describe; the G-test cases have since moved as "The G-test" describes, and the PyMOL script of `pdb.1HCK.gtest` as "The PyMOL residues" describes.
-  `54c6e70` changes no output of these cases, measured with HMMER 3.4; its changes to `.` gaps and letter case reach only inputs that none of them uses (`AGENTS.md`, "Letter case").
-  `1b96a80`, the commit now pinned, changes none either, also measured with HMMER 3.4.
+  Moving the pin from `ff11246` to `4aa8b57` moved seven weighted outputs and no unweighted one, which was measured for the unweighted cases with HMMER 3.4.
+  The weights kept their ratios and changed only their sum, and CladeCompare of that time, run against `ff11246` with weights rescaled to the new sums, wrote the new outputs byte for byte; the seven weighted cases are those of "Scale of the sequence weights" and "CHAIN's weighting in urn" above, which differ as those items describe.
+  Of them, `pair.jsd.w.a.2` still reproduces under that rescaling, while `single.gtest.w.a.001` and `pair.gtest.w` have since moved with the G-test (see "The G-test"), the two `urn` cases with CHAIN's weighting, `pair.hypg.w` with the residue that hypg tests, and `single.hypg.w.a.2` no longer runs; the PyMOL script of `pdb.1HCK.gtest` has moved as "The PyMOL residues" describes.
+  Moving the pin from `4aa8b57` to `54c6e70` moved no reference output, measured with HMMER 3.4.
+  The one change in that range that reaches CladeCompare, biofrills `95c29b6`, applies the HMMER and CHAIN case convention in `consensus` and `remove_empty_cols`: both count `.` as a gap, and `consensus` reads an alignment without uppercase residues regardless of case, which `uppercase_if_unmarked` matches (`AGENTS.md`, "Letter case").
+  These changes reach only inputs that none of the recorded cases uses.
+  `sequence_weights`, `aa_frequencies` and `aln2logodata` are unchanged in that range and still count `a` and `A` as different types; the other commits in it change pairwise identity and command-line tools and remove `biofrills.stats`, none of which CladeCompare calls.
+  `consensus` counts `X` as a residue and can return it, where CladeCompare's counts and frequencies skip it, so `process_one` and `process_pair` give a column whose consensus is `X` p = 1.
+  Moving the pin from `54c6e70` to `1b96a80`, the commit now pinned, moved no reference output either, measured with HMMER 3.4.
+  Four of the seven biofrills commits in that range reach the functions that CladeCompare calls.
+  Before `192c370` and `eb8a856`, `remove_empty_cols`, which `clean_alignments` and `combine_alignments` call, raised `ValueError` whenever it dropped a column from a record carrying per-letter annotations, such as the `#=GR` lines of a Stockholm alignment; it now keeps those annotations and the feature locations at the kept columns, neither of which CladeCompare writes into any output.
+  A pair of equal-width Stockholm files with such lines and an all-gap column therefore passes `clean_alignments` where it failed before.
+  A later step can still fail on a Stockholm pair with `#=GC` lines (`AGENTS.md`, "biofrills is a dependency").
+  Commit `5581325` raises `ValueError` where `aa_counts` asserted the length of its weights, which CladeCompare's calls satisfy because its weights come from `sequence_weights` on the same alignment, and for an alignment without rows in `blocks`, which CladeCompare does not call.
+  Commit `1b96a80` makes `case_marks_inserts` and `has_aligned_residue` public without changing them, and `uppercase_if_unmarked` and `uppercase_mixed_columns` call them in place of the copies they held before.
+  The other three commits change pairwise identity, `seq-pick` and `alnutils.to_graph`, none of which CladeCompare calls.
+  Later biofrills releases can move numbers, for instance through changes to consensus gap decisions or to frequency summation, so a biofrills upgrade is judged against the reference outputs like any other change.
+- **HMMER version.**
+  On the two unaligned FASTA inputs, `scttlre-domain.fasta` and `cdc2-domain.fasta`, HMMER 3.1b2, 3.2.1, 3.3.2 and 3.4 without `--allcol` give a2m output byte-identical to HMMER 3.0 with it, and the reference cases that use hmmalign, including the `--pdb` cases, reproduce under each of them.
+  HMMER 3.0 without the option drops all-gap match columns: none of 289 for `cdc2-domain.fasta`, one of 289 for `scttlre-domain.fasta`, which then reaches MUSCLE as an alignment of unequal width, and 7 of 289 for chain A of `1HCK.pdb`, which would shift the residues in the PyMOL script if the run continued.
+  The structure would then have 282 entries, while the alignment that MUSCLE makes of the two sets keeps at least the 289 columns of `cdc2-domain.fasta`, so `process_output` would be expected to stop the run with `InputError`; the column counts were measured with HMMER 3.0, but the whole run has not been.
+- **Letter case and `.` gaps.**
+  On the example pair written with `.` for every gap, every strategy in both modes writes the output of the pair written with `-`; before biofrills `95c29b6`, the 7 columns of `.` alone survived `clean_alignments` and raised m from 242 to 249.
+  Before `uppercase_if_unmarked`, with the foreground file of the example pair lowercased, single-alignment urn, phospho and hypg raised `KeyError` and jsd wrote values above 1; with both files lowercased, paired jsd raised `ZeroDivisionError`; and every paired result, apart from gtest on two lowercase files, differed from that of the uppercase files.
+  With it, every strategy in both modes, weighted or not, writes the uppercase files' output byte for byte.
+  Before `uppercase_mixed_columns`, the statistics counted `c` and `C` as two types, so that a column of only Cys could test as different between the sets, and single-alignment urn and hypg raised `KeyError` where the consensus type occurred nowhere in the alignment in uppercase; such a column now gives the value of the same column in uppercase.
+  The default Stockholm output of hmmalign for `test/cdc2-domain.fasta` and `CDK.hmm`, read with `-f stockholm`, gives 451 columns, 162 of them insert columns, beside the 289 match states.
 - **Raw p-values.**
   The `.out` files hold unadjusted p-values, and their stars compare those raw values with alpha.
   The Benjamini-Hochberg procedure, whose selection is capped at the 50 most significant sites, only selects the sites in the `.pttrn` file, which also name the pair logos and the PyMOL script.

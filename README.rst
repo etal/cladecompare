@@ -318,7 +318,7 @@ match state, stops the run with an error before any output is written. The
 PyMOL object is named after the PDB ID that the file's ``HEADER`` record
 gives and the chain, as in ``1hckA``, and a file without a PDB ID, such as a
 model from the AlphaFold database, after its file name. Without a profile,
-the comparison runs and an error is logged, but no script is written. A
+``--pdb`` stops the run with an error before any alignment is read. A
 significant column that is a deletion in the structure has no residue to
 draw; it is named in a warning and left out of the script. One limitation
 applies in this release: ``--pdb`` given more than once stops the run with an

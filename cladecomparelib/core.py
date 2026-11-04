@@ -79,6 +79,8 @@ def process_args(args):
     if profile_aligned and args.format != "fasta":
         # run_gaps requires FASTA input
         raise InputError("Sequences to align with a profile must be in FASTA format.")
+    if args.pdb and not profile_aligned:
+        raise InputError("--pdb requires a profile, given with --hmm or --mapgaps")
     if args.chain is not None and not args.pdb:
         raise InputError("--chain requires a structure, given with --pdb")
 
@@ -95,26 +97,16 @@ def process_args(args):
         all_alns.append(aln)
 
     pdb_data = []
-    if args.pdb:
+    for pdbfname in args.pdb or []:
         if args.hmm:
-            for pdbfname in args.pdb:
-                logger.info("Aligning %s with HMM profile %s", pdbfname, args.hmm)
-                pdb_rec, pdb_resnums, pdb_inserts = pdb_hmm(
-                    args.hmm, pdbfname, args.chain
-                )
-                pdb_data.append((pdbfname, pdb_rec, pdb_resnums, pdb_inserts))
-        elif args.mapgaps:
-            for pdbfname in args.pdb:
-                logger.info(
-                    "Aligning %s with MAPGAPS profile %s", pdbfname, args.mapgaps
-                )
-                pdb_rec, pdb_resnums, pdb_inserts = pdb_mapgaps(
-                    args.mapgaps, pdbfname, args.chain
-                )
-                pdb_data.append((pdbfname, pdb_rec, pdb_resnums, pdb_inserts))
+            logger.info("Aligning %s with HMM profile %s", pdbfname, args.hmm)
+            pdb_rec, pdb_resnums, pdb_inserts = pdb_hmm(args.hmm, pdbfname, args.chain)
         else:
-            logger.error("PDB alignment requires a MAPGAPS or HMM profile.")
-            # ENH - realign to fg, bg
+            logger.info("Aligning %s with MAPGAPS profile %s", pdbfname, args.mapgaps)
+            pdb_rec, pdb_resnums, pdb_inserts = pdb_mapgaps(
+                args.mapgaps, pdbfname, args.chain
+            )
+        pdb_data.append((pdbfname, pdb_rec, pdb_resnums, pdb_inserts))
 
     description, module = STRATEGIES[args.strategy]
     logger.info("Using %s", description)

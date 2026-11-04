@@ -357,6 +357,17 @@ def test_more_than_two_alignments_ignore_output_options(tmp_path):
             ["cladecompare.py", "cdc2-a.aln.fasta", "cdc2-b.aln.fasta", "--chain", "A"],
             "cladecompare: error: --chain requires a structure, given with --pdb",
         ),
+        (
+            [
+                "cladecompare.py",
+                "cdc2-a.aln.fasta",
+                "cdc2-b.aln.fasta",
+                "--pdb",
+                "1HCK.pdb",
+            ],
+            "cladecompare: error: --pdb requires a profile, given with --hmm or "
+            "--mapgaps",
+        ),
     ],
 )
 def test_input_error_prints_a_message_without_traceback(argv, message, tmp_path):

@@ -29,7 +29,7 @@ def build_single(mapping, inserts, patterns, pdbfname, chain, idcode):
     """Build a PyMOL script showing a single structure with selected residues."""
     pml_name = get_pml_name(pdbfname, chain, idcode)
     outs = [
-        mk_intro_one(pdbfname, pml_name, chain),
+        mk_intro_one(pdbfname, pml_name, chain.strip()),
         HR,
         mk_struct(
             pml_name,
@@ -149,7 +149,18 @@ def get_pml_name(pdb_fname, chain_id, idcode):
     object name and in a selection.
     """
     base = idcode or os.path.splitext(os.path.basename(pdb_fname))[0]
-    return "%s%s" % (re.sub(r"\W", "_", base, flags=re.ASCII).lower(), chain_id.upper())
+    base = re.sub(r"\W", "_", base, flags=re.ASCII).lower()
+    return base + chain_id.strip().upper()
+
+
+def chain_selection(chain):
+    """The part of a PyMOL selection that restricts it to a chain.
+
+    PyMOL selects a chain whose ID is blank as chain "".
+    """
+    if chain is None:
+        return ""
+    return "and chain %s" % (chain.strip() or '""')
 
 
 # ---------------------------------------------------------
@@ -197,11 +208,11 @@ hide all
         ),
         "align": (
             "\n".join(
-                "align (%s and chain %s), (%s and chain %s)"
-                % (oname, ochain, names[0], chains[0])
+                "align (%s %s), (%s %s)"
+                % (oname, chain_selection(ochain), names[0], chain_selection(chains[0]))
                 for oname, ochain in zip(names[1:], chains[1:], strict=True)
             )
-            if chains and len(chains) == len([c for c in chains if c])
+            if chains and all(c is not None for c in chains)
             else "\n".join("cealign %s, %s" % (names[0], other) for other in names[1:])
         ),
     }
@@ -226,7 +237,7 @@ color %(color)s, %(label)s
         "label": label,  # ENH: make optional
         "name": name,
         "resn": ("and resn %s" % resn) if resn else "",
-        "chain": ("and chain %s" % chain) if chain else "",
+        "chain": chain_selection(chain),
         "color": color,
         "style": style,
         "transparency": (
@@ -245,7 +256,7 @@ color %(color)s, %(name)s and resi %(snum)s-%(enum)s %(chain)s
         "name": name,
         "snum": startnum,
         "enum": endnum,
-        "chain": ("and chain %s" % chain) if chain else "",
+        "chain": chain_selection(chain),
         "color": color,
     }
 
@@ -262,7 +273,7 @@ util.cnc %(label)s
 """ % {
         "label": label or ("%s%s-%s" % (restype, num, mol)),
         "name": name,
-        "chain": ("and chain %s" % chain) if chain else "",
+        "chain": chain_selection(chain),
         "bbone": "c,n,o" if restype != "P" else "c,o",
         "num": num,
         "color": color,

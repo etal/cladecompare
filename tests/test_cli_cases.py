@@ -393,6 +393,41 @@ def test_chain_option_draws_the_chain_named(chain, message, tmp_path, require):
     assert written == set()
 
 
+@pytest.mark.integration
+def test_structure_with_a_blank_chain_id(tmp_path, require):
+    """A chain without an ID is drawn as chain A of 1HCK.pdb is, and selected
+    as chain "", which is how PyMOL selects a blank chain ID.
+
+    The record ID that Biopython gives such a chain, '1HCK: ', loses its
+    blank in hmmalign's output, so no chain was found.
+    """
+    require("hmmalign")
+    structure = tmp_path / "blank" / "1HCK.pdb"
+    structure.parent.mkdir()
+    lines = (DATA / "inputs" / "1HCK.pdb").read_text().splitlines(keepends=True)
+    structure.write_text(
+        "".join(
+            line[:21] + " " + line[22:]
+            if line.startswith(("ATOM", "HETATM", "TER"))
+            else line
+            for line in lines
+        )
+    )
+    argv = load("pdb.1HCK.gtest")["commands"][0]["argv"]
+    argv[argv.index("1HCK.pdb")] = "../blank/1HCK.pdb"
+    _workdir, _written, [result], _tmpdir = run_commands([argv], tmp_path)
+    assert result.returncode == 0, result.stderr
+    expected = (
+        expected_text("pdb.1HCK.gtest", "1HCK.pdb.pml")
+        .decode()
+        .replace("# PyMOL script -- A\n", "# PyMOL script -- 1hck\n")
+        .replace("load 1HCK.pdb, ", "load ../blank/1HCK.pdb, ")
+        .replace("1hckA", "1hck")
+        .replace(" and chain A ", ' and chain "" ')
+    )
+    assert (structure.parent / "1HCK.pdb.pml").read_text() == expected
+
+
 @pytest.mark.parametrize("case", sorted(REJECTED))
 def test_single_alignment_hypg_is_rejected(case, tmp_path):
     """hypg needs a foreground and a background, and writes nothing without."""

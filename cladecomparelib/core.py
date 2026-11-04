@@ -744,7 +744,9 @@ def read_pdb_seq(pdb_fname):
 
     Yields the name of the FASTA file and a dict that maps the name under
     which each chain is written in that file to the chain's SeqRecord, in the
-    order in which Biopython reads the chains.
+    order in which Biopython reads the chains. The name is the chain's index
+    in that order, since a record ID such as '1ABC: ', of a chain whose ID is
+    blank, loses its blank in an aligner's output.
 
     Context manager: on exit, the directory is removed together with any files
     that an aligner wrote beside the FASTA file.
@@ -760,12 +762,21 @@ def read_pdb_seq(pdb_fname):
             raise ValueError("it has no atoms")
     with tempfile.TemporaryDirectory() as tmpdir:
         pdbseqfname = os.path.join(tmpdir, "pdbseq")
-        SeqIO.write(pdbseqs, pdbseqfname, "fasta")
-        yield pdbseqfname, {rec.id: rec for rec in pdbseqs}
+        SeqIO.write(
+            [
+                SeqRecord(rec.seq, id=str(i), description="")
+                for i, rec in enumerate(pdbseqs)
+            ],
+            pdbseqfname,
+            "fasta",
+        )
+        yield pdbseqfname, {str(i): rec for i, rec in enumerate(pdbseqs)}
 
 
 def describe_chain(record, pdb_fname):
     """Name a chain of a structure file in a message."""
+    if not record.annotations["chain"].strip():
+        return "the chain without an ID of %s" % pdb_fname
     return "chain %s of %s" % (record.annotations["chain"], pdb_fname)
 
 

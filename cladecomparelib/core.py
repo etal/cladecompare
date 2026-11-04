@@ -756,24 +756,26 @@ def read_pdb_seq(pdb_fname):
             raise ValueError(str(exc)) from exc
         if not pdbseqs:
             raise ValueError("it has no atoms")
+    chains = {str(i): rec for i, rec in enumerate(pdbseqs)}
     with tempfile.TemporaryDirectory() as tmpdir:
         pdbseqfname = os.path.join(tmpdir, "pdbseq")
         SeqIO.write(
             [
-                SeqRecord(rec.seq, id=str(i), description="")
-                for i, rec in enumerate(pdbseqs)
+                SeqRecord(rec.seq, id=name, description="")
+                for name, rec in chains.items()
             ],
             pdbseqfname,
             "fasta",
         )
-        yield pdbseqfname, {str(i): rec for i, rec in enumerate(pdbseqs)}
+        yield pdbseqfname, chains
 
 
 def describe_chain(record, pdb_fname):
     """Name a chain of a structure file in a message."""
-    if not record.annotations["chain"].strip():
-        return "the chain without an ID of %s" % pdb_fname
-    return "chain %s of %s" % (record.annotations["chain"], pdb_fname)
+    return "chain %s of %s" % (
+        pmlscript.chain_label(record.annotations["chain"]),
+        pdb_fname,
+    )
 
 
 def choose_chain(rows, chains, pdb_fname, chain=None):
@@ -782,13 +784,13 @@ def choose_chain(rows, chains, pdb_fname, chain=None):
     `rows` maps the name of each chain in the aligned file to its aligned
     row, and `chains` maps the same names to the chains' SeqRecords, as
     read_pdb_seq yields them; a chain that the aligner did not return is not
-    a candidate. Given a chain ID, `chain`, that chain is chosen. Otherwise
-    the chain with the most residues aligned to match states is, not
-    counting residues that the structure does not resolve, 'X', and of chains
-    with equally many, the one whose chain ID sorts first, so the choice does
-    not depend on the order of the aligner's rows. A chosen chain without a
-    residue aligned to a match state, or a chain ID that the structure does
-    not have, raises InputError.
+    a candidate. Given a chain ID, `chain`, that chain is chosen; an empty or
+    blank `chain` names a chain whose ID is blank. Otherwise the chain with the
+    most residues aligned to match states is, not counting residues that the
+    structure does not resolve, 'X', and of chains with equally many, the one
+    whose chain ID sorts first, so the choice does not depend on the order of
+    the aligner's rows. A chosen chain without a residue aligned to a match
+    state, or a chain ID that the structure does not have, raises InputError.
 
     Returns a tuple: (SeqRecord, aligned row)
     """
@@ -810,19 +812,29 @@ def choose_chain(rows, chains, pdb_fname, chain=None):
                 "No chain of %s has a residue aligned to the profile" % pdb_fname
             )
     else:
-        ids = [record.annotations["chain"] for record in chains.values()]
-        if chain not in ids:
+        label = pmlscript.chain_label(chain)
+        named = [
+            record
+            for record in chains.values()
+            if pmlscript.chain_label(record.annotations["chain"]) == label
+        ]
+        if not named:
             raise InputError(
                 "%s has no chain %s; its chains are %s"
-                % (pdb_fname, chain, ", ".join(ids))
+                % (
+                    pdb_fname,
+                    label,
+                    ", ".join(
+                        pmlscript.chain_label(record.annotations["chain"])
+                        for record in chains.values()
+                    ),
+                )
             )
-        chosen = next(
-            (c for c in candidates if c[1].annotations["chain"] == chain), None
-        )
+        chosen = next((c for c in candidates if c[1] is named[0]), None)
         if chosen is None or chosen[0] == 0:
             raise InputError(
-                "Chain %s of %s has no residue aligned to the profile"
-                % (chain, pdb_fname)
+                "%s has no residue aligned to the profile"
+                % describe_chain(named[0], pdb_fname)
             )
     count, record, row = chosen
     if len(candidates) > 1:
@@ -831,7 +843,7 @@ def choose_chain(rows, chains, pdb_fname, chain=None):
             describe_chain(record, pdb_fname),
             count,
             ", ".join(
-                "%s %d" % (rec.annotations["chain"], n)
+                "%s %d" % (pmlscript.chain_label(rec.annotations["chain"]), n)
                 for n, rec, _row in candidates
                 if rec is not record
             ),

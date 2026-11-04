@@ -129,7 +129,7 @@ def make_residues(mapping, patterns, pml_name, chain):
             logger.warning(
                 "Column %d is a deletion in chain %s; no residue to show",
                 posn,
-                chain,
+                chain_label(chain),
             )
             continue
         yield mk_residue(pml_name, resid, restype, chain, mol=pml_name, color="magenta")
@@ -153,14 +153,19 @@ def get_pml_name(pdb_fname, chain_id, idcode):
     return base + chain_id.strip().upper()
 
 
-def chain_selection(chain):
-    """The part of a PyMOL selection that restricts it to a chain.
+def chain_label(chain):
+    """A chain ID as a selection and --chain give it.
 
     PyMOL selects a chain whose ID is blank as chain "".
     """
+    return chain.strip() or '""'
+
+
+def chain_selection(chain):
+    """The part of a PyMOL selection that restricts it to a chain."""
     if chain is None:
         return ""
-    return "and chain %s" % (chain.strip() or '""')
+    return "and chain %s" % chain_label(chain)
 
 
 # ---------------------------------------------------------

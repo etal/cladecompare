@@ -62,8 +62,8 @@ SPOOLED = {"web.hmm.pair.gtest", "web.pdb.1HCK.gtest"}
 # Recorded failures that now succeed, and the command-line case whose current
 # report, apart from the title, each response must equal. The application saved
 # an uploaded structure under the fixed name pdbfile, from which pmlscript
-# could not read a PDB ID; it now keeps the name the structure was uploaded
-# with.
+# could not read a PDB ID; the PDB ID now comes from the structure's HEADER
+# record, and the upload keeps the name it was uploaded with.
 REPAIRED = {"web.pdb.1HCK.gtest": "pdb.1HCK.gtest"}
 
 # Recorded submissions whose response the reference records equal, apart from

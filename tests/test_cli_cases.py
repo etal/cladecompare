@@ -75,8 +75,9 @@ NOT_WRITTEN = {"_cc_combined.seq"}
 
 # The reference records -s phospho failing with TypeError in every case,
 # cladereport failing with ValueError on the three .out files of multi.gtest,
-# and pdb.1FIN-AB-CA.gtest failing with KeyError on its second chain; each now
-# completes ("Recorded defects" in tests/data/README.md).
+# and pdb.1FIN-AB-CA.gtest failing with KeyError, as every structure with more
+# than one aligned chain did; each now completes ("Recorded defects" in
+# tests/data/README.md).
 RETURNCODES = {
     "multi.gtest": [0, 0],
     "pair.phospho": [0],
@@ -391,8 +392,10 @@ def test_input_error_prints_a_message_without_traceback(argv, message, tmp_path)
         ),
     ],
 )
-def test_chain_option_draws_the_chain_named(chain, message, tmp_path, require):
-    """--chain bypasses the choice of chain A, and stops before any output."""
+def test_chain_option_stops_on_a_chain_it_cannot_draw(
+    chain, message, tmp_path, require
+):
+    """--chain overrides the choice of chain A, and stops before any output."""
     require("hmmalign")
     argv = load("pdb.1FIN-AB-CA.gtest")["commands"][0]["argv"]
     _workdir, written, [result], _tmpdir = run_commands(
@@ -404,6 +407,69 @@ def test_chain_option_draws_the_chain_named(chain, message, tmp_path, require):
     assert written == set()
 
 
+def run_on_structure(tmp_path, case, source, edit, options=()):
+    """Run the first command of a recorded --pdb case on an edited copy of its
+    structure, in a directory beside the scratch directory.
+
+    `edit` maps each line of the structure file to its replacement text, and
+    `options` are added to the command. Return the completed process and the
+    PyMOL script it wrote.
+    """
+    structure = tmp_path / "edited" / source
+    structure.parent.mkdir(parents=True)
+    lines = (DATA / "inputs" / source).read_text().splitlines(keepends=True)
+    structure.write_text("".join(edit(line) for line in lines))
+    argv = load(case)["commands"][0]["argv"]
+    argv[argv.index(source)] = "../edited/" + source
+    _workdir, _written, [result], _tmpdir = run_commands(
+        [argv + list(options)], tmp_path
+    )
+    assert result.returncode == 0, result.stderr
+    return result, (structure.parent / (source + ".pml")).read_text()
+
+
+def set_chain(line, chain):
+    if line.startswith(("ATOM", "HETATM", "TER")):
+        return line[:21] + chain + line[22:]
+    return line
+
+
+@pytest.mark.integration
+def test_chain_option_draws_a_copy_of_the_best_chain(tmp_path, require):
+    """Chain C, a copy of chain A, ties with it and is not drawn by default;
+    --chain C draws it."""
+    require("hmmalign")
+    source = "1FIN-AB-CA.pdb"
+    lines = (DATA / "inputs" / source).read_text().splitlines(keepends=True)
+    copy = "".join(
+        set_chain(line, "C")
+        for line in lines
+        if line.startswith("ATOM") and line[21] == "A"
+    )
+
+    def add_copy(line):
+        return copy + line if line.startswith("END") else line
+
+    case = "pdb.1FIN-AB-CA.gtest"
+    expected = (
+        expected_text(case, source + ".pml")
+        .decode()
+        .replace("load 1FIN-AB-CA.pdb, ", "load ../edited/1FIN-AB-CA.pdb, ")
+    )
+    result, script = run_on_structure(tmp_path / "default", case, source, add_copy)
+    assert "Using chain A of ../edited/1FIN-AB-CA.pdb" in result.stderr
+    assert "(other chains: B 1, C 282)" in result.stderr
+    assert script == expected
+    _result, script = run_on_structure(
+        tmp_path / "named", case, source, add_copy, ["--chain", "C"]
+    )
+    assert script == (
+        expected.replace("# PyMOL script -- A\n", "# PyMOL script -- C\n")
+        .replace("1finA", "1finC")
+        .replace(" and chain A ", " and chain C ")
+    )
+
+
 @pytest.mark.integration
 def test_structure_with_a_blank_chain_id(tmp_path, require):
     """A chain without an ID is drawn as chain A of 1HCK.pdb is, and selected
@@ -413,30 +479,18 @@ def test_structure_with_a_blank_chain_id(tmp_path, require):
     blank in hmmalign's output, so no chain was found.
     """
     require("hmmalign")
-    structure = tmp_path / "blank" / "1HCK.pdb"
-    structure.parent.mkdir()
-    lines = (DATA / "inputs" / "1HCK.pdb").read_text().splitlines(keepends=True)
-    structure.write_text(
-        "".join(
-            line[:21] + " " + line[22:]
-            if line.startswith(("ATOM", "HETATM", "TER"))
-            else line
-            for line in lines
-        )
+    _result, script = run_on_structure(
+        tmp_path, "pdb.1HCK.gtest", "1HCK.pdb", lambda line: set_chain(line, " ")
     )
-    argv = load("pdb.1HCK.gtest")["commands"][0]["argv"]
-    argv[argv.index("1HCK.pdb")] = "../blank/1HCK.pdb"
-    _workdir, _written, [result], _tmpdir = run_commands([argv], tmp_path)
-    assert result.returncode == 0, result.stderr
     expected = (
         expected_text("pdb.1HCK.gtest", "1HCK.pdb.pml")
         .decode()
         .replace("# PyMOL script -- A\n", "# PyMOL script -- 1hck\n")
-        .replace("load 1HCK.pdb, ", "load ../blank/1HCK.pdb, ")
+        .replace("load 1HCK.pdb, ", "load ../edited/1HCK.pdb, ")
         .replace("1hckA", "1hck")
         .replace(" and chain A ", ' and chain "" ')
     )
-    assert (structure.parent / "1HCK.pdb.pml").read_text() == expected
+    assert script == expected
 
 
 @pytest.mark.parametrize("case", sorted(REJECTED))

@@ -304,10 +304,11 @@ with a cyclin does. Every chain is aligned to the profile, and the script
 draws the chain with the most residues aligned to match states, or, of
 chains with equally many, the one whose chain ID sorts first, such as chain A
 of two copies of the kinase in chains A and C; the log names the chain drawn
-and the number of residues aligned in each of the others. In a complex of two
-members of the family, those numbers reflect how much of each chain the
-structure resolves rather than which chain is of interest, so ``--chain``
-names the chain to draw instead::
+and the number of residues aligned in each of the others. ``--chain`` names
+the chain to draw instead, such as the second copy of the kinase, or, in a
+complex of two members of the family, whose numbers reflect how much of each
+chain the structure resolves rather than which chain is of interest, the
+other member; ``--chain ""`` names a chain without a chain ID::
 
     curl -O https://files.rcsb.org/download/1FIN.pdb
     cladecompare test/scttlre-domain.fasta test/cdc2-domain.fasta \

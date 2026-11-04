@@ -512,12 +512,13 @@ ROWS = {"1XYZ:A": "KLM-", "1XYZ:B": "-E--", "1XYZ:C": "KLMX"}
 
 @pytest.mark.parametrize("order", [["A", "B", "C"], ["C", "B", "A"], ["B", "C", "A"]])
 def test_choose_chain_takes_the_most_matches_then_the_first_id(order):
-    """Ties go to the chain ID that sorts first, in any order of the rows."""
-    rows = {"1XYZ:" + c: ROWS["1XYZ:" + c] for c in order}
-    record, row = core.choose_chain(rows, CHAINS, "1xyz.pdb")
+    """Ties go to the chain ID that sorts first, in any order of the chains."""
+    chains = {"1XYZ:" + c: CHAINS["1XYZ:" + c] for c in order}
+    record, row = core.choose_chain(ROWS, chains, "1xyz.pdb")
     assert (record.annotations["chain"], row) == ("A", "KLM-")
+    rows = dict(ROWS)
     del rows["1XYZ:A"]
-    record, row = core.choose_chain(rows, CHAINS, "1xyz.pdb")
+    record, row = core.choose_chain(rows, chains, "1xyz.pdb")
     assert (record.annotations["chain"], row) == ("C", "KLMX")
 
 
@@ -535,20 +536,34 @@ def test_choose_chain_takes_the_chain_named(chain, row):
     assert (record.annotations["chain"], chosen) == (chain, row)
 
 
+# A chain whose ID is blank beside chain A.
+BLANK = dict([pdb_chain(" ", "KLM"), pdb_chain("A", "E")])
+
+
+@pytest.mark.parametrize("chain", ["", " "])
+def test_choose_chain_names_a_blank_chain_as_empty(chain):
+    rows = {"1XYZ: ": "KLM", "1XYZ:A": "-E-"}
+    record, _row = core.choose_chain(rows, BLANK, "1xyz.pdb", chain)
+    assert record.annotations["chain"] == " "
+
+
 @pytest.mark.parametrize(
-    "chain, rows, message",
+    "chain, chains, rows, message",
     [
-        ("D", ROWS, "1xyz.pdb has no chain D; its chains are A, B, C"),
+        ("D", CHAINS, ROWS, "1xyz.pdb has no chain D; its chains are A, B, C"),
         # Chain IDs are case-sensitive.
-        ("a", ROWS, "1xyz.pdb has no chain a; its chains are A, B, C"),
+        ("a", CHAINS, ROWS, "1xyz.pdb has no chain a; its chains are A, B, C"),
+        ("", CHAINS, ROWS, '1xyz.pdb has no chain ""; its chains are A, B, C'),
+        ("B", BLANK, {}, '1xyz.pdb has no chain B; its chains are "", A'),
         # --mapgaps returns only the chains it aligns.
-        ("B", {"1XYZ:A": "KLM-"}, "Chain B of 1xyz.pdb has no residue aligned"),
-        ("B", ROWS | {"1XYZ:B": "-e--"}, "Chain B of 1xyz.pdb has no residue aligned"),
+        ("B", CHAINS, {"1XYZ:A": "KLM-"}, "chain B of 1xyz.pdb has no residue"),
+        ("B", CHAINS, ROWS | {"1XYZ:B": "-e--"}, "chain B of 1xyz.pdb has no residue"),
+        ("", BLANK, {"1XYZ: ": "---"}, 'chain "" of 1xyz.pdb has no residue'),
     ],
 )
-def test_choose_chain_rejects_a_chain_it_cannot_draw(chain, rows, message):
+def test_choose_chain_rejects_a_chain_it_cannot_draw(chain, chains, rows, message):
     with pytest.raises(InputError, match=message):
-        core.choose_chain(rows, CHAINS, "1xyz.pdb", chain)
+        core.choose_chain(rows, chains, "1xyz.pdb", chain)
 
 
 # --- Profile-aligned runs ---

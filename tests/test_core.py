@@ -288,9 +288,10 @@ def test_lowercase_copy_of_a_foreground_sequence_is_purged(tmp_path):
 
 
 @pytest.mark.parametrize("strategy", sorted(core.STRATEGIES))
-def test_set_left_without_uppercase_is_compared_as_aligned(strategy):
+def test_rows_beside_a_removed_uppercase_row_are_counted_as_uppercase(strategy):
     """The background's only uppercase row duplicates a foreground ID and is
-    removed, so its other rows no longer mark anything by case."""
+    removed, but every column holds lowercase residues beside it, so the other
+    rows are counted as uppercase."""
     module = core.STRATEGIES[strategy][1]
     fg = [("a", "SCDEF"), ("b", "SCDEW"), ("c", "TCDEF")]
     bg = [("x", "scdkf"), ("y", "gcdew"), ("z", "acdkf")]
@@ -301,16 +302,193 @@ def test_set_left_without_uppercase_is_compared_as_aligned(strategy):
     assert hits == expected
 
 
-def test_lowercase_beside_uppercase_marks_an_insert_column(tmp_path):
-    """A file with uppercase residues keeps its case, and a column of
-    lowercase residues alone is an insert column, reported with p = 1."""
-    fname = write_fasta(
-        tmp_path / "aln.fasta", [("a", "SCdEF"), ("b", "SCeEW"), ("c", "TC-EF")]
+# The sets are parts of one alignment, whose columns 3 and 5 hold inserts of
+# the background and of the foreground, or are aligned separately, with inserts
+# of their own, and differ in width. Without the inserts, the sets are
+# MATCH_FG and MATCH_BG.
+MATCH_FG = [("a", "SCEF"), ("b", "SCEW"), ("c", "TCEF")]
+MATCH_BG = [("x", "GCKF"), ("y", "ACEW"), ("z", "TCKF")]
+WITH_INSERTS = {
+    "one alignment": (
+        [("a", "SC-EkF"), ("b", "SC-EmW"), ("c", "TC-E-F")],
+        [("x", "GCwK-F"), ("y", "ACyE-W"), ("z", "TC-K-F")],
+    ),
+    "separate": (
+        [("a", "SCEkF"), ("b", "SCEmW"), ("c", "TCE-F")],
+        [("x", "GCwKFv"), ("y", "ACyEW-"), ("z", "TC-KF-")],
+    ),
+}
+
+
+def refuse_to_combine(_fg, _bg):
+    raise AssertionError("the sets share their match columns")
+
+
+@pytest.mark.parametrize("layout", sorted(WITH_INSERTS))
+@pytest.mark.parametrize("strategy", sorted(core.STRATEGIES))
+def test_insert_columns_are_removed_from_a_pair(strategy, layout, monkeypatch):
+    """A column of lowercase residues and gaps is not compared, numbered or
+    counted in the pseudocounts, whether the other set holds gaps there or the
+    sets differ in width; the match columns are compared without MUSCLE."""
+    monkeypatch.setattr(core, "combine_alignments", refuse_to_combine)
+    module = core.STRATEGIES[strategy][1]
+    fg, bg = WITH_INSERTS[layout]
+    *_, expected = core.process_pair(aln(*MATCH_FG), aln(*MATCH_BG), module, False)
+    *_, hits = core.process_pair(aln(*fg), aln(*bg), module, False)
+    assert hits == expected
+
+
+@pytest.mark.parametrize(
+    "strategy",
+    [
+        name
+        for name, (_d, module) in core.STRATEGIES.items()
+        if hasattr(module, "compare_one")
+    ],
+)
+def test_insert_column_is_removed_from_a_single_alignment(strategy):
+    """Lowercase w, counted as a type of its own, would move the pseudocounts
+    of every column."""
+    module = core.STRATEGIES[strategy][1]
+    with_insert = [("a", "SCwEF"), ("b", "SCwEW"), ("c", "TCwEF"), ("d", "SC-EF")]
+    without = [(id_, seq.replace("w", "").replace("-", "")) for id_, seq in with_insert]
+    _, expected = core.process_one(aln(*without), module, False)
+    _, hits = core.process_one(aln(*with_insert), module, False)
+    assert hits == expected
+
+
+def test_alignment_without_rows_shares_no_columns():
+    """It is returned as it is, and the other alignment loses only its own
+    insert column."""
+    reduced = core.match_columns(
+        [aln(("a", "SCdEF")), MultipleSeqAlignment([])], ["one", "other"]
     )
-    alignment = core.read_aln(fname, "fasta")
-    assert rows(alignment)[0] == ("a", "SCdEF")
-    _, hits = core.process_one(alignment, core.STRATEGIES["urn"][1], False)
-    assert hits[2] == ("-", "_", 1.0, "-")
+    assert rows(reduced[0]) == [("a", "SCEF")]
+    assert len(reduced[1]) == 0
+
+
+def test_sequences_that_differ_only_in_inserts_are_duplicates():
+    fg, bg = core.clean_alignments(
+        aln(("a", "SCdEF"), ("b", "SC-EF"), ("c", "TCeEW")),
+        aln(("x", "GC-KF"), ("y", "SC-EF")),
+    )
+    assert rows(fg) == [("a", "SCEF"), ("c", "TCEW")]
+    assert rows(bg) == [("x", "GCKF")]
+
+
+def test_sets_of_equal_width_with_other_inserts_are_reduced_separately(monkeypatch):
+    """An insert column of the foreground holds uppercase residues in the
+    background, so the sets do not share their columns: each loses its own
+    inserts, and the sets, now of unequal width, are aligned to each other."""
+    combined = []
+
+    def combine(fg, bg):
+        combined.append((rows(fg), rows(bg)))
+        raise RuntimeError("combined")
+
+    monkeypatch.setattr(core, "combine_alignments", combine)
+    bg = [("x", "GCWKF"), ("y", "ACWEW")]
+    with pytest.raises(RuntimeError, match="combined"):
+        core.clean_alignments(aln(("a", "SCdEF"), ("b", "TC-EW")), aln(*bg))
+    assert combined == [([("a", "SCEF"), ("b", "TCEW")], bg)]
+
+
+STOCKHOLM = """\
+# STOCKHOLM 1.0
+{0}1 {1}
+#=GR {0}1 PP {2}
+{0}2 {3}
+#=GR {0}2 PP {2}
+#=GC RF {4}
+//
+"""
+
+
+def test_pair_logos_of_stockholm_alignments(tmp_path):
+    """Annotations of the columns of a Stockholm file do not survive into the
+    alignments compared, whose all-gap column 3 is removed, so a logo reaching
+    past their last column can be drawn; removing the all-gap column narrows
+    the annotations of the residues, the #=GR lines, rather than failing on
+    them."""
+    names = []
+    for label, row1, row2 in [("f", "SC-EF", "SC-EW"), ("b", "GC-KF", "AC-EW")]:
+        names.append(tmp_path / f"{label}.sto")
+        names[-1].write_text(STOCKHOLM.format(label, row1, "99.99", row2, "xxxxx"))
+    fg, bg = (core.read_aln(str(name), "stockholm") for name in names)
+    fg_clean, bg_clean, _hits = core.process_pair(
+        fg, bg, core.STRATEGIES["gtest"][1], False
+    )
+    core.pairlogo.make_pairlogos(
+        fg_clean, bg_clean, [(3, "E")], str(tmp_path / "x"), 10
+    )
+    assert (tmp_path / "x-3.pdf").exists()
+    for rec in fg_clean:
+        assert rec.letter_annotations["posterior_probability"] == "9999"
+
+
+def multi_run(tmp_path, monkeypatch, files):
+    """Compare three alignments, each with the other two, and return the text
+    of the .out file of each."""
+    tmp_path.mkdir(exist_ok=True)
+    for name, rows_ in files.items():
+        write_fasta(tmp_path / name, rows_)
+    monkeypatch.chdir(tmp_path)
+    names = sorted(files)
+    core.process_args(
+        argparse.Namespace(
+            foreground=names[0],
+            background=names[1:],
+            format="fasta",
+            hmm=None,
+            mapgaps=None,
+            pdb=None,
+            chain=None,
+            strategy="gtest",
+            weight=False,
+            alpha=0.05,
+            output=None,
+            pattern=None,
+            pmlout=None,
+        )
+    )
+    return [(tmp_path / (name + ".out")).read_text() for name in names]
+
+
+def test_three_alignments_are_compared_over_their_match_columns(tmp_path, monkeypatch):
+    """Three alignments of different widths become one width without their
+    insert columns, before any background joins two of them."""
+    fg, bg = WITH_INSERTS["separate"]
+    third = [("p", "SCEfF"), ("q", "TCKgW")]
+    expected = multi_run(
+        tmp_path / "match",
+        monkeypatch,
+        {
+            "1.fasta": MATCH_FG,
+            "2.fasta": MATCH_BG,
+            "3.fasta": [("p", "SCEF"), ("q", "TCKW")],
+        },
+    )
+    assert (
+        multi_run(
+            tmp_path / "inserts",
+            monkeypatch,
+            {"1.fasta": fg, "2.fasta": bg, "3.fasta": third},
+        )
+        == expected
+    )
+
+
+def test_three_alignments_of_different_widths_are_refused(tmp_path, monkeypatch):
+    with pytest.raises(
+        InputError,
+        match="equal width, but 1.fasta has 4 columns, 2.fasta has 4 columns, "
+        "3.fasta has 5 columns",
+    ):
+        multi_run(
+            tmp_path,
+            monkeypatch,
+            {"1.fasta": MATCH_FG, "2.fasta": MATCH_BG, "3.fasta": [("p", "SCEFK")]},
+        )
 
 
 @pytest.mark.parametrize("weight", [False, True])

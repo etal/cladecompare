@@ -146,10 +146,24 @@ def process_args(args):
                 "Comparing more than two alignments: ignoring -o and -p, and "
                 "writing <alignment>.out and <alignment>.pttrn for each alignment"
             )
+        fnames = [args.foreground] + args.background
         outfnames_ptnfnames = [
             (basename(alnfname) + ".out", basename(alnfname) + ".pttrn")
-            for alnfname in ([args.foreground] + args.background)
+            for alnfname in fnames
         ]
+        # Each background joins several alignments, so their columns must
+        # correspond before any is combined with another.
+        all_alns = match_columns(all_alns, ["alignment " + name for name in fnames])
+        widths = [aln.get_alignment_length() for aln in all_alns]
+        if len(set(widths)) > 1:
+            raise InputError(
+                "Comparing more than two alignments requires alignments of "
+                "equal width, but "
+                + ", ".join(
+                    "%s has %d columns" % pair
+                    for pair in zip(fnames, widths, strict=True)
+                )
+            )
         for idx, fg_aln in enumerate(all_alns):
             # Combine other alns into bg
             _other_alns = all_alns[:idx] + all_alns[idx + 1 :]
@@ -186,11 +200,6 @@ def process_pair(fg_aln, bg_aln, module, do_weight, profile_aligned=False):
     foreground consensus otherwise, as for an untested column.
     """
     fg_aln, bg_aln = clean_alignments(fg_aln, bg_aln, profile_aligned)
-    # Removing sequences can leave a set with no uppercase residue. The
-    # consensus of biofrills reads such a set without regard to case, and it
-    # reads a column that mixes cases as uppercase; the counts must do both.
-    fg_aln = uppercase_mixed_columns(uppercase_if_unmarked(fg_aln), "foreground")
-    bg_aln = uppercase_mixed_columns(uppercase_if_unmarked(bg_aln), "background")
     fg_scaling, bg_scaling = weight_scalings(module, do_weight)
     fg_weights = sequence_weights(fg_aln, fg_scaling)
     bg_weights = sequence_weights(bg_aln, bg_scaling)
@@ -247,10 +256,7 @@ def process_one(aln, module, do_weight):
             "%s compares two alignments; give a foreground and a background"
             % module.__name__.rpartition(".")[2]
         )
-    # read_aln has already uppercased an alignment without uppercase residues,
-    # cma_blocks and the profile paths drop lowercase residues outright, and
-    # no sequence is removed here, so only mixed columns remain to fold.
-    aln = uppercase_mixed_columns(aln, "alignment")
+    (aln,) = match_columns([aln], ["alignment"])
     # A single alignment takes the foreground's weighting.
     scaling = weight_scalings(module, do_weight)[0]
     if do_weight and scaling is None:
@@ -517,65 +523,115 @@ def uppercase_if_unmarked(aln):
     return MultipleSeqAlignment([rec.upper() for rec in aln])
 
 
-def uppercase_mixed_columns(aln, label):
-    """Uppercase each column that holds a lowercase residue beside an aligned
-    character.
+def match_columns(alns, labels):
+    """Reduce alignments that are compared column by column to their match
+    columns.
 
-    biofrills' consensus counts as aligned any non-gap character that is not
-    lowercase, X included. In an alignment that holds any uppercase residue,
-    it reads a column that holds a lowercase residue beside one as uppercase,
-    with a warning, and a column whose residues are all lowercase as an insert
-    column. Counting the mixed column in the same way keeps the consensus
-    residue, the counts, the sequence weights and the pseudocounts in one
-    alphabet; insert columns are left as they are. label names the set in the
-    logged warning.
+    In the convention of HMMER and CHAIN, a lowercase residue is an insertion,
+    but only in an alignment that also holds uppercase residues; an alignment
+    without any is uppercased first, as uppercase_if_unmarked does. A column
+    of lowercase residues and gaps, holding no aligned character, which
+    biofrills takes to be any non-gap character that is not lowercase, X and
+    * included, is then an insert column, which biofrills' consensus reads as
+    a gap. It is removed, so that it is not numbered, its residues do not
+    enter the pseudocounts, and sequences that differ only in their inserts
+    are duplicates. A column that holds lowercase residues beside an aligned
+    character is a match column, which the consensus reads as uppercase, and
+    it is uppercased, so that the consensus residue, the counts, the sequence
+    weights and the pseudocounts share one alphabet.
+
+    Alignments of equal width are taken to share their columns, as the parts
+    of one alignment do, so that a column that is an insert column of one is
+    removed from all. Where any such column holds an aligned character in
+    another alignment, the alignments do not share their columns, and each
+    loses only its own insert columns, as alignments of different widths do.
+    labels name the alignments in the logged warnings. An alignment that
+    loses no column and holds no lowercase residue is returned as it is.
     """
-    rows = [str(rec.seq) for rec in aln]
-    marks_inserts = alnutils.case_marks_inserts(rows)
-    mixed = [
-        idx
-        for idx, col in enumerate(zip(*rows, strict=True))
-        if any(c.islower() for c in col)
-        and alnutils.has_aligned_residue(col, marks_inserts)
-    ]
-    if not mixed:
-        return aln
-    logger.warning(
-        "Counting as uppercase the columns of the %s that hold lowercase "
-        "residues beside aligned characters: %s",
-        label,
-        ", ".join(str(idx + 1) for idx in mixed),
-    )
-    folded = []
-    for rec, row in zip(aln, rows, strict=True):
-        chars = list(row)
-        for idx in mixed:
-            chars[idx] = chars[idx].upper()
-        folded.append(
-            SeqRecord(
-                Seq("".join(chars)),
-                id=rec.id,
-                name=rec.name,
-                description=rec.description,
-                dbxrefs=list(rec.dbxrefs),
-                features=list(rec.features),
-                annotations=dict(rec.annotations),
-                letter_annotations=dict(rec.letter_annotations),
+    alns = [uppercase_if_unmarked(aln) for aln in alns]
+    rows = [[str(rec.seq) for rec in aln] for aln in alns]
+    inserts, mixed, aligned = [], [], set()
+    for aln_rows in rows:
+        # True after uppercase_if_unmarked, unless no row holds a letter
+        marks_inserts = alnutils.case_marks_inserts(aln_rows)
+        ins, mix = set(), set()
+        for idx, col in enumerate(zip(*aln_rows, strict=True)):
+            lowercase = any(c.islower() for c in col)
+            if alnutils.has_aligned_residue(col, marks_inserts):
+                aligned.add(idx)
+                if lowercase:
+                    mix.add(idx)
+            elif lowercase:
+                ins.add(idx)
+        inserts.append(ins)
+        mixed.append(mix)
+    joint = set().union(*inserts)
+    widths = [aln.get_alignment_length() for aln in alns]
+    if len(set(widths)) <= 1 and not joint & aligned:
+        if any(joint - ins for ins in inserts):
+            logger.warning(
+                "Reading the %s as parts of one alignment: an insert column "
+                "of any is removed from all",
+                " and the ".join(labels),
+            )
+        inserts = [joint] * len(alns)
+
+    reduced = []
+    for aln, width, aln_rows, drop, fold, label in zip(
+        alns, widths, rows, inserts, mixed, labels, strict=True
+    ):
+        if not drop and not fold:
+            reduced.append(aln)
+            continue
+        if fold:
+            logger.warning(
+                "Counting as uppercase the columns of the %s that hold "
+                "lowercase residues beside aligned characters: %s",
+                label,
+                ", ".join(str(idx + 1) for idx in sorted(fold)),
+            )
+        if drop:
+            logger.warning(
+                "Removing insert columns, of lowercase residues and gaps, "
+                "from the %s: %d of its %d columns",
+                label,
+                len(drop),
+                width,
+            )
+        keep = [idx for idx in range(width) if idx not in drop]
+        reduced.append(
+            MultipleSeqAlignment(
+                SeqRecord(
+                    Seq("".join(row[i].upper() if i in fold else row[i] for i in keep)),
+                    id=rec.id,
+                    name=rec.name,
+                    description=rec.description,
+                    dbxrefs=list(rec.dbxrefs),
+                    annotations=dict(rec.annotations),
+                )
+                for rec, row in zip(aln, aln_rows, strict=True)
             )
         )
-    return MultipleSeqAlignment(folded)
+    return reduced
 
 
 def read_aln(fname, format):
-    """Read a sequence alignment; one that cannot be read raises InputError."""
+    """Read a sequence alignment; one that cannot be read raises InputError.
+
+    Annotations of columns, such as the #=GC lines of a Stockholm file, are
+    dropped: nothing reads them, and once a column has been removed, an
+    annotation that keeps the input width makes Biopython refuse a slice that
+    reaches past the last column, as a pair logo window can.
+    """
     if fname.endswith(".cma") or format == "cma":
         return cma_blocks(fname)
     else:
         with reading(fname, f"a {format} alignment"):
             aln = AlignIO.read(fname, format)
+        aln.column_annotations = {}
         for rec in aln:
             rec.description = ""
-        return uppercase_if_unmarked(aln)
+        return aln
 
 
 # The program name and version at the start of `muscle -version`, e.g.
@@ -620,6 +676,7 @@ def combine_alignments(fg_aln, bg_aln):
 def clean_alignments(fg_aln, bg_aln, profile_aligned=False):
     """Fix simple issues in the alignments:
 
+    - Reduce both sets to their match columns, as match_columns does
     - Remove duplicated sequences and IDs from the background
     - Ensure alignments are the same width (if not, align to each other)
     - Remove all-gap columns from the full alignment, unless both sets were
@@ -629,6 +686,9 @@ def clean_alignments(fg_aln, bg_aln, profile_aligned=False):
         raise InputError("Foreground set is empty")
     if not len(bg_aln):
         raise InputError("Background set is empty")
+
+    # Before the duplicates are found, so that inserts do not tell them apart
+    fg_aln, bg_aln = match_columns([fg_aln, bg_aln], ["foreground", "background"])
 
     # Remove FG seqs from BG -- by equal sequence IDs, here
     killme = []

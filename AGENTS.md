@@ -11,7 +11,7 @@ such as `/mnt/c` — `CLAUDE.md` arrives as a stub naming this file, so read
 CladeCompare compares two protein sequence alignments — a *foreground* clade against a *background* — and reports, for each alignment column, how strongly the amino-acid composition of the two differs, in order to find the residues that distinguish one subfamily from its relatives.
 `README.rst`, "What CladeCompare is for", states the purpose, its lineage in CHAIN and the reference to Talevich & Kannan (2013); the license is BSD 2-clause.
 
-Three console commands share one library of about 2,650 lines under `cladecomparelib/`, and each is the `main()` function of a module there that keeps the name of the script it replaced:
+Three console commands share one library of about 2,750 lines under `cladecomparelib/`, and each is the `main()` function of a module there that keeps the name of the script it replaced:
 
 | command | module | role |
 |---|---|---|
@@ -49,7 +49,7 @@ A statistic that returns `nan` writes it to the `.out` file on purpose (`most_si
 A pattern file marks the columns that carry its sites' numbers, and a site that is not among the `.out` file's columns raises `InputError`.
 
 The multiple-testing correction exists only in `top_hits` in `core.py`: a Benjamini–Hochberg step-up procedure at false discovery rate alpha, with m equal to the number of columns in `hits`, including the columns that `process_pair` and `process_one` skip and assign p = 1, those whose consensus is a gap or X (`NON_RESIDUES` in `cladecomparelib/shared.py`, the characters that no count includes).
-In paired mode that count is taken after `clean_alignments` has dropped the columns that are gaps, `-` or `.`, in every sequence of both sets, except when both sets were aligned to a profile with `--hmm` or `--mapgaps`, where every match state keeps its column; the column numbers in `.out` and `.pttrn` refer to that cleaned alignment.
+In paired mode that count is taken after `clean_alignments` has removed the insert columns of lowercase residues and gaps ("Letter case" below) and dropped the columns that are gaps, `-` or `.`, in every sequence of both sets, except when both sets were aligned to a profile with `--hmm` or `--mapgaps`, where every match state keeps its column; the column numbers in `.out` and `.pttrn` refer to that cleaned alignment.
 Its result is the set of significant sites, which becomes the `.pttrn` file when `-p` is given, names the pair logos, and lists the residues highlighted in the PyMOL script.
 `make_residues` in `cladecomparelib/pmlscript.py` draws the structure's residue at each site's column, from the first list that `aln_resnums_inserts` returns, which holds one entry per match state of the profile, and logs and leaves out a site whose column is a deletion in the structure.
 Site N is entry N - 1 of that list because, under a profile, column N is match state N: `process_args` and the cladeweb application pass `profile_aligned` to `process_pair`, so that `clean_alignments` keeps a match state that no sequence of either set occupies.
@@ -96,21 +96,25 @@ For `--hmm`, `hmm_align_and_read` in `cladecomparelib/core.py` drops the lowerca
 For `--pdb`, the lowercase residues of the structure's own alignment are kept, because they are residues of the chain.
 `aln_resnums_inserts` numbers each uppercase residue and records each run of lowercase residues as an insert, `get_aln_offset` locates the whole run of residues, inserts included, in the chain sequence, and `choose_chain` takes the chain that `--chain` names or, by default, of the structure's chains the one with the most uppercase residues other than X, and of chains with equally many the one whose chain ID sorts first; only that chain is located and drawn.
 
-An alignment read in any other format goes through `read_aln` and Biopython's `AlignIO`, and the convention applies to it only where its letter case can mark anything; biofrills' consensus then applies it, as described below.
-An alignment without any uppercase residue, such as the lowercase output of some aligners, marks no inserts: biofrills' consensus reads such an alignment without regard to case, and `uppercase_if_unmarked` in `cladecomparelib/core.py` uppercases it, so that the consensus residue and the residues counted in its column share one case.
-It does so in `read_aln` for each file, so that a lowercase sequence identical to an uppercase one in the other set is purged as a duplicate and the multi-alignment mode can combine a lowercase file with uppercase ones, and again in `process_pair` for each set after `clean_alignments`, which can remove the only uppercase rows of a set.
-Without it, the consensus would be uppercase while the counts and the pseudocounts held lowercase types.
-With it, every strategy in both modes, weighted or not, writes the output of the uppercase files for a lowercase alignment.
-`uppercase_if_unmarked` decides with `alnutils.case_marks_inserts`, the test that the consensus itself applies.
+An alignment read in any other format goes through `read_aln` and Biopython's `AlignIO`, and `match_columns` in `cladecomparelib/core.py` applies the convention to it before anything counts, weights or numbers a column: `process_one` calls it for the alignment, `clean_alignments` for the two sets before it removes duplicates, and the multi-alignment mode of `process_args` for all the files before any background joins two of them.
+`read_aln` drops the column annotations, such as the `#=GC` lines of a Stockholm file, which nothing reads: once `clean_alignments` has removed a column, an annotation that keeps the input width makes Biopython refuse a slice that reaches past the last column, as a pair logo window can.
+An alignment without any uppercase residue, such as the lowercase output of some aligners, marks no inserts: biofrills' consensus reads such an alignment without regard to case, and `uppercase_if_unmarked` uppercases it, for each file or set separately, so that the case of one file is never read through that of another.
 
-An alignment that holds any uppercase residue keeps its letter case, and biofrills' consensus reads it column by column.
-A column holding only lowercase residues and gaps is an insert column: it has a gap consensus and is reported with p = 1, but it is still numbered and still counted among the columns of the Benjamini–Hochberg selection.
-Its residues enter the alignment-wide frequencies, and with them the pseudocounts, as types of their own.
-A column that holds lowercase residues beside aligned characters, which biofrills takes to be any non-gap character that is not lowercase, such as an uppercase residue, `X` or `*`, is read by the consensus as uppercase; `uppercase_mixed_columns` in `cladecomparelib/core.py` finds such columns with the predicates that the consensus applies, `alnutils.case_marks_inserts` and `alnutils.has_aligned_residue`, and uppercases them, in `process_one` and in `process_pair` for each set, with a warning that names the set's mixed columns, before the sequence weights, the counts and the pseudocounts are computed, so that these and the pair logos read the column as the consensus does.
+In an alignment that holds any uppercase residue, a column of lowercase residues and gaps, holding no aligned character, is an insert column, and `match_columns` removes it, as `hmm_align_and_read` and `cma_blocks` remove lowercase residues.
+It is therefore not numbered and not counted among the columns of the Benjamini–Hochberg selection, its residues do not enter the alignment-wide frequencies or the pseudocounts, and two sequences that differ only in their inserts are purged as duplicates.
+A column that holds lowercase residues beside aligned characters, which biofrills takes to be any non-gap character that is not lowercase, such as an uppercase residue, `X` or `*`, is read by the consensus as uppercase, and `match_columns` uppercases it, with a warning that names the set's mixed columns, so that the sequence weights, the counts, the pseudocounts and the pair logos read the column as the consensus does.
 Such a column gives the value of the same column in uppercase, where the statistics would otherwise count `c` and `C` as two types.
-Two sequences of such an input that differ only in their inserts are not purged as duplicates.
-The a2m output of hmmalign cannot be read as a FASTA alignment through `AlignIO`, because its rows differ in length, but its default Stockholm output, read with `-f stockholm`, can, and Biopython reads its `.` padding as `-`.
-Such an alignment is compared with its insert columns in place, which changes the column numbers, the selection threshold and the pseudocounts of every column (`tests/data/README.md`, "Letter case and `.` gaps", gives the column counts of the example).
+Both decisions use the predicates that the consensus applies, `alnutils.case_marks_inserts` and `alnutils.has_aligned_residue`, and no lowercase residue remains after `match_columns`.
+
+Alignments of equal width are taken to share their columns, as `clean_alignments` already assumes when it compares them without MUSCLE.
+A column that is an insert column of one of them is removed from all, with a warning that the alignments are read as parts of one, so that two parts of one alignment, where an insert column of one part holds only gaps in the other, keep the same match columns.
+Where any such column holds an aligned character in another alignment, the alignments do not share their columns, and each loses only its own insert columns, as alignments of different widths do.
+The rule cannot tell two parts of one alignment from two alignments made separately whose widths are equal by chance and whose insert columns all fall on columns that the other leaves empty; it reads them as parts of one.
+Two alignments made separately with one profile, such as the default Stockholm output of hmmalign for each set, read with `-f stockholm`, thereby both arrive at the profile's match states and are compared without MUSCLE.
+In the multi-alignment mode, alignments that still differ in width raise `InputError`, because each background joins the rows of the other alignments, and `combine_alignments` aligns two sets only.
+On the example pair, that Stockholm output gives the output of `--hmm` byte for byte (`tests/data/README.md`, "Letter case and `.` gaps").
+The exception is a match state that no sequence of either set occupies: without the profile it is an all-gap column, which `clean_alignments` drops where `--hmm` keeps it, so that the later column numbers and m differ from those of `--hmm`.
+An alignment whose letter case no longer marks its inserts, as in a subset that `esl-alimanip --seq-k` writes, is compared with its insert columns in place, because its `#=GC RF` line, which marks them, is not read.
 
 ## biofrills is a dependency, pinned to a git commit until 0.4.0
 
@@ -127,11 +131,10 @@ pip does not read that table; `README.rst` gives the pip route, which installs t
 Vendoring the biofrills modules was the alternative while the extension blocked installation, and it no longer offers anything.
 
 Judge a biofrills upgrade against the reference outputs like any other change, because it can move numbers, for instance through changes to consensus gap decisions or to frequency summation; `tests/data/README.md`, "biofrills version", records what each pin moved and what it left unchanged.
-Three behaviors of biofrills are standing assumptions of CladeCompare's code:
+Two behaviors of biofrills are standing assumptions of CladeCompare's code:
 
-- `sequence_weights`, `aa_frequencies` and `aln2logodata` count `a` and `A` as different types, which `uppercase_if_unmarked` and `uppercase_mixed_columns` account for.
+- `sequence_weights`, `aa_frequencies` and `aln2logodata` count `a` and `A` as different types, which `match_columns` accounts for.
 - `consensus` counts `X` as a residue and can return it, where CladeCompare's counts and frequencies skip it, so `process_one` and `process_pair` give a column whose consensus is `X` p = 1; a biofrills change to that rule should be judged against those two functions.
-- `remove_empty_cols` keeps the per-letter annotations of a record, such as the `#=GR` lines of a Stockholm alignment, at the kept columns, but `clean_alignments` leaves the column annotations of `#=GC` lines at the original width, and the pair logos slice the alignments together with those annotations, so a Stockholm pair with `#=GC` lines can still fail after `clean_alignments`.
 
 gtest takes the upper tail of the chi-squared distribution from `scipy.stats.chi2.sf`, not from biofrills' `chisqprob`, whose convergence tolerance is large enough to change the sixth significant digit of a printed p-value and with it the ranking that the Benjamini–Hochberg selection depends on.
 

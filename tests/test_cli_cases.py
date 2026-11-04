@@ -602,3 +602,31 @@ def test_mapgaps_matches_hmm_alignment(tmp_path, require):
     hmm = commands[0].index("--hmm")
     commands[0][hmm : hmm + 2] = ["--mapgaps", "CDK"]
     check_case(case, tmp_path, path_prefix=bindir, commands=commands)
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("case", ["hmm.pair.gtest", "hmm.single.gtest"])
+def test_stockholm_output_of_hmmalign_matches_hmm_alignment(case, tmp_path, require):
+    """hmmalign's own Stockholm output, read with -f stockholm, is compared
+    over the match states that --hmm compares.
+
+    Its insert columns, of lowercase residues and gaps, are removed; the
+    outputs must then equal those of the recorded --hmm case. Every match
+    state of the profile is occupied by some sequence of the pair, so no
+    column of the --hmm run is empty in both sets.
+    """
+    require("hmmalign")
+    commands = [step["argv"] for step in load(case)["commands"]]
+    argv = commands[0]
+    hmm = argv.index("--hmm")
+    profile = DATA / "inputs" / argv[hmm + 1]
+    for idx in range(1, hmm):
+        stockholm = tmp_path / (argv[idx] + ".sto")
+        subprocess.run(
+            ["hmmalign", "-o", stockholm, profile, DATA / "inputs" / argv[idx]],
+            check=True,
+            capture_output=True,
+        )
+        argv[idx] = str(stockholm)
+    argv[hmm : hmm + 2] = ["-f", "stockholm"]
+    check_case(case, tmp_path, commands=commands)

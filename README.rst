@@ -202,9 +202,15 @@ alignment, the format MAPGAPS writes; any other file is read in the format
 that ``-f`` names, using Biopython's names for alignment formats (``fasta``
 by default, or for instance ``clustal`` or ``stockholm``). The two
 alignments should share their columns, as they do when both are aligned to
-the same profile. If they differ in width, CladeCompare aligns them to each
-other with MUSCLE, and the column numbers then refer to that combined
-alignment, which is not written out.
+the same profile. Where an alignment holds uppercase residues, its lowercase
+residues are insertions relative to such a profile, as in the default
+Stockholm output of ``hmmalign``, and their columns are removed before the
+alignments are compared. Two sets aligned separately to one profile are
+thereby compared over its match states, as with ``--hmm``; "Consensus
+residues and untested columns" gives the rule. If the alignments still
+differ in width, CladeCompare aligns them to each other with MUSCLE, and the
+column numbers then refer to that combined alignment, which is not written
+out.
 
 Each line of the result, the ``.out`` file, describes one column::
 
@@ -347,10 +353,12 @@ foreground and all the others together as the background::
 
     cladecompare subfam1.aln subfam2.aln subfam3.aln
 
-All the alignments must have the same width. For each alignment, the result,
-the pattern file and the logos are written to the current directory, named
-after the alignment file, as in ``subfam1.aln.out``, ``subfam1.aln.pttrn``
-and ``subfam1.aln-12,15.pdf``. ``-o`` and ``-p`` are ignored, with a warning.
+All the alignments must have the same width once their insert columns are
+removed; otherwise CladeCompare stops with an error that names the width of
+each file. For each alignment, the result, the pattern file and the logos
+are written to the current directory, named after the alignment file, as in
+``subfam1.aln.out``, ``subfam1.aln.pttrn`` and ``subfam1.aln-12,15.pdf``.
+``-o`` and ``-p`` are ignored, with a warning.
 With ``--pdb``, every comparison writes its PyMOL script to the same file,
 the one named after the structure or by ``--pmlout``, so that the file holds
 only the script of the last alignment on the command line.
@@ -515,14 +523,17 @@ of ``a`` over all columns of the same set; ties go to the alphabetically first
 type. A column whose weighted fraction of gap characters, ``-`` or ``.``, is
 0.8 or more has a gap as its consensus, except where such columns form a run
 at the start or the end of the alignment: those receive a residue consensus
-if they hold any aligned residue, however many gaps accompany it. Where an
-alignment contains uppercase residues, its lowercase residues are insertions:
-a column of lowercase residues and gaps alone has a gap as its consensus,
-while a column that holds lowercase residues beside aligned characters, which
-are uppercase residues and other characters such as ``*``, is read,
-consensus, counts and sequence weights alike, as if it were uppercase. An
-alignment without any uppercase residue marks nothing by case and is read as
-if it were uppercase.
+if they hold any aligned residue, however many gaps accompany it.
+Where an alignment contains uppercase residues, its lowercase residues are
+insertions. A column of lowercase residues and gaps alone is an insert
+column, which is removed before any column is counted or numbered. Where the
+alignments have the same width, an insert column of one is removed from all,
+unless another holds an aligned character in it; each alignment then loses
+only its own insert columns. A column that holds lowercase residues beside
+aligned characters, which are uppercase residues and other characters such
+as ``*``, is read, consensus, counts and sequence weights alike, as if it
+were uppercase. An alignment without any uppercase residue marks nothing by
+case and is read as if it were uppercase.
 A column whose foreground or background consensus is a gap, or X, an unknown
 residue that the counts skip, is not tested and is reported with p = 1.
 The site of a column is named in the pattern file after its foreground

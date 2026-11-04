@@ -65,7 +65,7 @@ See README or https://github.com/etal/cladecompare for full documentation.
     )
     AP.add_argument(
         "--chain",
-        help="""Draw this chain of the --pdb structure, or with "" the chain
+        help="""Draw this chain of the --pdb structure; "" names the chain
             without an ID (default: the chain with the most residues aligned
             to the profile).""",
     )

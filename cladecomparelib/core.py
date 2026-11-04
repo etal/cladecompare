@@ -770,12 +770,14 @@ def read_pdb_seq(pdb_fname):
         yield pdbseqfname, chains
 
 
+def chain_id(record):
+    """The ID of a chain as messages and --chain give it."""
+    return pmlscript.chain_label(record.annotations["chain"])
+
+
 def describe_chain(record, pdb_fname):
     """Name a chain of a structure file in a message."""
-    return "chain %s of %s" % (
-        pmlscript.chain_label(record.annotations["chain"]),
-        pdb_fname,
-    )
+    return "chain %s of %s" % (chain_id(record), pdb_fname)
 
 
 def choose_chain(rows, chains, pdb_fname, chain=None):
@@ -813,28 +815,17 @@ def choose_chain(rows, chains, pdb_fname, chain=None):
             )
     else:
         label = pmlscript.chain_label(chain)
-        named = [
-            record
-            for record in chains.values()
-            if pmlscript.chain_label(record.annotations["chain"]) == label
-        ]
-        if not named:
+        by_label = {chain_id(record): record for record in chains.values()}
+        if label not in by_label:
             raise InputError(
                 "%s has no chain %s; its chains are %s"
-                % (
-                    pdb_fname,
-                    label,
-                    ", ".join(
-                        pmlscript.chain_label(record.annotations["chain"])
-                        for record in chains.values()
-                    ),
-                )
+                % (pdb_fname, label, ", ".join(by_label))
             )
-        chosen = next((c for c in candidates if c[1] is named[0]), None)
+        chosen = next((c for c in candidates if c[1] is by_label[label]), None)
         if chosen is None or chosen[0] == 0:
             raise InputError(
                 "%s has no residue aligned to the profile"
-                % describe_chain(named[0], pdb_fname)
+                % describe_chain(by_label[label], pdb_fname)
             )
     count, record, row = chosen
     if len(candidates) > 1:
@@ -843,7 +834,7 @@ def choose_chain(rows, chains, pdb_fname, chain=None):
             describe_chain(record, pdb_fname),
             count,
             ", ".join(
-                "%s %d" % (pmlscript.chain_label(rec.annotations["chain"]), n)
+                "%s %d" % (chain_id(rec), n)
                 for n, rec, _row in candidates
                 if rec is not record
             ),

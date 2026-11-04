@@ -154,10 +154,7 @@ def get_pml_name(pdb_fname, chain_id, idcode):
 
 
 def chain_label(chain):
-    """A chain ID as a selection and --chain give it.
-
-    PyMOL selects a chain whose ID is blank as chain "".
-    """
+    """A chain ID as PyMOL selects it and --chain names it: "" for a blank ID."""
     return chain.strip() or '""'
 
 

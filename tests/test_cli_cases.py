@@ -411,14 +411,15 @@ def run_on_structure(tmp_path, case, source, edit, options=()):
     """Run the first command of a recorded --pdb case on an edited copy of its
     structure, in a directory beside the scratch directory.
 
-    `edit` maps each line of the structure file to its replacement text, and
+    `edit` maps the lines of the structure file to the text of the copy, and
     `options` are added to the command. Return the completed process and the
     PyMOL script it wrote.
     """
     structure = tmp_path / "edited" / source
     structure.parent.mkdir(parents=True)
-    lines = (DATA / "inputs" / source).read_text().splitlines(keepends=True)
-    structure.write_text("".join(edit(line) for line in lines))
+    structure.write_text(
+        edit((DATA / "inputs" / source).read_text().splitlines(keepends=True))
+    )
     argv = load(case)["commands"][0]["argv"]
     argv[argv.index(source)] = "../edited/" + source
     _workdir, _written, [result], _tmpdir = run_commands(
@@ -429,6 +430,7 @@ def run_on_structure(tmp_path, case, source, edit, options=()):
 
 
 def set_chain(line, chain):
+    """Give an atom or TER record of a PDB file another chain ID."""
     if line.startswith(("ATOM", "HETATM", "TER")):
         return line[:21] + chain + line[22:]
     return line
@@ -439,18 +441,17 @@ def test_chain_option_draws_a_copy_of_the_best_chain(tmp_path, require):
     """Chain C, a copy of chain A, ties with it and is not drawn by default;
     --chain C draws it."""
     require("hmmalign")
-    source = "1FIN-AB-CA.pdb"
-    lines = (DATA / "inputs" / source).read_text().splitlines(keepends=True)
-    copy = "".join(
-        set_chain(line, "C")
-        for line in lines
-        if line.startswith("ATOM") and line[21] == "A"
-    )
 
-    def add_copy(line):
-        return copy + line if line.startswith("END") else line
+    def add_copy(lines):
+        copy = [
+            set_chain(line, "C")
+            for line in lines
+            if line.startswith("ATOM") and line[21] == "A"
+        ]
+        end = lines.index("END\n")
+        return "".join(lines[:end] + copy + lines[end:])
 
-    case = "pdb.1FIN-AB-CA.gtest"
+    case, source = "pdb.1FIN-AB-CA.gtest", "1FIN-AB-CA.pdb"
     expected = (
         expected_text(case, source + ".pml")
         .decode()
@@ -471,16 +472,22 @@ def test_chain_option_draws_a_copy_of_the_best_chain(tmp_path, require):
 
 
 @pytest.mark.integration
-def test_structure_with_a_blank_chain_id(tmp_path, require):
+@pytest.mark.parametrize("options", [[], ["--chain", ""]])
+def test_structure_with_a_blank_chain_id(options, tmp_path, require):
     """A chain without an ID is drawn as chain A of 1HCK.pdb is, and selected
-    as chain "", which is how PyMOL selects a blank chain ID.
+    as chain "", which is how PyMOL selects a blank chain ID and how --chain
+    names it.
 
     The record ID that Biopython gives such a chain, '1HCK: ', loses its
     blank in hmmalign's output, so no chain was found.
     """
     require("hmmalign")
     _result, script = run_on_structure(
-        tmp_path, "pdb.1HCK.gtest", "1HCK.pdb", lambda line: set_chain(line, " ")
+        tmp_path,
+        "pdb.1HCK.gtest",
+        "1HCK.pdb",
+        lambda lines: "".join(set_chain(line, " ") for line in lines),
+        options,
     )
     expected = (
         expected_text("pdb.1HCK.gtest", "1HCK.pdb.pml")

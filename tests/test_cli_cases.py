@@ -379,6 +379,9 @@ def test_input_error_prints_a_message_without_traceback(argv, message, tmp_path)
     assert written == set()
 
 
+FIN_CASE, FIN_SOURCE = "pdb.1FIN-AB-CA.gtest", "1FIN-AB-CA.pdb"
+
+
 @pytest.mark.integration
 @pytest.mark.parametrize(
     "chain, message",
@@ -397,7 +400,7 @@ def test_chain_option_stops_on_a_chain_it_cannot_draw(
 ):
     """--chain overrides the choice of chain A, and stops before any output."""
     require("hmmalign")
-    argv = load("pdb.1FIN-AB-CA.gtest")["commands"][0]["argv"]
+    argv = load(FIN_CASE)["commands"][0]["argv"]
     _workdir, written, [result], _tmpdir = run_commands(
         [argv + ["--chain", chain]], tmp_path
     )
@@ -453,9 +456,6 @@ def add_copy_of_a(chain, residues=None):
     return edit
 
 
-FIN_CASE, FIN_SOURCE = "pdb.1FIN-AB-CA.gtest", "1FIN-AB-CA.pdb"
-
-
 @pytest.mark.integration
 def test_chain_option_draws_a_copy_of_the_best_chain(tmp_path, require):
     """Chain C, a copy of chain A, ties with it and is not drawn by default;
@@ -488,7 +488,10 @@ def test_chain_option_names_a_blank_chain_id_as_empty(tmp_path, require):
     require("hmmalign")
     edit = add_copy_of_a(" ", residues=200)
     result, script = run_on_structure(tmp_path / "default", FIN_CASE, FIN_SOURCE, edit)
-    assert '(other chains: "" ' in result.stderr
+    assert (
+        "Using chain A of ../edited/1FIN-AB-CA.pdb, with 282 residues aligned to "
+        'the profile (other chains: "" 196, B 1)'
+    ) in result.stderr
     assert "create MainStruct_1finA, 1finA and chain A \n" in script
     _result, script = run_on_structure(
         tmp_path / "named", FIN_CASE, FIN_SOURCE, edit, ["--chain", ""]

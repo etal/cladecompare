@@ -306,8 +306,9 @@ chains with equally many, the one whose chain ID sorts first, such as chain A
 of two copies of the kinase in chains A and C; the log names the chain drawn
 and the number of residues aligned in each of the others. In a complex of two
 members of the family, those numbers reflect how much of each chain the
-structure resolves rather than which chain is of interest. ``--chain`` names
-the chain to draw instead, here the second copy of the kinase::
+structure resolves rather than which chain is of interest, so the chain of
+interest may not be the one drawn. ``--chain`` names the chain to draw
+instead, such as the other member or, here, the second copy of the kinase::
 
     curl -O https://files.rcsb.org/download/1FIN.pdb
     cladecompare test/scttlre-domain.fasta test/cdc2-domain.fasta \
@@ -315,16 +316,15 @@ the chain to draw instead, here the second copy of the kinase::
 
 ``--chain ""`` names a chain without a chain ID. A chain that the file does
 not hold, or one without a residue aligned to a match state, stops the run
-with an error before any output is written. The
-PyMOL object is named after the PDB ID that the file's ``HEADER`` record
-gives and the chain, as in ``1hckA``, and a file without a PDB ID, such as a
-model from the AlphaFold database, after its file name. Without a profile,
-``--pdb`` stops the run with an error before any alignment is read. A
-significant column that is a deletion in the structure has no residue to
-draw; it is named in a warning and left out of the script. One limitation
-applies in this release: ``--pdb`` given more than once stops the run with an
-error, after the ``.out`` file and, with ``-p``, the pattern file and any
-logos are written.
+with an error before any output is written. The PyMOL object is named after
+the PDB ID that the file's ``HEADER`` record gives and the chain, as in
+``1hckA``, and a file without a PDB ID, such as a model from the AlphaFold
+database, after its file name. Without a profile, ``--pdb`` stops the run
+with an error before any alignment is read. A significant column that is a
+deletion in the structure has no residue to draw; it is named in a warning
+and left out of the script. One limitation applies in this release:
+``--pdb`` given more than once stops the run with an error, after the
+``.out`` file and, with ``-p``, the pattern file and any logos are written.
 
 .. _PyMOL: https://pymol.org/
 

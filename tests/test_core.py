@@ -478,7 +478,8 @@ def test_aln_offset_rejects_a_segment_it_cannot_place(full, aln, message):
 
 
 def pdb_chain(chain_id, seq, start=1):
-    """A chain as read_pdb_seq yields it: the FASTA name and the record."""
+    """A chain and the name it has in the aligner's input, here its record ID,
+    where read_pdb_seq gives its index; choose_chain only matches the two."""
     record = SeqRecord(
         Seq(seq),
         id="1XYZ:%s" % chain_id,

@@ -411,15 +411,14 @@ def run_on_structure(tmp_path, case, source, edit, options=()):
     """Run the first command of a recorded --pdb case on an edited copy of its
     structure, in a directory beside the scratch directory.
 
-    `edit` maps the lines of the structure file to the text of the copy, and
-    `options` are added to the command. Return the completed process and the
-    PyMOL script it wrote.
+    `edit` maps the list of lines of the structure file to the lines of the
+    copy, and `options` are added to the command. Return the completed
+    process and the PyMOL script it wrote.
     """
     structure = tmp_path / "edited" / source
     structure.parent.mkdir(parents=True)
-    structure.write_text(
-        edit((DATA / "inputs" / source).read_text().splitlines(keepends=True))
-    )
+    lines = (DATA / "inputs" / source).read_text().splitlines(keepends=True)
+    structure.write_text("".join(edit(lines)))
     argv = load(case)["commands"][0]["argv"]
     argv[argv.index(source)] = "../edited/" + source
     _workdir, _written, [result], _tmpdir = run_commands(
@@ -436,33 +435,44 @@ def set_chain(line, chain):
     return line
 
 
+def add_copy_of_a(chain, residues=None):
+    """An edit that adds a copy of chain A as `chain`, of its first `residues`
+    residues or all of them, before the END record."""
+
+    def edit(lines):
+        copy = [
+            set_chain(line, chain)
+            for line in lines
+            if line.startswith("ATOM")
+            and line[21] == "A"
+            and (residues is None or int(line[22:26]) <= residues)
+        ]
+        end = lines.index("END\n")
+        return lines[:end] + copy + lines[end:]
+
+    return edit
+
+
+FIN_CASE, FIN_SOURCE = "pdb.1FIN-AB-CA.gtest", "1FIN-AB-CA.pdb"
+
+
 @pytest.mark.integration
 def test_chain_option_draws_a_copy_of_the_best_chain(tmp_path, require):
     """Chain C, a copy of chain A, ties with it and is not drawn by default;
     --chain C draws it."""
     require("hmmalign")
-
-    def add_copy(lines):
-        copy = [
-            set_chain(line, "C")
-            for line in lines
-            if line.startswith("ATOM") and line[21] == "A"
-        ]
-        end = lines.index("END\n")
-        return "".join(lines[:end] + copy + lines[end:])
-
-    case, source = "pdb.1FIN-AB-CA.gtest", "1FIN-AB-CA.pdb"
+    edit = add_copy_of_a("C")
     expected = (
-        expected_text(case, source + ".pml")
+        expected_text(FIN_CASE, FIN_SOURCE + ".pml")
         .decode()
         .replace("load 1FIN-AB-CA.pdb, ", "load ../edited/1FIN-AB-CA.pdb, ")
     )
-    result, script = run_on_structure(tmp_path / "default", case, source, add_copy)
+    result, script = run_on_structure(tmp_path / "default", FIN_CASE, FIN_SOURCE, edit)
     assert "Using chain A of ../edited/1FIN-AB-CA.pdb" in result.stderr
     assert "(other chains: B 1, C 282)" in result.stderr
     assert script == expected
     _result, script = run_on_structure(
-        tmp_path / "named", case, source, add_copy, ["--chain", "C"]
+        tmp_path / "named", FIN_CASE, FIN_SOURCE, edit, ["--chain", "C"]
     )
     assert script == (
         expected.replace("# PyMOL script -- A\n", "# PyMOL script -- C\n")
@@ -472,11 +482,25 @@ def test_chain_option_draws_a_copy_of_the_best_chain(tmp_path, require):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("options", [[], ["--chain", ""]])
-def test_structure_with_a_blank_chain_id(options, tmp_path, require):
+def test_chain_option_names_a_blank_chain_id_as_empty(tmp_path, require):
+    """A copy of the first 200 residues of chain A without a chain ID loses
+    to chain A by default, and --chain "" draws it."""
+    require("hmmalign")
+    edit = add_copy_of_a(" ", residues=200)
+    result, script = run_on_structure(tmp_path / "default", FIN_CASE, FIN_SOURCE, edit)
+    assert '(other chains: "" ' in result.stderr
+    assert "create MainStruct_1finA, 1finA and chain A \n" in script
+    _result, script = run_on_structure(
+        tmp_path / "named", FIN_CASE, FIN_SOURCE, edit, ["--chain", ""]
+    )
+    assert 'create MainStruct_1fin, 1fin and chain "" \n' in script
+    assert " and chain A " not in script
+
+
+@pytest.mark.integration
+def test_structure_with_a_blank_chain_id(tmp_path, require):
     """A chain without an ID is drawn as chain A of 1HCK.pdb is, and selected
-    as chain "", which is how PyMOL selects a blank chain ID and how --chain
-    names it.
+    as chain "", which is how PyMOL selects a blank chain ID.
 
     The record ID that Biopython gives such a chain, '1HCK: ', loses its
     blank in hmmalign's output, so no chain was found.
@@ -486,8 +510,7 @@ def test_structure_with_a_blank_chain_id(options, tmp_path, require):
         tmp_path,
         "pdb.1HCK.gtest",
         "1HCK.pdb",
-        lambda lines: "".join(set_chain(line, " ") for line in lines),
-        options,
+        lambda lines: [set_chain(line, " ") for line in lines],
     )
     expected = (
         expected_text("pdb.1HCK.gtest", "1HCK.pdb.pml")

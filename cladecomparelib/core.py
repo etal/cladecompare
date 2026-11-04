@@ -770,14 +770,14 @@ def read_pdb_seq(pdb_fname):
         yield pdbseqfname, chains
 
 
-def chain_id(record):
-    """The ID of a chain as messages and --chain give it."""
+def record_chain_label(record):
+    """The chain ID of a record as pmlscript.chain_label writes it."""
     return pmlscript.chain_label(record.annotations["chain"])
 
 
 def describe_chain(record, pdb_fname):
     """Name a chain of a structure file in a message."""
-    return "chain %s of %s" % (chain_id(record), pdb_fname)
+    return "chain %s of %s" % (record_chain_label(record), pdb_fname)
 
 
 def choose_chain(rows, chains, pdb_fname, chain=None):
@@ -815,7 +815,7 @@ def choose_chain(rows, chains, pdb_fname, chain=None):
             )
     else:
         label = pmlscript.chain_label(chain)
-        by_label = {chain_id(record): record for record in chains.values()}
+        by_label = {record_chain_label(record): record for record in chains.values()}
         if label not in by_label:
             raise InputError(
                 "%s has no chain %s; its chains are %s"
@@ -834,7 +834,7 @@ def choose_chain(rows, chains, pdb_fname, chain=None):
             describe_chain(record, pdb_fname),
             count,
             ", ".join(
-                "%s %d" % (chain_id(rec), n)
+                "%s %d" % (record_chain_label(rec), n)
                 for n, rec, _row in candidates
                 if rec is not record
             ),

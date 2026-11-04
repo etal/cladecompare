@@ -496,21 +496,44 @@ ROWS = {"1XYZ:A": "KLM-", "1XYZ:B": "-E--", "1XYZ:C": "KLMX"}
 
 
 @pytest.mark.parametrize("order", [["A", "B", "C"], ["C", "B", "A"], ["B", "C", "A"]])
-def test_choose_best_aligned_takes_the_most_matches_then_the_first_id(order):
+def test_choose_chain_takes_the_most_matches_then_the_first_id(order):
     """Ties go to the chain ID that sorts first, in any order of the rows."""
     rows = {"1XYZ:" + c: ROWS["1XYZ:" + c] for c in order}
-    record, row = core.choose_best_aligned(rows, CHAINS, "1xyz.pdb")
+    record, row = core.choose_chain(rows, CHAINS, "1xyz.pdb")
     assert (record.annotations["chain"], row) == ("A", "KLM-")
     del rows["1XYZ:A"]
-    record, row = core.choose_best_aligned(rows, CHAINS, "1xyz.pdb")
+    record, row = core.choose_chain(rows, CHAINS, "1xyz.pdb")
     assert (record.annotations["chain"], row) == ("C", "KLMX")
 
 
 @pytest.mark.parametrize("rows", [{}, {"1XYZ:A": "---", "1XYZ:B": "xX-"}])
-def test_choose_best_aligned_rejects_a_structure_without_matches(rows):
+def test_choose_chain_rejects_a_structure_without_matches(rows):
     """--mapgaps can return no chain; hmmalign can return only gaps and X."""
     with pytest.raises(InputError, match="No chain of 1xyz.pdb has a residue"):
-        core.choose_best_aligned(rows, CHAINS, "1xyz.pdb")
+        core.choose_chain(rows, CHAINS, "1xyz.pdb")
+
+
+@pytest.mark.parametrize("chain, row", [("B", "-E--"), ("C", "KLMX")])
+def test_choose_chain_takes_the_chain_named(chain, row):
+    """A named chain is chosen over one with more matches or an earlier ID."""
+    record, chosen = core.choose_chain(ROWS, CHAINS, "1xyz.pdb", chain)
+    assert (record.annotations["chain"], chosen) == (chain, row)
+
+
+@pytest.mark.parametrize(
+    "chain, rows, message",
+    [
+        ("D", ROWS, "1xyz.pdb has no chain D; its chains are A, B, C"),
+        # Chain IDs are case-sensitive.
+        ("a", ROWS, "1xyz.pdb has no chain a; its chains are A, B, C"),
+        # --mapgaps returns only the chains it aligns.
+        ("B", {"1XYZ:A": "KLM-"}, "Chain B of 1xyz.pdb has no residue aligned"),
+        ("B", ROWS | {"1XYZ:B": "-e--"}, "Chain B of 1xyz.pdb has no residue aligned"),
+    ],
+)
+def test_choose_chain_rejects_a_chain_it_cannot_draw(chain, rows, message):
+    with pytest.raises(InputError, match=message):
+        core.choose_chain(rows, CHAINS, "1xyz.pdb", chain)
 
 
 # --- Profile-aligned runs ---
@@ -538,7 +561,7 @@ def profile_run(tmp_path, monkeypatch, option, background):
         lambda _profile, name: aln(*PROFILE_ALIGNED[name]),
     )
     monkeypatch.setattr(
-        core, "pdb_%s" % option, lambda _profile, _pdb: (chain, STRUCTURE, [])
+        core, "pdb_%s" % option, lambda _profile, _pdb, _chain: (chain, STRUCTURE, [])
     )
     monkeypatch.chdir(tmp_path)
     core.process_args(
@@ -549,6 +572,7 @@ def profile_run(tmp_path, monkeypatch, option, background):
             hmm="x.hmm" if option == "hmm" else None,
             mapgaps="x" if option == "mapgaps" else None,
             pdb=["1abc.pdb"],
+            chain=None,
             strategy="gtest",
             weight=False,
             alpha=0.05,

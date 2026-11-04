@@ -353,12 +353,42 @@ def test_more_than_two_alignments_ignore_output_options(tmp_path):
             ["cladereport.py", "missing.out"],
             "cladereport: error: Cannot read missing.out: No such file or directory",
         ),
+        (
+            ["cladecompare.py", "cdc2-a.aln.fasta", "cdc2-b.aln.fasta", "--chain", "A"],
+            "cladecompare: error: --chain requires a structure, given with --pdb",
+        ),
     ],
 )
 def test_input_error_prints_a_message_without_traceback(argv, message, tmp_path):
     _workdir, written, [result], _tmpdir = run_commands([argv], tmp_path)
     assert result.returncode == 1
     assert result.stderr.endswith(message + "\n")
+    assert "Traceback" not in result.stderr
+    assert written == set()
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "chain, message",
+    [
+        ("C", "1FIN-AB-CA.pdb has no chain C; its chains are A, B"),
+        # Cyclin A aligns a single E, which occurs 19 times in chain B.
+        (
+            "B",
+            "The aligned residues of chain B of 1FIN-AB-CA.pdb occur in more than "
+            "one place in its sequence: E",
+        ),
+    ],
+)
+def test_chain_option_draws_the_chain_named(chain, message, tmp_path, require):
+    """--chain bypasses the choice of chain A, and stops before any output."""
+    require("hmmalign")
+    argv = load("pdb.1FIN-AB-CA.gtest")["commands"][0]["argv"]
+    _workdir, written, [result], _tmpdir = run_commands(
+        [argv + ["--chain", chain]], tmp_path
+    )
+    assert result.returncode == 1
+    assert result.stderr.endswith("cladecompare: error: " + message + "\n")
     assert "Traceback" not in result.stderr
     assert written == set()
 

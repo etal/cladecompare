@@ -63,6 +63,11 @@ See README or https://github.com/etal/cladecompare for full documentation.
         action="append",
         help="""3D structure coordinates in Protein Data Bank format.""",
     )
+    AP.add_argument(
+        "--chain",
+        help="""Draw this chain of the --pdb structure (default: the chain
+            with the most residues aligned to the profile).""",
+    )
     # Options
     # add_argument_group?
     AP.add_argument(

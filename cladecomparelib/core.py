@@ -79,6 +79,8 @@ def process_args(args):
     if profile_aligned and args.format != "fasta":
         # run_gaps requires FASTA input
         raise InputError("Sequences to align with a profile must be in FASTA format.")
+    if args.chain is not None and not args.pdb:
+        raise InputError("--chain requires a structure, given with --pdb")
 
     all_alns = []
     for alnfname in [args.foreground] + args.background:
@@ -97,14 +99,18 @@ def process_args(args):
         if args.hmm:
             for pdbfname in args.pdb:
                 logger.info("Aligning %s with HMM profile %s", pdbfname, args.hmm)
-                pdb_rec, pdb_resnums, pdb_inserts = pdb_hmm(args.hmm, pdbfname)
+                pdb_rec, pdb_resnums, pdb_inserts = pdb_hmm(
+                    args.hmm, pdbfname, args.chain
+                )
                 pdb_data.append((pdbfname, pdb_rec, pdb_resnums, pdb_inserts))
         elif args.mapgaps:
             for pdbfname in args.pdb:
                 logger.info(
                     "Aligning %s with MAPGAPS profile %s", pdbfname, args.mapgaps
                 )
-                pdb_rec, pdb_resnums, pdb_inserts = pdb_mapgaps(args.mapgaps, pdbfname)
+                pdb_rec, pdb_resnums, pdb_inserts = pdb_mapgaps(
+                    args.mapgaps, pdbfname, args.chain
+                )
                 pdb_data.append((pdbfname, pdb_rec, pdb_resnums, pdb_inserts))
         else:
             logger.error("PDB alignment requires a MAPGAPS or HMM profile.")
@@ -763,17 +769,19 @@ def describe_chain(record, pdb_fname):
     return "chain %s of %s" % (record.annotations["chain"], pdb_fname)
 
 
-def choose_best_aligned(rows, chains, pdb_fname):
-    """Choose the chain with the most residues aligned to match states.
+def choose_chain(rows, chains, pdb_fname, chain=None):
+    """Choose the chain of a structure to draw.
 
     `rows` maps the name of each chain in the aligned file to its aligned
     row, and `chains` maps the same names to the chains' SeqRecords, as
     read_pdb_seq yields them; a chain that the aligner did not return is not
-    a candidate. Residues that the structure does not resolve, 'X', are not
-    counted. Of chains with equally many, the one whose chain ID sorts first
-    is chosen, so the choice does not depend on the order of the aligner's
-    rows. A structure in which no chain has a residue aligned to a match
-    state raises InputError.
+    a candidate. Given a chain ID, `chain`, that chain is chosen. Otherwise
+    the chain with the most residues aligned to match states is, not
+    counting residues that the structure does not resolve, 'X', and of chains
+    with equally many, the one whose chain ID sorts first, so the choice does
+    not depend on the order of the aligner's rows. A chosen chain without a
+    residue aligned to a match state, or a chain ID that the structure does
+    not have, raises InputError.
 
     Returns a tuple: (SeqRecord, aligned row)
     """
@@ -786,13 +794,30 @@ def choose_best_aligned(rows, chains, pdb_fname):
         for name, record in chains.items()
         if name in rows
     ]
-    if not candidates or max(count for count, _rec, _row in candidates) == 0:
-        raise InputError(
-            "No chain of %s has a residue aligned to the profile" % pdb_fname
+    if chain is None:
+        chosen = min(
+            candidates, key=lambda c: (-c[0], c[1].annotations["chain"]), default=None
         )
-    count, record, row = min(
-        candidates, key=lambda c: (-c[0], c[1].annotations["chain"])
-    )
+        if chosen is None or chosen[0] == 0:
+            raise InputError(
+                "No chain of %s has a residue aligned to the profile" % pdb_fname
+            )
+    else:
+        ids = [record.annotations["chain"] for record in chains.values()]
+        if chain not in ids:
+            raise InputError(
+                "%s has no chain %s; its chains are %s"
+                % (pdb_fname, chain, ", ".join(ids))
+            )
+        chosen = next(
+            (c for c in candidates if c[1].annotations["chain"] == chain), None
+        )
+        if chosen is None or chosen[0] == 0:
+            raise InputError(
+                "Chain %s of %s has no residue aligned to the profile"
+                % (chain, pdb_fname)
+            )
+    count, record, row = chosen
     if len(candidates) > 1:
         logger.info(
             "Using %s, with %d residues aligned to the profile (other chains: %s)",
@@ -870,16 +895,16 @@ def aln_resnums_inserts(aln, offset):
     return aln_resnums, aln_inserts
 
 
-def pdb_ref_resnums(rows, chains, pdb_fname):
+def pdb_ref_resnums(rows, chains, pdb_fname, chain=None):
     """Choose the chain to draw and map the alignment to its residues.
 
-    `rows` and `chains` are as choose_best_aligned takes them.
+    The arguments are as choose_chain takes them.
 
     Returns a tuple: (SeqRecord,
                       list of aligned residue numbers,
                       list of insert ranges as tuple pairs)
     """
-    ref_record, ref_aln = choose_best_aligned(rows, chains, pdb_fname)
+    ref_record, ref_aln = choose_chain(rows, chains, pdb_fname, chain)
     # Calculate aligned residue numbers & insert ranges
     offset = (
         ref_record.annotations["start"]
@@ -892,7 +917,7 @@ def pdb_ref_resnums(rows, chains, pdb_fname):
     return ref_record, resnums, inserts
 
 
-def pdb_hmm(hmm_profile, pdb_fname):
+def pdb_hmm(hmm_profile, pdb_fname, chain=None):
     """Align a PDB structure to an HMM profile.
 
     Returns a tuple as pdb_ref_resnums does.
@@ -900,10 +925,10 @@ def pdb_hmm(hmm_profile, pdb_fname):
     with read_pdb_seq(pdb_fname) as (seqfname, chains):
         out = hmmalign_a2m(hmm_profile, seqfname)
     rows = dict((rec.id, str(rec.seq)) for rec in SeqIO.parse(StringIO(out), "fasta"))
-    return pdb_ref_resnums(rows, chains, pdb_fname)
+    return pdb_ref_resnums(rows, chains, pdb_fname, chain)
 
 
-def pdb_mapgaps(mapgaps_profile, pdb_fname):
+def pdb_mapgaps(mapgaps_profile, pdb_fname, chain=None):
     """Align a PDB structure to a MAPGAPS profile.
 
     Returns a tuple as pdb_ref_resnums does.
@@ -911,4 +936,4 @@ def pdb_mapgaps(mapgaps_profile, pdb_fname):
     with read_pdb_seq(pdb_fname) as (seqfname, chains):
         call_quiet("run_gaps", mapgaps_profile, seqfname)
         rows = dict(cma_records(seqfname + "_aln.cma"))
-    return pdb_ref_resnums(rows, chains, pdb_fname)
+    return pdb_ref_resnums(rows, chains, pdb_fname, chain)

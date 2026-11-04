@@ -298,17 +298,21 @@ structure 1HCK from the Protein Data Bank::
         --hmm test/CDK.hmm --pdb 1HCK.pdb -o scttlre-v-cdc2.out
 
 The script is written to the structure's file name with ``.pml`` added
-(here ``1HCK.pdb.pml``), or to the file that ``--pmlout`` names. The file
-name of the structure must give its PDB ID, as in ``1abc.pdb``,
-``1abcA.pdb``, ``1abc_A.pdb`` or ``pdb1abc.ent``. Without a profile, the
-comparison runs and an error is logged, but no script is written. A
-significant column that is a deletion in the structure has no residue to
-draw; it is named in a warning and left out of the script. Two
-limitations apply in this release: a file holding more than one protein
-chain, such as a kinase in complex with a cyclin, stops the run with an
-error, so keep only the chain of interest in the file; and ``--pdb`` given
-more than once stops the run with an error, after the ``.out`` file and,
-with ``-p``, the pattern file and any logos are written.
+(here ``1HCK.pdb.pml``), or to the file that ``--pmlout`` names. The
+structure may hold more than one chain, as an entry of a kinase in complex
+with a cyclin does. Every chain is aligned to the profile, and the script
+draws the chain with the most residues aligned to match states, or, of
+chains with equally many, the one whose chain ID sorts first, such as chain A
+of two copies of the kinase in chains A and C; the log names the chain drawn
+and the number of residues aligned in each of the others. The PyMOL object
+is named after the PDB ID that the file's ``HEADER`` record gives and the
+chain, as in ``1hckA``, and a file without a PDB ID, such as a model from the
+AlphaFold database, after its file name. Without a profile, the comparison
+runs and an error is logged, but no script is written. A significant column
+that is a deletion in the structure has no residue to draw; it is named in a
+warning and left out of the script. One limitation applies in this release:
+``--pdb`` given more than once stops the run with an error, after the
+``.out`` file and, with ``-p``, the pattern file and any logos are written.
 
 .. _PyMOL: https://pymol.org/
 

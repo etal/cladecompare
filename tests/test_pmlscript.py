@@ -1,39 +1,26 @@
-"""Tests of pmlscript: PDB file name parsing and the residues drawn."""
+"""Tests of pmlscript: PyMOL object names and the residues drawn."""
 
 import logging
 
 import pytest
 
-from cladecomparelib import InputError, pmlscript
+from cladecomparelib import pmlscript
 
 
 @pytest.mark.parametrize(
-    "fname, expected",
+    "fname, idcode, expected",
     [
-        ("1hck.pdb", ("1hck", None)),
-        ("dir/00_1hck.pdb", ("1hck", None)),
-        ("1hckA.pdb", ("1hck", "A")),
-        ("1hck_a.pdb", ("1hck", "A")),
-        ("1hck_chain_A.pdb", ("1hck", None)),
-        ("pdb1hck.ent", ("1hck", None)),
+        # The PDB ID of the HEADER record wins over the file name.
+        ("1FIN-AB-CA.pdb", "1FIN", "1finA"),
+        ("pdb1hck.ent", "1HCK", "1hckA"),
+        # Without one, the file name gives the name.
+        ("dir/AF-P24941-F1-model_v6.pdb", "", "af_p24941_f1_model_v6A"),
+        ("1FIN-AB-CA.pdb", "", "1fin_ab_caA"),
+        ("model.v2.pdb", "", "model_v2A"),
     ],
 )
-def test_pdbid_from_fname(fname, expected):
-    assert pmlscript.pdbid_from_fname(fname) == expected
-
-
-@pytest.mark.parametrize(
-    "fname",
-    ["tmpq355bkts", "x.pdb", "1HCKA_.pdb", "1hc_A.pdb", "1FIN-AB-CA.pdb", "1hck.ent"],
-)
-def test_pdbid_from_fname_rejects_other_names(fname):
-    """Names that cannot be read raise InputError, even under python -O.
-
-    An assertion would not run under python -O, and each name would then
-    give a wrong PDB ID.
-    """
-    with pytest.raises(InputError, match="Cannot read a PDB ID"):
-        pmlscript.pdbid_from_fname(fname)
+def test_get_pml_name(fname, idcode, expected):
+    assert pmlscript.get_pml_name(fname, "a", idcode) == expected
 
 
 # The five columns of a chain that begins at residue 5 and has a deletion at

@@ -438,11 +438,11 @@ def test_top_hits_returns_50_sites_when_more_pass(pvalues):
 def test_aln_offset_matches_the_whole_segment_including_x():
     # The chain also begins with AGS, so the residues before the X alone
     # have no unique place.
-    assert core.get_aln_offset("AGSAGSXKLMN", "AGSXKL", "1XYZ:A") == 3
+    assert core.get_aln_offset("AGSAGSXKLMN", "AGSXKL", "chain A of 1xyz.pdb") == 3
 
 
 def test_aln_offset_ignores_case_deletions_and_insert_padding():
-    assert core.get_aln_offset("QQACDEFGHQQ", "ac-D.EfGH", "1XYZ:A") == 2
+    assert core.get_aln_offset("QQACDEFGHQQ", "ac-D.EfGH", "chain A of 1xyz.pdb") == 2
 
 
 @pytest.mark.parametrize(
@@ -458,23 +458,59 @@ def test_aln_offset_ignores_case_deletions_and_insert_padding():
 )
 def test_aln_offset_rejects_a_segment_it_cannot_place(full, aln, message):
     with pytest.raises(InputError, match=message) as excinfo:
-        core.get_aln_offset(full, aln, "1XYZ:A")
-    assert "chain 1XYZ:A " in str(excinfo.value)
+        core.get_aln_offset(full, aln, "chain A of 1xyz.pdb")
+    assert "chain A of 1xyz.pdb " in str(excinfo.value)
+
+
+def pdb_chain(chain_id, seq, start=1):
+    """A chain as read_pdb_seq yields it: the FASTA name and the record."""
+    record = SeqRecord(
+        Seq(seq),
+        id="1XYZ:%s" % chain_id,
+        annotations={"chain": chain_id, "start": start},
+    )
+    return record.id, record
 
 
 def test_pdb_ref_resnums_numbers_residues_from_the_chain_start():
     # Q101 Q102 A103 C104 D105 E106 F107 G108 H109 Q110 Q111
-    chain = SeqRecord(Seq("QQACDEFGHQQ"), id="1XYZ:A", annotations={"start": 101})
-    ref, resnums, inserts = core.pdb_ref_resnums({"1XYZ:A": "ac-DEfGH"}, [chain])
+    chains = dict([pdb_chain("A", "QQACDEFGHQQ", start=101)])
+    ref, resnums, inserts = core.pdb_ref_resnums(
+        {"1XYZ:A": "ac-DEfGH"}, chains, "1xyz.pdb"
+    )
     assert ref.id == "1XYZ:A"
     assert resnums == [("-", None), ("D", 105), ("E", 106), ("G", 108), ("H", 109)]
     assert inserts == [(103, 104), (107, 107)]
 
 
 def test_pdb_ref_resnums_names_the_chain_it_cannot_place():
-    chain = SeqRecord(Seq("ACDACD"), id="1XYZ:A", annotations={"start": 1})
-    with pytest.raises(InputError, match=r"chain 1XYZ:A .*more than one place"):
-        core.pdb_ref_resnums({"1XYZ:A": "ACD"}, [chain])
+    chains = dict([pdb_chain("A", "ACDACD")])
+    with pytest.raises(InputError, match=r"chain A of 1xyz.pdb .*more than one place"):
+        core.pdb_ref_resnums({"1XYZ:A": "ACD"}, chains, "1xyz.pdb")
+
+
+# A kinase, A, aligned at three match states, beside a partner, B, aligned
+# at one, and an identical copy of the kinase, C; X is not counted.
+CHAINS = dict([pdb_chain("A", "KLM"), pdb_chain("B", "E"), pdb_chain("C", "KLMX")])
+ROWS = {"1XYZ:A": "KLM-", "1XYZ:B": "-E--", "1XYZ:C": "KLMX"}
+
+
+@pytest.mark.parametrize("order", [["A", "B", "C"], ["C", "B", "A"], ["B", "C", "A"]])
+def test_choose_best_aligned_takes_the_most_matches_then_the_first_id(order):
+    """Ties go to the chain ID that sorts first, in any order of the rows."""
+    rows = {"1XYZ:" + c: ROWS["1XYZ:" + c] for c in order}
+    record, row = core.choose_best_aligned(rows, CHAINS, "1xyz.pdb")
+    assert (record.annotations["chain"], row) == ("A", "KLM-")
+    del rows["1XYZ:A"]
+    record, row = core.choose_best_aligned(rows, CHAINS, "1xyz.pdb")
+    assert (record.annotations["chain"], row) == ("C", "KLMX")
+
+
+@pytest.mark.parametrize("rows", [{}, {"1XYZ:A": "---", "1XYZ:B": "xX-"}])
+def test_choose_best_aligned_rejects_a_structure_without_matches(rows):
+    """--mapgaps can return no chain; hmmalign can return only gaps and X."""
+    with pytest.raises(InputError, match="No chain of 1xyz.pdb has a residue"):
+        core.choose_best_aligned(rows, CHAINS, "1xyz.pdb")
 
 
 # --- Profile-aligned runs ---
@@ -493,7 +529,9 @@ STRUCTURE = [("M", 10), ("N", 11), ("P", 12), ("Q", 13), ("R", 14)]
 
 def profile_run(tmp_path, monkeypatch, option, background):
     """Run cladecompare with a profile and a structure on the sets above."""
-    chain = SeqRecord(Seq("MNPQR"), id="1abc:A", annotations={"chain": "A"})
+    chain = SeqRecord(
+        Seq("MNPQR"), id="1abc:A", annotations={"chain": "A", "idcode": "1abc"}
+    )
     monkeypatch.setattr(
         core,
         "%s_align_and_read" % option,

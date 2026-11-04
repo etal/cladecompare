@@ -138,7 +138,7 @@ A case that needs hmmalign or MUSCLE is replayed only when the program is on `PA
 pixi run python tests/data/replay.py
 ```
 
-`uv run python tests/data/replay.py` replays the same cases where hmmalign and MUSCLE are installed, and otherwise only those that need no external program, which leaves the directories of `hmm.pair.gtest`, `hmm.single.gtest`, `pdb.1HCK.gtest` and `unequal.gtest` as they were.
+`uv run python tests/data/replay.py` replays the same cases where hmmalign and MUSCLE are installed, and otherwise only those that need no external program, which leaves the directories of `hmm.pair.gtest`, `hmm.single.gtest`, `pdb.1FIN-AB-CA.gtest`, `pdb.1HCK.gtest` and `unequal.gtest` as they were.
 
 Its output is deterministic, so a rerun on unchanged code leaves `current/` unchanged.
 It exits with an error while `PYTHONPATH` is set, because the commands it runs would inherit that path, and the files must record the biofrills that the lock files pin rather than a checkout on the path.
@@ -192,6 +192,13 @@ The tests inherit `PYTHONPATH`, so they import a checkout on that path.
   The code now draws the residue at the site's own column, which moves all 50 residues of `1HCK.pdb.pml` and no other file: the site L147 is drawn as F146 where it was G147, C165 as V164 where it was T165, and S2 as Q5 where it was K6.
   1HCK is human CDK2, a member of the background family, and the residue drawn now equals the background consensus of its column at 40 of the 50 sites, where it did at 2.
   The sites D34 and N37 fall on residues 37 and 40, which the structure does not resolve, so they select no atoms, as `X38` did in the reference.
+- **A structure with two chains** (`pdb.1FIN-AB-CA.gtest`).
+  The reference records a failure (see "Recorded defects"), so these files are the first expected output of the current code.
+  Chain A, CDK2, has 282 residues aligned to the 289 match states of `CDK.hmm`, and chain B, cyclin A, has 1, so the script draws chain A.
+  The alignments are those of `pdb.1HCK.gtest`, so the `.out` and `.pttrn` files and the names of the pair logos equal that case's.
+  1FIN and 1HCK are both human CDK2, and the script differs from `1HCK.pdb.pml` in its object name, `1finA`, and the file it loads, and in two residues: the sites D34 and N37 fall on residues 37 and 40, which 1FIN resolves, as L37 and E40, and 1HCK does not.
+  The file name `1FIN-AB-CA.pdb` gives no PDB ID, so the object is named after the PDB ID of its `HEADER` record.
+  The recorded case stops after `cladecompare.py`, so it writes no report.
 - **The residue tested** (`pair.hypg`, `pair.hypg.w`, `pair.urn`, `pair.urn.w`, `single.urn`, `single.urn.w`, `single.phospho`, `single.phospho.w`).
   urn and hypg tested the foreground consensus residue of each column, which is itself chosen from that column, without correcting for the choice.
   They now compute their tail probability for each residue type of the foreground column, report the smallest multiplied by the number of types, at most 1, and name the site in the pattern file after that type (README.rst, "The residue tested"); the `.out` file still names the consensus.
@@ -230,6 +237,7 @@ A port that fixes one of them differs from the reference by design, and the test
   phospho left the foreground unweighted when it was added on 2013-05-21, until the refactor of the strategy modules dropped that rule on 2013-06-03.
   Weighting both sets with the `none` scaling instead reduced the 11 foreground sequences of `pair.phospho.w` to a sample size of 2.117, which phospho rounded up to 3 and to 4 binomial trials, so that with the legacy pseudocounts no p-value fell below 0.0237, where, with the same pseudocounts, the unweighted foreground gave 4.94e-06.
 - `pdb.1FIN-AB-CA.gtest` fails with `KeyError` in `choose_best_aligned`, which indexes the aligned chains with a (key, value) pair whenever more than one chain aligns to the profile, so every multi-chain structure fails.
+  The code now draws the chain with the most residues aligned to match states, and names the PyMOL object after the PDB ID of the file's `HEADER` record rather than the file name, which here gives none, so this case differs from the reference by design: it returns 0, as `RETURNCODES` in `tests/test_cli_cases.py` declares, and writes the files that "A structure with two chains" under "Regenerated outputs in `current/`" describes.
 - `make_residues` in `pmlscript` looks up each site's column number, counted from 1, in the list of aligned residues, which is indexed from 0, so the PyMOL script of `pdb.1HCK.gtest` draws the residue of the following column: the site C165 as T165, and D34 as the unresolved residue X38.
   A significant last column raises `IndexError`, and a site whose following column is a deletion in the structure writes `resi None`, as the reference does for I93 and K254.
   The code now draws the residue at the site's own column, and logs and leaves out a site whose column is a deletion in the structure, so this case differs from the reference by design, as "The PyMOL residues" under "Regenerated outputs in `current/`" describes.
@@ -240,9 +248,10 @@ A port that fixes one of them differs from the reference by design, and the test
 - `web.pair.hypg` returns status 500 with `KeyError`: the web application's strategy table lacks hypg.
   The form and the web application now take their strategies from the same registry as the command line, so this case differs from the reference by design: it returns status 200, and its report equals the current report of `pair.hypg`, apart from the title.
   Before the registry, the strategies were listed in four places, and hypg reached the command line but not the web form.
-- `web.pdb.1HCK.gtest` returns status 500 with `AssertionError` from `pmlscript.pdbid_from_fname`: the uploaded structure is saved under a temporary name without the `.pdb` suffix that the function asserts.
-  The function now raises `InputError` for a file name it cannot read, so that the check also runs under `python -O`, and this case failed with `InputError` instead, still with status 500, until the change described next.
+- `web.pdb.1HCK.gtest` returns status 500 with `AssertionError` from `pmlscript.pdbid_from_fname`, which read the PDB ID from the structure's file name: the uploaded structure is saved under a temporary name without the `.pdb` suffix that the function asserts.
+  The function then raised `InputError` for a file name it could not read, so that the check also ran under `python -O`, and this case failed with `InputError` instead, still with status 500, until the change described next.
   The web application now saves an uploaded structure under its uploaded file name, as bottle normalizes it, in a directory of its own, so this case differs from the reference by design: it returns status 200, and its report equals the current report of `pdb.1HCK.gtest`, apart from the title.
+  The PDB ID now comes from the file's `HEADER` record, or, where that gives none, from the file name, so no file name is refused.
   The PyMOL script that the structure gives is written into the request's temporary directory and is not served.
 - Every paired web submission leaves files in the temporary directory (`leftover_temp_files`, between 2 and 17 per case), as does `web.single.phospho`, which fails in the reference; the successful single-alignment submissions leave none.
   For the successful submissions, those files are exactly the pair-logo PDFs named in the log, which are written beside the temporary pattern file and never served.

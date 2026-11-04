@@ -222,8 +222,9 @@ def compare_submission(tmpdir, uploads):
                 "to generate a PyMOL script for a PDB file you must "
                 "also specify an HMM profile"
             )
-        # pmlscript reads the PDB ID from the file name, so the structure
-        # keeps its uploaded file name, in a directory of its own.
+        # The structure keeps its uploaded file name, in a directory of its
+        # own, so that the script loads a file of that name and names a
+        # structure without a PDB ID after it.
         os.mkdir(os.path.join(tmpdir, "structure"))
         pdbfname = save_upload(
             pdbfile, tmpdir, os.path.join("structure", pdbfile.filename), uploads

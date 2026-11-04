@@ -73,13 +73,15 @@ CASES = {
 # longer writes.
 NOT_WRITTEN = {"_cc_combined.seq"}
 
-# The reference records -s phospho failing with TypeError in every case, and
-# cladereport failing with ValueError on the three .out files of multi.gtest;
-# each now completes ("Recorded defects" in tests/data/README.md).
+# The reference records -s phospho failing with TypeError in every case,
+# cladereport failing with ValueError on the three .out files of multi.gtest,
+# and pdb.1FIN-AB-CA.gtest failing with KeyError on its second chain; each now
+# completes ("Recorded defects" in tests/data/README.md).
 RETURNCODES = {
     "multi.gtest": [0, 0],
     "pair.phospho": [0],
     "pair.phospho.w": [0],
+    "pdb.1FIN-AB-CA.gtest": [0],
     "single.phospho": [0],
     "single.phospho.w": [0],
 }
@@ -105,7 +107,8 @@ RETURNCODES = {
 # corrected for that choice, and single.phospho and single.phospho.w because
 # phospho names each site after its most frequent Ser, Thr or Tyr ("The
 # residue tested" in tests/data/README.md). multi.gtest also writes the HTML
-# report of its three .out files, which cladereport failed to write.
+# report of its three .out files, which cladereport failed to write, and
+# pdb.1FIN-AB-CA.gtest the files of a structure with two chains.
 REGENERATED = {
     "hmm.pair.gtest",
     "hmm.single.gtest",
@@ -119,6 +122,7 @@ REGENERATED = {
     "pair.phospho.w",
     "pair.urn",
     "pair.urn.w",
+    "pdb.1FIN-AB-CA.gtest",
     "pdb.1HCK.gtest",
     "single.gtest.a.001",
     "single.gtest.w.a.001",

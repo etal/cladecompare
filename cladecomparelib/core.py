@@ -310,6 +310,7 @@ def process_output(
                 patterns,
                 pdb_fname,
                 pdb_rec.annotations["chain"],
+                pdb_rec.annotations["idcode"],
             )
             if not pml_output:
                 pml_output = pdb_fname + ".pml"
@@ -324,6 +325,7 @@ def process_output(
                 patterns,
                 pdb_fnames,
                 [r.annotations["chain"] for r in pdb_recs],
+                [r.annotations["idcode"] for r in pdb_recs],
             )
             if not pml_output:
                 pml_output = pdb_fnames[0] + "-etc.pml"
@@ -731,10 +733,12 @@ def top_hits(hits, alpha, N=50):
 
 @contextlib.contextmanager
 def read_pdb_seq(pdb_fname):
-    """Write the PDB atom sequence(s) to a FASTA file in a temporary directory.
+    """Write the chain sequences of a PDB file to a FASTA file in a temporary
+    directory.
 
-    Yields the name of the FASTA file and a list of the sequences themselves
-    (as SeqRecords).
+    Yields the name of the FASTA file and a dict that maps the name under
+    which each chain is written in that file to the chain's SeqRecord, in the
+    order in which Biopython reads the chains.
 
     Context manager: on exit, the directory is removed together with any files
     that an aligner wrote beside the FASTA file.
@@ -751,29 +755,59 @@ def read_pdb_seq(pdb_fname):
     with tempfile.TemporaryDirectory() as tmpdir:
         pdbseqfname = os.path.join(tmpdir, "pdbseq")
         SeqIO.write(pdbseqs, pdbseqfname, "fasta")
-        yield pdbseqfname, pdbseqs
+        yield pdbseqfname, {rec.id: rec for rec in pdbseqs}
 
 
-def choose_best_aligned(aligned):
-    """Choose the longest profile match as the "reference" chain.
+def describe_chain(record, pdb_fname):
+    """Name a chain of a structure file in a message."""
+    return "chain %s of %s" % (record.annotations["chain"], pdb_fname)
 
-    Returns a tuple: (sequence ID, sequence string)
+
+def choose_best_aligned(rows, chains, pdb_fname):
+    """Choose the chain with the most residues aligned to match states.
+
+    `rows` maps the name of each chain in the aligned file to its aligned
+    row, and `chains` maps the same names to the chains' SeqRecords, as
+    read_pdb_seq yields them; a chain that the aligner did not return is not
+    a candidate. Residues that the structure does not resolve, 'X', are not
+    counted. Of chains with equally many, the one whose chain ID sorts first
+    is chosen, so the choice does not depend on the order of the aligner's
+    rows. A structure in which no chain has a residue aligned to a match
+    state raises InputError.
+
+    Returns a tuple: (SeqRecord, aligned row)
     """
 
     def aligned_len(seq):
         return sum(c.isupper() for c in seq.replace("X", ""))
 
-    if not aligned:
-        raise RuntimeError("No PDB sequences were aligned by the profile!")
-    elif len(aligned) == 1:
-        ref_id, ref_aln = list(aligned.items())[0]
-    else:
-        ref_id = max(aligned.items(), key=lambda kv: aligned_len(kv[1]))
-        ref_aln = aligned[ref_id]
-    return ref_id, ref_aln
+    candidates = [
+        (aligned_len(rows[name]), record, rows[name])
+        for name, record in chains.items()
+        if name in rows
+    ]
+    if not candidates or max(count for count, _rec, _row in candidates) == 0:
+        raise InputError(
+            "No chain of %s has a residue aligned to the profile" % pdb_fname
+        )
+    count, record, row = min(
+        candidates, key=lambda c: (-c[0], c[1].annotations["chain"])
+    )
+    if len(candidates) > 1:
+        logger.info(
+            "Using %s, with %d residues aligned to the profile (other chains: %s)",
+            describe_chain(record, pdb_fname),
+            count,
+            ", ".join(
+                "%s %d" % (rec.annotations["chain"], n)
+                for n, rec, _row in candidates
+                if rec is not record
+            ),
+        )
+    return record, row
 
 
-def get_aln_offset(full, aln, ref_id):
+def get_aln_offset(full, aln, chain):
     """Locate the profile-aligned residues of a chain in the chain sequence.
 
     The aligned residues form a contiguous run of the chain sequence, and the
@@ -781,23 +815,25 @@ def get_aln_offset(full, aln, ref_id):
     structure are 'X' in the chain sequence and in the aligned sequence alike,
     and are matched as themselves. A run that is empty, absent from the chain
     sequence, or present in more than one place raises InputError naming the
-    chain, since the aligned sequence carries no residue numbers with which
-    to choose a place.
+    chain, as `chain` describes it, since the aligned sequence carries no
+    residue numbers with which to choose a place. Only the chain chosen for
+    the script is located, so a short chain that is not chosen cannot stop
+    the run.
     """
     residues = aln.replace("-", "").replace(".", "").upper()
     if not residues:
-        raise InputError("No residues of chain %s were aligned to the profile" % ref_id)
+        raise InputError("No residues of %s were aligned to the profile" % chain)
     start = full.find(residues)
     if start == -1:
         raise InputError(
-            "The aligned residues of chain %s do not occur in its sequence: %s"
-            % (ref_id, residues)
+            "The aligned residues of %s do not occur in its sequence: %s"
+            % (chain, residues)
         )
     # Searching again from the next index also finds an overlapping repeat.
     if full.find(residues, start + 1) != -1:
         raise InputError(
-            "The aligned residues of chain %s occur in more than one place "
-            "in its sequence: %s" % (ref_id, residues)
+            "The aligned residues of %s occur in more than one place "
+            "in its sequence: %s" % (chain, residues)
         )
     return start
 
@@ -834,19 +870,22 @@ def aln_resnums_inserts(aln, offset):
     return aln_resnums, aln_inserts
 
 
-def pdb_ref_resnums(aligned, seqs):
-    """Choose the reference chain and map the alignment to its residues.
+def pdb_ref_resnums(rows, chains, pdb_fname):
+    """Choose the chain to draw and map the alignment to its residues.
+
+    `rows` and `chains` are as choose_best_aligned takes them.
 
     Returns a tuple: (SeqRecord,
                       list of aligned residue numbers,
                       list of insert ranges as tuple pairs)
     """
-    ref_id, ref_aln = choose_best_aligned(aligned)
-    ref_record = SeqIO.to_dict(seqs)[ref_id]
+    ref_record, ref_aln = choose_best_aligned(rows, chains, pdb_fname)
     # Calculate aligned residue numbers & insert ranges
     offset = (
         ref_record.annotations["start"]
-        + get_aln_offset(str(ref_record.seq), ref_aln, ref_id)
+        + get_aln_offset(
+            str(ref_record.seq), ref_aln, describe_chain(ref_record, pdb_fname)
+        )
         - 1
     )
     resnums, inserts = aln_resnums_inserts(ref_aln, offset)
@@ -858,12 +897,10 @@ def pdb_hmm(hmm_profile, pdb_fname):
 
     Returns a tuple as pdb_ref_resnums does.
     """
-    with read_pdb_seq(pdb_fname) as (seqfname, seqs):
+    with read_pdb_seq(pdb_fname) as (seqfname, chains):
         out = hmmalign_a2m(hmm_profile, seqfname)
-    aligned = dict(
-        (rec.id, str(rec.seq)) for rec in SeqIO.parse(StringIO(out), "fasta")
-    )
-    return pdb_ref_resnums(aligned, seqs)
+    rows = dict((rec.id, str(rec.seq)) for rec in SeqIO.parse(StringIO(out), "fasta"))
+    return pdb_ref_resnums(rows, chains, pdb_fname)
 
 
 def pdb_mapgaps(mapgaps_profile, pdb_fname):
@@ -871,7 +908,7 @@ def pdb_mapgaps(mapgaps_profile, pdb_fname):
 
     Returns a tuple as pdb_ref_resnums does.
     """
-    with read_pdb_seq(pdb_fname) as (seqfname, seqs):
+    with read_pdb_seq(pdb_fname) as (seqfname, chains):
         call_quiet("run_gaps", mapgaps_profile, seqfname)
-        aligned = dict(cma_records(seqfname + "_aln.cma"))
-    return pdb_ref_resnums(aligned, seqs)
+        rows = dict(cma_records(seqfname + "_aln.cma"))
+    return pdb_ref_resnums(rows, chains, pdb_fname)

@@ -7,8 +7,7 @@ load the script in PyMOL and the pretty happens.
 
 import logging
 import os.path
-
-from . import InputError
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +25,9 @@ logger = logging.getLogger(__name__)
 # Script builders
 
 
-def build_single(mapping, inserts, patterns, pdbfname, chain):
+def build_single(mapping, inserts, patterns, pdbfname, chain, idcode):
     """Build a PyMOL script showing a single structure with selected residues."""
-    pml_name = get_pml_name(pdbfname, chain)
+    pml_name = get_pml_name(pdbfname, chain, idcode)
     outs = [
         mk_intro_one(pdbfname, pml_name, chain),
         HR,
@@ -49,7 +48,7 @@ def build_single(mapping, inserts, patterns, pdbfname, chain):
     return "\n".join(outs)
 
 
-def build_multi(mapping, inserts, key_residues, pdbfnames, chains):
+def build_multi(mapping, inserts, key_residues, pdbfnames, chains, idcodes):
     """Superimpose multiple structures onto a reference, showing equivalent
     selected residues in each.
 
@@ -58,7 +57,8 @@ def build_multi(mapping, inserts, key_residues, pdbfnames, chains):
     """
     # TODO - ensure Pymol's automatic struct colors aren't clobbered
     pml_names = [
-        get_pml_name(pfn, cid) for pfn, cid in zip(pdbfnames, chains, strict=True)
+        get_pml_name(pfn, cid, idc)
+        for pfn, cid, idc in zip(pdbfnames, chains, idcodes, strict=True)
     ]
     ref_pml_name, ref_chn = (pml_names[0], chains[0])
 
@@ -139,56 +139,17 @@ def make_residues(mapping, patterns, pml_name, chain):
 # Helper functions
 
 
-def get_pml_name(pdb_fname, chain_id):
-    pdb_id, chn = pdbid_from_fname(pdb_fname)
-    if chain_id is None:
-        chain_id = chn
-    if chain_id is None:
-        return "%s" % pdb_id.lower()
-    return "%s%s" % (pdb_id.lower(), chain_id.upper())
+def get_pml_name(pdb_fname, chain_id, idcode):
+    """Name the PyMOL object of a structure.
 
-
-def pdbid_from_fname(fname):
-    """Extract a PDB ID and chain ID from a filename.
-
-    Ex:
-        1abc.pdb, 00_1abc.pdb, 01_1abc.pdb, 1abc_chain_A.pdb, pdb1abc.ent
-            -> ('1abc', None)
-        1abcA.pdb, 1abc_a.pdb -> ('1abc', 'A')
-
-    The PDB ID keeps the case of the file name, and the chain ID is
-    uppercase. Any other name raises InputError.
+    The name is the PDB ID that the file's HEADER record gives, or, where it
+    gives none, as in a model from AlphaFold, the file name without its
+    extension, followed by the chain ID. Characters other than ASCII letters,
+    digits and '_' become '_', since PyMOL takes those three unchanged in an
+    object name and in a selection.
     """
-    fn = os.path.basename(fname)
-    if fn.endswith(".ent"):
-        recognized = len(fn) == 11 and fn.startswith("pdb")
-        pdbid = fn[3:-4]
-        chnid = None
-    elif fn.endswith(".pdb"):
-        if fn.startswith(("01_", "00_")):
-            fn = fn[3:]
-        pdbid = fn[:4]
-        if len(fn) == 8:
-            recognized = "_" not in fn
-            chnid = None
-        elif len(fn) == 9:
-            recognized = "_" not in fn
-            chnid = fn[4].upper()
-        elif len(fn) == 10:
-            recognized = fn[4] == "_"
-            chnid = fn[5].upper()
-        else:
-            recognized = "chain" in fn
-            # The chain is not read from this form of name.
-            chnid = None
-    else:
-        recognized = False
-    if not recognized:
-        raise InputError(
-            "Cannot read a PDB ID from the file name %s; name the file as, "
-            "for example, 1abc.pdb, 1abcA.pdb, 1abc_A.pdb or pdb1abc.ent" % fname
-        )
-    return pdbid, chnid
+    base = idcode or os.path.splitext(os.path.basename(pdb_fname))[0]
+    return "%s%s" % (re.sub(r"\W", "_", base, flags=re.ASCII).lower(), chain_id.upper())
 
 
 # ---------------------------------------------------------
@@ -197,7 +158,7 @@ def pdbid_from_fname(fname):
 HR = "\n# %s\n" % ("-" * 70)
 
 
-def mk_intro_one(pdb, name=None, description=None):
+def mk_intro_one(pdb, name, description=None):
     """Generate the initializing code for a PyMol script."""
     return """\
 # PyMOL script -- %(description)s
@@ -207,18 +168,16 @@ load %(pdb)s, %(name)s
 hide all
 """ % {
         "pdb": pdb,
-        "name": name or pdbid_from_fname(pdb)[0],
-        "description": description or name or pdbid_from_fname(pdb)[0],
+        "name": name,
+        "description": description or name,
     }
 
 
-def mk_intro_multi(pdbs, names=None, chains=None, description=None):
+def mk_intro_multi(pdbs, names, chains=None, description=None):
     """Generate the initializing PyMol code for multiple aligned proteins."""
     if isinstance(pdbs, str):
         pdbs = [pdbs]
-    if not names:
-        names = [pdbid_from_fname(p)[0] for p in pdbs]
-    elif isinstance(names, str):
+    if isinstance(names, str):
         names = [names]
     if not len(pdbs) == len(names):
         raise ValueError(

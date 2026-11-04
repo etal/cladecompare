@@ -771,7 +771,7 @@ def read_pdb_seq(pdb_fname):
 
 
 def record_chain_label(record):
-    """The chain ID of a record as pmlscript.chain_label writes it."""
+    """The label of a record's chain, as pmlscript.chain_label gives it."""
     return pmlscript.chain_label(record.annotations["chain"])
 
 

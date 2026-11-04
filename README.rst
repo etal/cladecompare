@@ -306,9 +306,9 @@ chains with equally many, the one whose chain ID sorts first, such as chain A
 of two copies of the kinase in chains A and C; the log names the chain drawn
 and the number of residues aligned in each of the others. In a complex of two
 members of the family, those numbers reflect how much of each chain the
-structure resolves rather than which chain is of interest, so the chain of
-interest may not be the one drawn. ``--chain`` names the chain to draw
-instead, such as the other member or, here, the second copy of the kinase::
+structure resolves rather than which chain is of interest, so the chain drawn
+may not be the one wanted. ``--chain`` names the chain to draw instead, such
+as the other member or, here, the second copy of the kinase::
 
     curl -O https://files.rcsb.org/download/1FIN.pdb
     cladecompare test/scttlre-domain.fasta test/cdc2-domain.fasta \

@@ -126,6 +126,21 @@ def test_read_pdb_seq_rejects_a_file_without_atoms(tmp_path, text):
             pass
 
 
+def test_read_pdb_seq_names_the_line_of_a_malformed_coordinate(tmp_path):
+    lines = (INPUTS / "1HCK.pdb").read_text().splitlines(keepends=True)
+    atom = lines.index(next(line for line in lines if line.startswith("ATOM")))
+    lines[atom] = lines[atom][:30] + "  xx.xxx" + lines[atom][38:]
+    path = tmp_path / "1abc.pdb"
+    path.write_text("".join(lines))
+    with pytest.raises(
+        InputError,
+        match=r"as a PDB file: Invalid or missing coordinate\(s\) at line %d"
+        % (atom + 1),
+    ):
+        with core.read_pdb_seq(str(path)):
+            pass
+
+
 def test_hmmalign_names_a_missing_profile_before_running(tmp_path, monkeypatch):
     """hmmalign is not run on a file that cannot be read."""
 

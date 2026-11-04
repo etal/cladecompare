@@ -15,6 +15,7 @@ from os.path import basename
 from Bio import AlignIO, SeqIO
 from Bio.Align import MultipleSeqAlignment
 from Bio.File import as_handle
+from Bio.PDB.PDBExceptions import PDBConstructionException
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from biofrills import alnutils, consensus
@@ -750,6 +751,9 @@ def read_pdb_seq(pdb_fname):
             # Biopython looks up the first model, which a file without ATOM
             # records lacks.
             pdbseqs = []
+        except PDBConstructionException as exc:
+            # Such as a coordinate that is not a number; not a ValueError.
+            raise ValueError(str(exc)) from exc
         if not pdbseqs:
             raise ValueError("it has no atoms")
     with tempfile.TemporaryDirectory() as tmpdir:

@@ -35,7 +35,7 @@ from pathlib import Path
 
 import pytest
 
-from cladecomparelib import report
+from cladecompare import report
 
 DATA = Path(__file__).resolve().parent / "data"
 REFERENCE = DATA / "py27" / "cli"
@@ -571,7 +571,7 @@ from io import StringIO
 
 from Bio import SeqIO
 
-from cladecomparelib.core import hmmalign_a2m
+from cladecompare.core import hmmalign_a2m
 
 profile, fasta = sys.argv[1:]
 with open(fasta + "_aln.cma", "w") as out:

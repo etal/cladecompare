@@ -12,7 +12,7 @@ Files written, all under tests/data/inputs/:
 * scttlre-domain.fasta_aln.cma, cdc2-domain.fasta_aln.cma, scttlre-domain.fasta,
   cdc2-domain.fasta, CDK.hmm -- copied unchanged from test/.
 * scttlre-domain.aln.fasta, cdc2-domain.aln.fasta -- the two CMA alignments
-  reduced to their consensus columns as cladecomparelib.core.cma_blocks does:
+  reduced to their consensus columns as cladecompare.core.cma_blocks does:
   keep the aligned part of each sequence line and drop its lowercase insert
   residues.  Every sequence line in these two files has the plain form
   {()SEQ()}*, so the fixed slice below is equivalent.  cladeweb

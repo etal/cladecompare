@@ -4,7 +4,7 @@ import logging
 
 import pytest
 
-from cladecomparelib import pmlscript
+from cladecompare import pmlscript
 
 
 @pytest.mark.parametrize(
@@ -46,7 +46,7 @@ def test_make_residues_draws_the_last_column():
 
 def test_make_residues_skips_a_deletion_column(caplog):
     """A column the chain deletes is logged and the next site still drawn."""
-    caplog.set_level(logging.WARNING, logger="cladecomparelib.pmlscript")
+    caplog.set_level(logging.WARNING, logger="cladecompare.pmlscript")
     script = residues([4, 3, 1])
     assert script.count("create ") == 2
     assert "create G7-1hckA" in script

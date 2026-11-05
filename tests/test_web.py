@@ -33,8 +33,8 @@ import pytest
 from test_cli_cases import expected_text, reference_text
 from test_core import aln
 
-import cladecomparelib.cladeweb  # registers the routes
-from cladecomparelib import core, report
+import cladecompare.cladeweb  # registers the routes
+from cladecompare import core, report
 
 DATA = Path(__file__).resolve().parent / "data"
 REFERENCE = DATA / "py27" / "web"
@@ -189,7 +189,7 @@ def test_recorded_responses_are_the_recorded_reports():
 
 def test_form_offers_every_strategy():
     """The form offers each strategy that -s accepts, with the default checked."""
-    page = cladecomparelib.cladeweb.form()
+    page = cladecompare.cladeweb.form()
     assert re.findall(r'name="strategy" value="(\w+)"', page) == list(core.STRATEGIES)
     assert re.findall(r'name="strategy" value="(\w+)" checked="checked"', page) == [
         core.DEFAULT_STRATEGY
@@ -246,7 +246,7 @@ def test_hypg_submission_matches_the_command_line(tmp_path, monkeypatch):
 
 def test_weighted_submission_matches_the_command_line(tmp_path, monkeypatch):
     """The form's weight checkbox gives the report of cladecompare -w."""
-    assert '<input type="checkbox" name="weight" />' in cladecomparelib.cladeweb.form()
+    assert '<input type="checkbox" name="weight" />' in cladecompare.cladeweb.form()
     record = load("web.pair.gtest")
     record["fields"].append(["weight", "on"])
     _workdir, _tmpdir, status, response, errors = submit(record, tmp_path, monkeypatch)
@@ -290,7 +290,7 @@ def test_a_failing_submission_leaves_no_temporary_files(tmp_path, monkeypatch, c
         raise RuntimeError("report failed")
 
     monkeypatch.setattr(report, "do_single", fail)
-    caplog.set_level(logging.INFO, logger="cladecomparelib.pairlogo")
+    caplog.set_level(logging.INFO, logger="cladecompare.pairlogo")
     _workdir, tmpdir, status, _response, errors = submit(
         load("web.pair.gtest"), tmp_path, monkeypatch
     )
@@ -345,9 +345,7 @@ def test_browser_opens_once_the_server_listens(monkeypatch):
             opened.append(url)
 
     monkeypatch.setattr(webbrowser, "open", open_url)
-    server = cladecomparelib.cladeweb.BrowserServer(
-        ("localhost", 0), WSGIRequestHandler
-    )
+    server = cladecompare.cladeweb.BrowserServer(("localhost", 0), WSGIRequestHandler)
     server.server_close()
     assert opened == ["http://localhost:%d/cladecompare" % server.server_port]
 
@@ -359,7 +357,7 @@ def test_browser_does_not_open_when_the_port_is_taken(monkeypatch):
     monkeypatch.setattr(webbrowser, "open", opened.append)
     with socket.create_server(("localhost", 0)) as taken:
         with pytest.raises(OSError):
-            cladecomparelib.cladeweb.BrowserServer(
+            cladecompare.cladeweb.BrowserServer(
                 taken.getsockname()[:2], WSGIRequestHandler
             )
     assert opened == []

@@ -1,4 +1,4 @@
-"""Core API shared by cladecompare and cladeweb for running the algorithms."""
+"""Core API that the cladecompare and cladeweb commands share to run the algorithms."""
 
 import contextlib
 import logging

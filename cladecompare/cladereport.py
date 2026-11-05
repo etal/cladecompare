@@ -18,8 +18,8 @@ depend on alpha.
 
 import argparse
 
-from cladecomparelib import InputError, configure_logging
-from cladecomparelib.report import do_multi, do_single, html_page
+from cladecompare import InputError, configure_logging
+from cladecompare.report import do_multi, do_single, html_page
 
 
 def main():

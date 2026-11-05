@@ -2,8 +2,8 @@
 
 import argparse
 
-from cladecomparelib import InputError, configure_logging
-from cladecomparelib.core import (
+from cladecompare import InputError, configure_logging
+from cladecompare.core import (
     DEFAULT_STRATEGY,
     STRATEGIES,
     parse_alpha,

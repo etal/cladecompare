@@ -4,7 +4,7 @@ import io
 
 import pytest
 
-from cladecomparelib import InputError, core, report
+from cladecompare import InputError, core, report
 
 
 def test_parse_out_reads_what_write_pvalues_writes(tmp_path):

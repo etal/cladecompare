@@ -71,7 +71,7 @@ Two consecutive captures produce identical files, and captures with `PYTHONHASHS
 
 `1HCK.pdb` is kept complete, with its ATP `HETATM`, `SEQRES` and `CONECT` records, because the ported code reads it with a later Biopython release than the reference did, and that reader should be checked on a full entry; reduced to its C-alpha atoms, it would give the same outputs here.
 
-The `.aln.fasta` files apply the rule of `cladecomparelib.core.cma_blocks`: keep the aligned part of each CMA sequence line and drop its lowercase insert residues.
+The `.aln.fasta` files apply the rule of `cladecompare.core.cma_blocks`: keep the aligned part of each CMA sequence line and drop its lowercase insert residues.
 In these files the aligned part always lies between a leading `{()` and a trailing `()}*`.
 They hold the same alignments that CladeCompare computes from the CMA files.
 

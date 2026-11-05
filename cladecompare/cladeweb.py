@@ -21,7 +21,7 @@ from wsgiref.simple_server import WSGIServer
 
 import bottle
 
-from cladecomparelib import InputError, configure_logging, core, report
+from cladecompare import InputError, configure_logging, core, report
 
 logger = logging.getLogger(__name__)
 

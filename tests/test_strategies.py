@@ -12,8 +12,8 @@ from math import comb, log2
 
 import pytest
 
-from cladecomparelib import gtest, hypg, jsd, phospho, urn
-from cladecomparelib.shared import most_significant_type
+from cladecompare import gtest, hypg, jsd, phospho, urn
+from cladecompare.shared import most_significant_type
 
 AMINO = "ACDEFGHIKLMNPQRSTVWY"
 PSEUDO = 0.5

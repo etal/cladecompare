@@ -13,7 +13,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from scipy.stats import false_discovery_control
 
-from cladecomparelib import InputError, core
+from cladecompare import InputError, core
 
 INPUTS = Path(__file__).resolve().parent / "data" / "inputs"
 

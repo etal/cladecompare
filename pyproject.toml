@@ -11,7 +11,7 @@ requires-python = ">=3.12"
 # The bundled DejaVu font is under the Bitstream Vera license; the DejaVu
 # changes to it are in the public domain.
 license = "BSD-2-Clause AND Bitstream-Vera"
-license-files = ["LICENSE", "cladecomparelib/data/LICENSE.DejaVu"]
+license-files = ["LICENSE", "cladecompare/data/LICENSE.DejaVu"]
 authors = [
     {name = "Eric Talevich", email = "me+code@etal.mozmail.com"},
 ]
@@ -41,9 +41,9 @@ dependencies = [
 ]
 
 [project.scripts]
-cladecompare = "cladecomparelib.cladecompare:main"
-cladereport = "cladecomparelib.cladereport:main"
-cladeweb = "cladecomparelib.cladeweb:main"
+cladecompare = "cladecompare.cladecompare:main"
+cladereport = "cladecompare.cladereport:main"
+cladeweb = "cladecompare.cladeweb:main"
 
 [project.urls]
 homepage = "https://github.com/etal/cladecompare"
@@ -54,16 +54,16 @@ dev = [
     "ruff>=0.17.2",
 ]
 
-# Named explicitly: automatic discovery would also declare cladecomparelib.data
+# Named explicitly: automatic discovery would also declare cladecompare.data
 # a package.
 [tool.setuptools]
-packages = ["cladecomparelib"]
+packages = ["cladecompare"]
 
 [tool.setuptools.package-data]
-cladecomparelib = ["data/DejaVuSansMono-Bold.ttf", "data/LICENSE.DejaVu"]
+cladecompare = ["data/DejaVuSansMono-Bold.ttf", "data/LICENSE.DejaVu"]
 
 [tool.setuptools.dynamic]
-version = {attr = "cladecomparelib.__version__"}
+version = {attr = "cladecompare.__version__"}
 
 [tool.pytest.ini_options]
 minversion = "9.0.2"
@@ -92,7 +92,7 @@ ignore = ["UP031"]
 # Two PyMOL templates end lines in a space that the recorded 1HCK.pdb.pml
 # contains. ruff format leaves whitespace inside strings alone, so W291 is the
 # only rule that reports it.
-"cladecomparelib/pmlscript.py" = ["W291"]
+"cladecompare/pmlscript.py" = ["W291"]
 
 # biofrills comes from its repository at a pinned commit, which the lock files
 # then record; moving to a newer commit is a deliberate change of the pin,

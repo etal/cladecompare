@@ -19,7 +19,7 @@ describes it:
 CladeCompare is distributed under the BSD 2-clause license (see
 ``LICENSE``). The font it ships for drawing sequence logos, DejaVu Sans Mono,
 is under the Bitstream Vera license (see
-``cladecomparelib/data/LICENSE.DejaVu``).
+``cladecompare/data/LICENSE.DejaVu``).
 
 What CladeCompare is for
 ------------------------

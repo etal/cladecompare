@@ -84,17 +84,19 @@ What it needs
 
 What it gives
     For each column, the value of the chosen statistic, unadjusted for
-    multiple testing; the significant columns, selected by the
-    Benjamini-Hochberg procedure at a false discovery rate of alpha and
-    capped at 50; paired foreground and background sequence logos around
-    them; and, given a structure aligned to the same profile, a PyMOL
-    script that highlights them. A column that cannot be tested, because
-    the consensus of either set is a gap or an unknown residue, has the
-    value 1 and still counts among the columns of the selection. Input
-    that CladeCompare recognizes as unusable stops the run with an error
-    message, which names the file where one is at fault, rather than a
-    traceback; a missing external program, or one that fails on its
-    input, still ends with a traceback.
+    multiple testing; the significant columns, which are the sites that the
+    Benjamini-Hochberg procedure accepts at a false discovery rate of
+    alpha, at most 50, or, for a strategy that reports a score rather than
+    a p-value, the 50 highest-scoring columns; paired foreground and
+    background sequence logos around them; and, given a structure aligned
+    to the same profile, a PyMOL script that highlights them. A column that
+    cannot be tested, because the consensus of either set is a gap or an
+    unknown residue, has the value 1, and still counts among the columns of
+    the Benjamini-Hochberg selection, or, for a score, the value 0, and is
+    never selected. Input that CladeCompare recognizes as unusable stops
+    the run with an error message, which names the file where one is at
+    fault, rather than a traceback; a missing external program, or one that
+    fails on its input, still ends with a traceback.
 
 What it does not do
     It does not define clades, infer a phylogeny or align sequences other
@@ -221,17 +223,19 @@ Each line of the result, the ``.out`` file, describes one column::
 
 The fields are the consensus residue of the foreground column, that of the
 background column in parentheses, the column number, and the value of the
-statistic, which for most strategies is a p-value. The value of urn and hypg
-refers to the residue that the pattern file names, which can differ from the
-consensus, and that of phospho to Ser, Thr and Tyr together, as `The residue
-tested`_ explains. A consensus of ``-`` marks a gap column, as `Consensus
-residues and untested columns`_ defines it, which is not tested and is given
-the value 1. The asterisks, after a tab, show one per order of magnitude of
-the value where it is below the significance threshold alpha (``-a``,
-between 0 and 1, default 0.005). These values are not adjusted for multiple
-testing, so among hundreds of columns some fall below alpha by chance; the
-correction applies to the significant sites described below. `Preparing the
-alignments`_ describes which columns the numbers refer to.
+statistic, labeled ``prob=`` where it is a p-value and ``score=`` where it is
+a score, as for jsd. The value of urn and hypg refers to the residue that the
+pattern file names, which can differ from the consensus, and that of phospho
+to Ser, Thr and Tyr together, as `The residue tested`_ explains. A consensus
+of ``-`` marks a gap column, as `Consensus residues and untested columns`_
+defines it, which is not tested and is given the value 1, or, for jsd, a
+score of 0. The asterisks, after a tab, show one per order of magnitude of a
+p-value below the significance threshold alpha (``-a``, between 0 and 1,
+default 0.005); a score has none, and alpha does not apply to it. These
+values are not adjusted for multiple testing, so among hundreds of columns
+some fall below alpha by chance; the correction applies to the significant
+sites described below. `Preparing the alignments`_ describes which columns
+the numbers refer to.
 
 ``-s`` chooses the statistic, as described under Strategies_, and ``-w``
 weights the sequences, so that a group of closely related sequences counts
@@ -261,7 +265,8 @@ the residue that `The residue tested`_ describes. The significant columns are
 those that pass the Benjamini-Hochberg procedure at a false discovery rate of
 alpha, taken over all columns of the alignment, and at most 50 columns are
 selected, even where the procedure would accept more, as `Significant sites`_
-under Methods explains. Each logo file shows the foreground above the
+under Methods explains. For jsd, which reports a score, they are the 50
+highest-scoring columns instead. Each logo file shows the foreground above the
 background for a group of significant columns that lie at most 10 columns
 apart, with up to 10 columns on either side, and is named after the pattern
 file and the columns it highlights, as in
@@ -371,13 +376,14 @@ Viewing the results
     cladereport scttlre-v-cdc2.out -p scttlre-v-cdc2.pttrn -o scttlre-v-cdc2.html
 
 The page shows the foreground and background consensus sequences, with each
-foreground residue colored by the unadjusted value of its column: red below
-0.1, darker as the value decreases; white from 0.1 to 0.5; blue above 0.5,
-for columns that are similar in both sets. Columns whose foreground
-consensus is a gap are gray, and those whose background consensus is a gap
-are yellow. The colors do not depend on alpha. With ``-p``, an asterisk
-above the sequences marks each column of the pattern file. Without ``-o``,
-the page is written to standard output.
+foreground residue colored by the unadjusted value of its column. A p-value
+is red below 0.1, darker as the value decreases; white from 0.1 to 0.5; blue
+above 0.5, for columns that are similar in both sets. A score is blue below
+0.1, white from 0.1 to 0.4, and red from 0.4, one step darker for each
+further 0.1. Columns whose foreground consensus is a gap are gray, and those
+whose background consensus is a gap are yellow. The colors do not depend on
+alpha. With ``-p``, an asterisk above the sequences marks each column of the
+pattern file. Without ``-o``, the page is written to standard output.
 
 Given several ``.out`` files, such as those written for `More than two
 alignments`_, ``cladereport`` shows the foreground consensus of each as one
@@ -410,9 +416,10 @@ of a single alignment, described above. A file whose name ends in ``.cma``
 is read as CMA, and any other as FASTA. If an HMM profile, whose file name
 must end in ``.hmm``, is given as well, the sequences are aligned to it with
 ``hmmalign``, as with ``--hmm``, and must then be in FASTA format. The form
-also chooses the strategy, alpha and, with its checkbox, the weighting of
-``-w``. The submission name becomes the title of the result, which is the
-page that ``cladereport`` would write for the ``.out`` and pattern files.
+also chooses the strategy, alpha, which applies only to a strategy that
+computes a p-value, and, with its checkbox, the weighting of ``-w``. The
+submission name becomes the title of the result, which is the page that
+``cladereport`` would write for the ``.out`` and pattern files.
 The web interface does not offer the logos, structures or more than two
 alignments; use ``cladecompare`` for these.
 
@@ -437,9 +444,9 @@ below gives the formula each one computes and the sources it follows:
     phosphorylatable residues Ser, Thr and Tyr in the FG column, against
     their combined frequency in the FG and BG columns together.
 :jsd:
-    Jensen-Shannon divergence between the FG and BG column compositions,
-    after INTREPID (Sankararaman & Sjölander 2008). The value reported is a
-    score that is smaller for more divergent columns, not a p-value.
+    Jensen-Shannon divergence between the FG and BG column compositions.
+    The value reported is a score that is larger for more divergent
+    columns, not a p-value.
 :hypg:
     Hypergeometric model: the probability of drawing at least as many
     sequences of the amino acid type with the smallest tail probability as
@@ -448,10 +455,9 @@ below gives the formula each one computes and the sources it follows:
     ``cladecompare`` stops with an error.
 
 gtest, urn, phospho, and hypg report p-values. The jsd score is not a
-p-value, but in this release it still receives asterisks where it is below
-alpha and passes through the same selection of significant sites. For jsd,
-the pattern file lists the columns with the smallest scores, without the
-meaning of a false discovery rate.
+p-value: it receives no asterisks, alpha does not apply to it, and its
+pattern file lists the 50 highest-scoring columns, a ranking that claims no
+false discovery rate.
 
 
 Methods
@@ -535,7 +541,8 @@ as ``*``, is read, consensus, counts and sequence weights alike, as if it
 were uppercase. An alignment without any uppercase residue marks nothing by
 case and is read as if it were uppercase.
 A column whose foreground or background consensus is a gap, or X, an unknown
-residue that the counts skip, is not tested and is reported with p = 1.
+residue that the counts skip, is not tested and is reported with p = 1, or,
+for jsd, a score of 0.
 The site of a column is named in the pattern file after its foreground
 consensus residue for gtest and jsd, and after the residue that the next
 section describes for urn, hypg and phospho.
@@ -739,18 +746,44 @@ Jensen-Shannon divergence (jsd)
 
 In paired mode, ``P`` is the foreground composition ``n_a / Σ n`` and ``Q`` the
 background composition including pseudocounts, ``(m_a + π f_a)``, normalized
-to sum to 1. With ``M = (P + Q) / 2`` and ``H`` the Shannon entropy in bits::
+to sum to 1. With ``M = (P + Q) / 2`` and ``H`` the Shannon entropy in bits,
+the score is::
 
-    JSD   = H(M) - (H(P) + H(Q)) / 2
-    score = (1 - JSD)²
+    JSD = H(M) - (H(P) + H(Q)) / 2
 
 With a single alignment, ``Q`` is the uniform distribution over the 20 amino
-acid types. The score lies between 0 and 1 and is smaller for more divergent
-columns. It is not a p-value, and it does not account for the number of
-sequences, so a small foreground set appears divergent partly through
-sampling variation. INTREPID (Sankararaman & Sjölander 2008), which this
-strategy follows, uses JSD between a column and a background distribution as
-a conservation score.
+acid types. The score lies between 0, for identical compositions, and 1, for
+compositions that share no residue type, except in a column that holds a
+letter other than the 20 amino acids and X, such as B or Z, and in paired
+mode in every column of a pair that holds one, whose pseudocounts carry it
+into each background column. The counts include that letter but the mixture
+``M`` omits it, so the value is not a divergence there: it can fall below 0,
+exceed 1, or lie between them and still be wrong. When it leaves [0, 1],
+``cladecompare`` warns that it is out of its domain; it warns in the same
+way for a column of the 20 amino acids in equal proportions, whose score a
+rounding error can place below 0. It is not a p-value, and it does not
+account for the number of sequences, so a small foreground set appears
+divergent partly through sampling variation. With the example pair's 47
+sequences divided at random into sets of 11 and 36, as the pair is, 97% of
+the columns scored below 0.4, and none of 14,520 columns reached 0.7; with 3
+sequences in the foreground against 36, about 11 columns per division
+reached 0.7.
+
+Capra & Singh (2007) found JSD between a column and a background
+distribution the most accurate of the conservation scores they compared for
+predicting functional residues, and INTREPID (Sankararaman & Sjölander 2008)
+uses it for the same purpose, against the BLOSUM62 background; the
+single-alignment score is that conservation score against a uniform
+background. The paired score applies the same divergence to the foreground
+and the background column instead.
+
+Until November 2026, jsd reported ``(1 - JSD)²``, which is smaller for more
+divergent columns, and passed it through the asterisks and the
+Benjamini-Hochberg selection as if it were a p-value; the square had been
+added to make the values resemble the p-values of the other strategies and
+to give a pattern on the example pair at alpha 0.2.
+At the default alpha, the example pair gave 16 sites without ``-w`` and none
+with it, and a single alignment gave none at the default alpha or at 0.2.
 
 Hypergeometric model (hypg)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -782,11 +815,14 @@ runs over all columns, and at most 50 of the columns it accepts, the most
 significant, are selected, so a selection of fewer than 50 means that the
 procedure accepted fewer. On the example pair at the default alpha, without
 ``-w``, gtest, urn and hypg accept 102, 62 and 91 columns, and each of
-their pattern files lists 50. Versions before 0.3.0 confined the search to
-the 50 most significant columns, so where the procedure accepted more than
-50, they could select fewer than 50, or none: with ``-s hypg -w -a 0.245``,
-the example pair accepted 54 columns under the hypg of that time, of which
-the earlier search selected 11.
+their pattern files lists 50. A score is not a p-value, so for jsd no
+procedure decides how many columns are significant: its sites are the 50
+columns with the largest scores, leaving out the untested columns, and it
+selects 50 whenever 50 columns are tested. Versions before 0.3.0 confined
+the search to the 50 most significant columns, so where the procedure
+accepted more than 50, they could select fewer than 50, or none: with
+``-s hypg -w -a 0.245``, the example pair accepted 54 columns under the hypg
+of that time, of which the earlier search selected 11.
 
 Alignments from MAPGAPS
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -804,6 +840,9 @@ References
   practical and powerful approach to multiple testing. *Journal of the Royal
   Statistical Society, Series B* 57(1):289-300.
   doi:10.1111/j.2517-6161.1995.tb02031.x
+- Capra JA, Singh M (2007) Predicting functionally important residues from
+  sequence conservation. *Bioinformatics* 23(15):1875-1882.
+  doi:10.1093/bioinformatics/btm270
 - Dunning T (1993) Accurate methods for the statistics of surprise and
   coincidence. *Computational Linguistics* 19(1):61-74.
 - Henikoff S, Henikoff JG (1994) Position-based sequence weights. *Journal

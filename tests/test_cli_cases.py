@@ -8,7 +8,8 @@ must fail with the recorded exception. The text files the commands write must
 equal the recorded ones, or the regenerated ones for the cases in
 ``REGENERATED``; the reference records the pair-logo PDFs by name
 only, so those must have the recorded names and embed the font that
-CladeCompare bundles. Every p-value written must be finite and within [0, 1].
+CladeCompare bundles. Every p-value or score written must be finite and within
+[0, 1].
 
 Where the code departs from the reference by design, as
 ``tests/data/README.md`` lists, the difference is declared here: a file in
@@ -107,9 +108,12 @@ RETURNCODES = {
 # because those statistics now test the residue type with the smallest tail,
 # corrected for that choice, and single.phospho and single.phospho.w because
 # phospho names each site after its most frequent Ser, Thr or Tyr ("The
-# residue tested" in tests/data/README.md). multi.gtest also writes the HTML
-# report of its three .out files, which cladereport failed to write, and
-# pdb.1FIN-AB-CA.gtest the files of a structure with two chains.
+# residue tested" in tests/data/README.md). The four jsd cases moved because
+# jsd now writes the Jensen-Shannon divergence as a score, without asterisks,
+# and selects the 50 highest-scoring columns as its sites ("jsd as a score" in
+# tests/data/README.md). multi.gtest also writes the HTML report of its three
+# .out files, which cladereport failed to write, and pdb.1FIN-AB-CA.gtest the
+# files of a structure with two chains.
 REGENERATED = {
     "hmm.pair.gtest",
     "hmm.single.gtest",
@@ -118,6 +122,7 @@ REGENERATED = {
     "pair.gtest.w",
     "pair.hypg",
     "pair.hypg.w",
+    "pair.jsd.a.2",
     "pair.jsd.w.a.2",
     "pair.phospho",
     "pair.phospho.w",
@@ -127,6 +132,8 @@ REGENERATED = {
     "pdb.1HCK.gtest",
     "single.gtest.a.001",
     "single.gtest.w.a.001",
+    "single.jsd.a.2",
+    "single.jsd.w.a.2",
     "single.phospho",
     "single.phospho.w",
     "single.urn",
@@ -191,12 +198,11 @@ def run_commands(commands, tmp_path, path_prefix=None):
     return workdir, written, results, tmpdir
 
 
-def assert_valid_pvalues(path):
-    """Every p-value in a .out file is finite and within [0, 1]; return them."""
-    pvalues = [prob for _fg, _bg, _posn, prob in report.parse_out(path)]
-    invalid = [p for p in pvalues if not (math.isfinite(p) and 0.0 <= p <= 1.0)]
-    assert pvalues and not invalid, f"{path.name}: {invalid[:5]}"
-    return pvalues
+def assert_valid_values(path):
+    """Every p-value or score in a .out file is finite and within [0, 1]."""
+    values = [value for *_site, value in report.parse_out(path)]
+    invalid = [v for v in values if not (math.isfinite(v) and 0.0 <= v <= 1.0)]
+    assert values and not invalid, f"{path.name}: {invalid[:5]}"
 
 
 def assert_pdfs(workdir, pdfs, expected):
@@ -259,7 +265,7 @@ def check_case(case, tmp_path, path_prefix=None, commands=None):
     for name in sorted(expected):
         assert (workdir / name).read_bytes() == expected_text(case, name), name
         if name.endswith(".out"):
-            assert_valid_pvalues(workdir / name)
+            assert_valid_values(workdir / name)
     leftovers = list(tmpdir.iterdir())
     assert len(leftovers) == record["leftover_temp_files"], leftovers
 

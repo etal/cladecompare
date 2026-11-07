@@ -82,6 +82,12 @@ REPORTS = {
     "web.single.urn": "single.urn",
 }
 
+# Recorded jsd submissions, and the command-line case whose current report,
+# apart from the title, each response must equal. The reference records them
+# at alpha 0.005 and the command-line cases at 0.2, but alpha no longer applies
+# to a score, so both now give the same report.
+SCORES = {"web.pair.jsd": "pair.jsd.a.2", "web.single.jsd": "single.jsd.a.2"}
+
 # Recorded submissions with a test of their own below.
 OWN_TESTS = {"web.pair.hypg", "web.pair.phospho", "web.single.phospho"}
 
@@ -164,6 +170,8 @@ def test_reference_submission(case, tmp_path, monkeypatch, require):
         assert error in errors
     elif case in REPORTS:
         assert response == cli_report(REPORTS[case], title)
+    elif case in SCORES:
+        assert response == cli_report(SCORES[case], title)
     else:
         assert response == (REFERENCE / case / "response.html").read_bytes()
     assert os.listdir(workdir) == record["written_files"] == []

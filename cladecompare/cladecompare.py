@@ -20,7 +20,7 @@ def main():
 cladecompare fg.seq bg.seq > fg-v-bg.out
 cladecompare fg.cma bg.cma > fg-v-bg.out
 
-# Save per-site p-values and "pattern" file of significant sites
+# Save per-site values and a "pattern" file of the selected sites
 cladecompare fg.seq bg.seq -p fg-v-bg.pttrn -o fg-v-bg.out
 
 # Align sequences on the fly by giving the MAPGAPS profile
@@ -76,7 +76,8 @@ See README or https://github.com/etal/cladecompare for full documentation.
         "--alpha",
         default=0.005,
         type=alpha,
-        help="Significance threshold for pattern columns, between 0 and 1.",
+        help="Significance threshold for pattern columns, between 0 and 1, "
+        "for a strategy that computes a p-value.",
     )
     AP.add_argument(
         "-s",
@@ -97,10 +98,10 @@ See README or https://github.com/etal/cladecompare for full documentation.
     AP.add_argument(
         "-o",
         "--output",
-        help="""Write per-column probabilities to this filename, for use
-            with cladereport (default: standard output). Ignored when
-            comparing more than two alignments, which writes <alignment>.out
-            for each alignment.""",
+        help="""Write the per-column values, p-values or scores, to this
+            filename, for use with cladereport (default: standard output).
+            Ignored when comparing more than two alignments, which writes
+            <alignment>.out for each alignment.""",
     )
     AP.add_argument(
         "-p",

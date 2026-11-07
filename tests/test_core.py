@@ -519,9 +519,10 @@ def test_mixed_case_column_gives_the_results_of_uppercase(strategy, weight):
 @pytest.mark.parametrize("strategy", sorted(core.STRATEGIES))
 def test_consensus_of_unknown_residues_is_not_tested(strategy):
     """The counts skip X, so a column whose consensus is X, in either set, has
-    no consensus residue to count; it is reported with p = 1, not with a value
-    from the residues beside the X."""
+    no consensus residue to count; it is reported as untested, with p = 1 or a
+    score of 0, not with a value from the residues beside the X."""
     module = core.STRATEGIES[strategy][1]
+    untested = 0.0 if strategy == "jsd" else 1.0
     fg = [("a", "XDAKS"), ("b", "XDARS"), ("c", "SEAKT")]
     bg = [
         ("p", "GDAKX"),
@@ -532,10 +533,10 @@ def test_consensus_of_unknown_residues_is_not_tested(strategy):
     ]
     if hasattr(module, "compare_one"):  # hypg compares two alignments only
         _, hits = core.process_one(aln(*fg), module, False)
-        assert hits[0] == ("X", "_", 1.0, "X")
+        assert hits[0] == ("X", "_", untested, "X")
     *_, hits = core.process_pair(aln(*fg), aln(*bg), module, False)
-    assert (hits[0][0], hits[0][2]) == ("X", 1.0)
-    assert (hits[4][1], hits[4][2]) == ("X", 1.0)
+    assert (hits[0][0], hits[0][2]) == ("X", untested)
+    assert (hits[4][1], hits[4][2]) == ("X", untested)
 
 
 def test_process_one_refuses_a_strategy_for_two_alignments():
@@ -544,14 +545,18 @@ def test_process_one_refuses_a_strategy_for_two_alignments():
         core.process_one(alignment, core.STRATEGIES["hypg"][1], False)
 
 
-# --- top_hits ---
+# --- Site selection: top_hits and top_scores ---
 
 
-def hits_from(pvalues):
-    return [("A", "C", p, "A") for p in pvalues]
+def hits_from(values):
+    return [("A", "C", v, "A") for v in values]
 
 
-# The most sites that top_hits returns.
+def positions(tophits):
+    return [posn for posn, _residue in tophits]
+
+
+# The most sites that top_hits and top_scores return.
 MAX_SITES = 50
 
 
@@ -561,10 +566,6 @@ def bh_expected(pvalues, alpha):
     k_star = int((false_discovery_control(pvalues, method="bh") <= alpha).sum())
     order = np.argsort(pvalues, kind="stable")
     return [int(idx) + 1 for idx in order[: min(k_star, MAX_SITES)]]
-
-
-def positions(tophits):
-    return [posn for posn, _residue in tophits]
 
 
 @pytest.mark.parametrize("seed", range(20))
@@ -623,6 +624,26 @@ def test_top_hits_returns_50_sites_when_more_pass(pvalues):
     expected = bh_expected(pvalues, 0.05)
     assert len(expected) == MAX_SITES
     assert positions(core.top_hits(hits_from(pvalues), 0.05)) == expected
+
+
+def test_top_scores_takes_the_largest_tested_scores():
+    """Largest first, ties to the earlier column, each site named by its
+    residue in hits; an untested column is never a site, whatever its value."""
+    hits = [
+        ("A", "C", 0.2, "A"),
+        ("X", "E", 0.9, "X"),
+        ("D", "E", 0.7, "D"),
+        ("F", "-", 0.9, "F"),
+        ("G", "H", 0.7, "G"),
+        ("K", "_", 0.8, "K"),
+    ]
+    assert core.top_scores(hits) == [(6, "K"), (3, "D"), (5, "G"), (1, "A")]
+
+
+def test_top_scores_returns_at_most_50_sites():
+    scores = [i / 100 for i in range(100)]
+    sites = positions(core.top_scores(hits_from(scores)))
+    assert sites == list(range(100, 100 - MAX_SITES, -1))
 
 
 # --- Structure residue numbering ---
@@ -837,8 +858,21 @@ def test_process_output_rejects_a_structure_of_another_width(tmp_path):
     pdb_data = [("1abc.pdb", chain, STRUCTURE[:4], [])]
     output = tmp_path / "x.out"
     with pytest.raises(InputError, match="1abc.pdb is aligned to 4 match states"):
-        core.process_output(None, None, hits, 0.05, str(output), None, pdb_data)
+        core.process_output(
+            None, None, hits, core.gtest, 0.05, str(output), None, pdb_data
+        )
     assert not output.exists()
+
+
+def test_process_output_selects_a_score_by_rank_not_by_alpha(tmp_path):
+    """A score is labeled as one, has no asterisks, and its sites are the
+    largest scores, where the Benjamini-Hochberg procedure would take only
+    column 2."""
+    hits = [("A", "C", 0.9, "A"), ("D", "E", 0.001, "D")]
+    output, pattern = tmp_path / "x.out", tmp_path / "x.pttrn"
+    core.process_output(None, None, hits, core.jsd, 0.05, str(output), str(pattern), [])
+    assert output.read_text() == "A (C) 1 : score=0.9\t\nD (E) 2 : score=0.001\t\n"
+    assert pattern.read_text() == "1:A1,D2"
 
 
 # --- External programs ---

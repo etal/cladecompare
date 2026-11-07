@@ -3,6 +3,7 @@
 import html
 import logging
 import re
+from bisect import bisect_right
 from math import isfinite, log10, nan
 
 from . import InputError, reading
@@ -57,11 +58,13 @@ def html_page(title, contents):
     return html_page_tpl % dict(title=html.escape(title), contents=contents)
 
 
-# A line of a '.out' file as core.write_pvalues writes it, without the
-# surrounding white space, e.g. "Y (Y) 1 : prob=0.00363161\t**". The
+# A line of a '.out' file as core.write_values writes it, without the
+# surrounding white space, e.g. "Y (Y) 1 : prob=0.00363161\t**". The label
+# names the kind of value, a p-value ("prob") or a score ("score"). The
 # asterisks follow from the value and alpha, so they are matched but not read.
 OUT_LINE = re.compile(
-    r"(?P<fg>\S) \((?P<bg>\S)\) (?P<posn>\d+) : prob=(?P<prob>[^\s*]+)"
+    r"(?P<fg>\S) \((?P<bg>\S)\) (?P<posn>\d+) : "
+    r"(?P<label>prob|score)=(?P<value>[^\s*]+)"
     r"(?:\s+\*+)?"
 )
 
@@ -73,8 +76,9 @@ def parse_out(fname):
     """Read the sites of a '.out' file.
 
     Return a list of (foreground residue, background residue, column number,
-    value), one for each line. A file without sites, a line of any other
-    shape, or a value that is not a finite number raises InputError.
+    label, value), one for each line, where label names the kind of value,
+    "prob" or "score". A file without sites, a line of any other shape, or a
+    value that is not a finite number raises InputError.
     """
     sites = []
     with reading(fname), open(fname) as infile:
@@ -89,15 +93,17 @@ def parse_out(fname):
                     f"{line!r}"
                 )
             try:
-                prob = float(match["prob"])
+                value = float(match["value"])
             except ValueError:
-                prob = nan
-            if not isfinite(prob):
+                value = nan
+            if not isfinite(value):
                 raise InputError(
-                    f"{fname}, line {lineno}: the value {match['prob']!r} "
+                    f"{fname}, line {lineno}: the value {match['value']!r} "
                     "is not a finite number"
                 )
-            sites.append((match["fg"], match["bg"], int(match["posn"]), prob))
+            sites.append(
+                (match["fg"], match["bg"], int(match["posn"]), match["label"], value)
+            )
     if not sites:
         raise InputError(f"{fname} holds no lines of cladecompare output")
     return sites
@@ -186,6 +192,39 @@ def p2class(fg, bg, pval):
     return "r%d" % int((nlp + 1) / 2)
 
 
+# The upper bounds of the score classes below, in bits of Jensen-Shannon
+# divergence, and the class of each interval.
+SCORE_CUTS = (0.1, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
+SCORE_CLASSES = ("b1", "wt", "r1", "r2", "r3", "r4", "r5", "r6")
+
+
+def score2class(fg, bg, score):
+    """Assign a table cell (td) CSS class given a score.
+
+    Heat map, from the score of identical compositions, 0, to that of
+    disjoint ones, 1:
+        below 0.1 -> blue
+        0.1 to 0.4 -> white
+        0.4 and above -> red, one step darker per 0.1
+
+    Under random division of the example pair's sequences into a foreground
+    and a background of the same sizes, nearly every column scores below 0.4.
+    A score is not a p-value, so a red cell is not significant.
+
+    Foreground deletions -> gray, inserts -> gold.
+    """
+    if fg == "-":
+        return "del"
+    if bg == "-":
+        return "ins"
+    return SCORE_CLASSES[bisect_right(SCORE_CUTS, score)]
+
+
+# For each label of a '.out' line, the name of the value in a cell's title
+# and the function that colors the cell.
+VALUE_SCALES = {"prob": ("p", p2class), "score": ("score", score2class)}
+
+
 # Formatting
 
 
@@ -194,7 +233,7 @@ def tables(pattern, posns, rows, width=50):
 
     pattern holds the mark above each column, and posns the column numbers,
     of which every tenth is shown below the rows. Each row is (label, cells,
-    values, classes); a row whose classes are None is drawn plain.
+    titles, classes); a row whose classes are None is drawn plain.
     """
     shown = [str(p) if not p % 10 else "" for p in posns]
     out = ""
@@ -203,11 +242,11 @@ def tables(pattern, posns, rows, width=50):
         out += "<table>"
         if any(pattern[cols]):
             out += tr_plain("", pattern[cols])
-        for label, cells, pvalues, classes in rows:
+        for label, cells, titles, classes in rows:
             if classes is None:
                 out += tr_plain(label, cells[cols])
             else:
-                out += tr_class(label, cells[cols], pvalues[cols], classes[cols])
+                out += tr_class(label, cells[cols], titles[cols], classes[cols])
         out += tr_pos(shown[cols])
         out += "</table><p />"
     return out
@@ -221,13 +260,13 @@ def tr_plain(label, cells):
     return out
 
 
-def tr_class(label, cells, pvalues, classes):
+def tr_class(label, cells, titles, classes):
     out = "<tr>\n"
     out += '<td class="label">%s</td>' % html.escape(label)
     out += "".join(
         [
-            '<td class="%s" title="p=%s">%s</td>' % (cls, pval, txt)
-            for cls, pval, txt in zip(classes, pvalues, cells, strict=True)
+            '<td class="%s" title="%s">%s</td>' % (cls, title, txt)
+            for cls, title, txt in zip(classes, titles, cells, strict=True)
         ]
     )
     out += "\n</tr>"
@@ -245,23 +284,28 @@ def tr_pos(cells):
 
 
 def read_columns(fname):
-    """Read the columns of a '.out' file with the cell class of each.
+    """Read the columns of a '.out' file with the cell title and class of each.
 
     Return the foreground and background consensus, the column numbers, the
-    values and the classes, each as a sequence over the columns.
+    titles, which name and give each value, and the classes, each as a
+    sequence over the columns.
     """
-    fg_seq, bg_seq, posns, probs = zip(*parse_out(fname), strict=True)
-    classes = [
-        p2class(fg, bg, p) for fg, bg, p in zip(fg_seq, bg_seq, probs, strict=True)
-    ]
-    return fg_seq, bg_seq, posns, probs, classes
+    fg_seq, bg_seq, posns, titles, classes = [], [], [], [], []
+    for fg, bg, posn, label, value in parse_out(fname):
+        name, value2class = VALUE_SCALES[label]
+        fg_seq.append(fg)
+        bg_seq.append(bg)
+        posns.append(posn)
+        titles.append("%s=%s" % (name, value))
+        classes.append(value2class(fg, bg, value))
+    return fg_seq, bg_seq, posns, titles, classes
 
 
 def do_single(fname, patternfname):
     """Build an HTML document for a single '.out' file and optional pattern."""
-    fg_seq, bg_seq, posns, probs, classes = read_columns(fname)
+    fg_seq, bg_seq, posns, titles, classes = read_columns(fname)
     rows = [
-        ("foreground", fg_seq, probs, classes),
+        ("foreground", fg_seq, titles, classes),
         ("background", bg_seq, None, None),
     ]
     pattern = pattern_marks(patternfname, posns, fname)
@@ -272,12 +316,13 @@ def do_multi(fnames, patternfname):
     """Build an HTML document combining multiple '.out' files.
 
     Each file becomes one row of the table, under one row of column numbers,
-    so the files must number the same columns.
+    so the files must number the same columns. Each cell is colored on the
+    scale that the label of its line names, a p-value's or a score's.
     """
     rows = []
     posns = None
     for fname in fnames:
-        fg_seq, _bg_seq, file_posns, probs, classes = read_columns(fname)
+        fg_seq, _bg_seq, file_posns, titles, classes = read_columns(fname)
         if posns is None:
             posns = file_posns
         elif file_posns != posns:
@@ -286,6 +331,6 @@ def do_multi(fnames, patternfname):
                 "so they cannot be shown in one table"
                 % (fnames[0], fname, len(posns), len(file_posns))
             )
-        rows.append((fname.removesuffix(".out"), fg_seq, probs, classes))
+        rows.append((fname.removesuffix(".out"), fg_seq, titles, classes))
     pattern = pattern_marks(patternfname, posns, fnames[0])
     return ", ".join(fnames), tables(pattern, posns, rows)

@@ -11,8 +11,9 @@ If given multiple files:
     The background, which differs between those files, is not shown; a
     column whose background consensus is a gap is colored as an insert.
 
-The color of a foreground cell follows its column's p-value; it does not
-depend on alpha.
+The color of a foreground cell follows its column's value, on the p-value
+scale or the score scale that each file's lines name; it does not depend on
+alpha.
 
 """
 

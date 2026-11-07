@@ -63,7 +63,7 @@ FORM_HTML = """\
   <h2>Statistical strategy</h2>
 %(strategies)s
   <p>
-    Significance cutoff (alpha):
+    Significance cutoff (alpha), for a strategy that computes a p-value:
     <input type="text" name="alpha" value="0.005" />
   </p>
 
@@ -246,12 +246,21 @@ def compare_submission(tmpdir, uploads):
             fg_aln, bg_aln, stat_module, do_weight, bool(profname)
         )
         core.process_output(
-            fg_clean, bg_clean, hits, alpha, tmp_output, tmp_pattern, pdb_data
+            fg_clean,
+            bg_clean,
+            hits,
+            stat_module,
+            alpha,
+            tmp_output,
+            tmp_pattern,
+            pdb_data,
         )
     else:
         # Single mode; a strategy that compares two alignments refuses it
         aln, hits = core.process_one(fg_aln, stat_module, do_weight)
-        core.process_output(aln, None, hits, alpha, tmp_output, tmp_pattern, pdb_data)
+        core.process_output(
+            aln, None, hits, stat_module, alpha, tmp_output, tmp_pattern, pdb_data
+        )
 
     # Get the HTML report data
     contents = report.do_single(tmp_output, tmp_pattern)[1]

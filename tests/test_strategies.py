@@ -59,7 +59,9 @@ def chisq_tail(x, df):
     ) * math.fsum(terms)
 
 
-def pair(module, fg_col, bg_col, fg_weights=None, bg_weights=None, fg_cons="D"):
+def pair(
+    module, fg_col, bg_col, fg_weights=None, bg_weights=None, fg_cons="D", freqs=FREQS
+):
     fg_weights = fg_weights or ones(fg_col)
     bg_weights = bg_weights or ones(bg_col)
     return module.compare_cols(
@@ -71,7 +73,7 @@ def pair(module, fg_col, bg_col, fg_weights=None, bg_weights=None, fg_cons="D"):
         "E",
         math.fsum(bg_weights),
         bg_weights,
-        FREQS,
+        freqs,
         PSEUDO,
     )
 
@@ -257,15 +259,15 @@ def entropy(dist):
     return -math.fsum(p * log2(p) for p in dist.values() if p)
 
 
-def normalized(counts):
+def normalized(counts, letters=AMINO):
     total = math.fsum(counts.values())
-    return {aa: counts.get(aa, 0.0) / total for aa in AMINO}
+    return {aa: counts.get(aa, 0.0) / total for aa in letters}
 
 
-def similarity(p, q):
-    """(1 - JSD)^2 with equal mixture weights."""
-    mix = {aa: 0.5 * p[aa] + 0.5 * q[aa] for aa in AMINO}
-    return (1 - (entropy(mix) - 0.5 * (entropy(p) + entropy(q)))) ** 2
+def divergence(p, q, letters=AMINO):
+    """JSD in bits with equal mixture weights."""
+    mix = {aa: 0.5 * p[aa] + 0.5 * q[aa] for aa in letters}
+    return entropy(mix) - 0.5 * (entropy(p) + entropy(q))
 
 
 def test_jsd_pair_compares_with_the_pseudocounted_background():
@@ -278,7 +280,7 @@ def test_jsd_pair_compares_with_the_pseudocounted_background():
     )
     assert pair(jsd, "DDDDE", "DEEEEEAA") == (
         "D",
-        pytest.approx(similarity(p, q), rel=1e-12),
+        pytest.approx(divergence(p, q), rel=1e-12),
     )
 
 
@@ -288,7 +290,63 @@ def test_jsd_single_compares_with_uniform_frequencies():
     q = {aa: 1 / 20 for aa in AMINO}
     assert jsd.compare_one(col, "D", 5.0, ones(col), FREQS, PSEUDO) == (
         "D",
-        pytest.approx(similarity(p, q), rel=1e-12),
+        pytest.approx(divergence(p, q), rel=1e-12),
+    )
+
+
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason="the two entropies of a uniform column differ by a rounding error, "
+    "which gives a JSD of -8.9e-16",
+)
+def test_jsd_of_a_uniform_column_is_not_negative():
+    # Equal weights of 1.0 cancel exactly; 0.3 leaves the two entropies
+    # differing by a rounding error.
+    assert jsd.compare_one(AMINO, "A", 6.0, [0.3] * 20, FREQS, PSEUDO)[1] >= 0.0
+
+
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason="the counts include B, which the mixture of the 20 amino acids "
+    "omits, so the JSD of 'BBDD' against 'DDDD' is -0.35",
+)
+def test_jsd_of_a_pair_with_an_ambiguity_code_lies_between_0_and_1():
+    assert 0.0 <= pair(jsd, "BBDD", "DDDD")[1] <= 1.0
+
+
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason="the counts include B, which the mixture of the 20 amino acids "
+    "omits, so the JSD of 'BBBB' against uniform frequencies is 2.16",
+)
+def test_jsd_of_a_single_column_with_an_ambiguity_code_lies_between_0_and_1():
+    col = "BBBB"
+    assert 0.0 <= jsd.compare_one(col, "B", 4.0, ones(col), FREQS, PSEUDO)[1] <= 1.0
+
+
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason="a B in the pseudocounts enters the background composition but not "
+    "the mixture of the 20 amino acids, so a column without B is not scored as "
+    "the divergence of its compositions",
+)
+def test_jsd_pair_with_an_ambiguity_code_in_the_pseudocounts_is_a_divergence():
+    freqs = {aa: 0.9 * f for aa, f in FREQS.items()} | {"B": 0.1}
+    letters = AMINO + "B"
+    p = normalized({"D": 4, "E": 1}, letters)
+    q = normalized(
+        {
+            aa: {"D": 1, "E": 5, "A": 2}.get(aa, 0) + f * PSEUDO
+            for aa, f in freqs.items()
+        },
+        letters,
+    )
+    assert pair(jsd, "DDDDE", "DEEEEEAA", freqs=freqs)[1] == pytest.approx(
+        divergence(p, q, letters), rel=1e-12
     )
 
 

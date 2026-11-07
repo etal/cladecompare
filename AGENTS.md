@@ -11,7 +11,7 @@ such as `/mnt/c` — `CLAUDE.md` arrives as a stub naming this file, so read
 CladeCompare compares two protein sequence alignments — a *foreground* clade against a *background* — and reports, for each alignment column, how strongly the amino-acid composition of the two differs, in order to find the residues that distinguish one subfamily from its relatives.
 `README.rst`, "What CladeCompare is for", states the purpose, its lineage in CHAIN and the reference to Talevich & Kannan (2013); the license is BSD 2-clause.
 
-Three console commands share one library of about 2,750 lines under `cladecompare/`, and each is the `main()` function of a module there that keeps the name of the script it replaced:
+Three console commands share one library of about 2,900 lines under `cladecompare/`, and each is the `main()` function of a module there that keeps the name of the script it replaced:
 
 | command | module | role |
 |---|---|---|
@@ -29,13 +29,15 @@ The tracebacks recorded in `tests/data/py27/` therefore name `cladecomparelib`.
 
 - `gtest` — G-test of column amino-acid frequencies
 - `urn` — CHAIN's ball-in-urn statistic
-- `jsd` — Jensen–Shannon divergence
+- `jsd` — Jensen–Shannon divergence, a score rather than a p-value
 - `hypg` — hypergeometric
 - `phospho` — Ser/Thr/Tyr phosphorylation sites specifically
 
 `STRATEGIES` in `cladecompare/core.py` registers each strategy once, mapping its name to a one-line description and its module, and `DEFAULT_STRATEGY` names the default.
 The `-s` choices and help text, the radio buttons of the cladeweb form, the module that `process_args` and the web application run, and the log line that names the strategy all come from it, so adding a sixth means writing the module under `cladecompare/` and adding one entry to `STRATEGIES`, together with the module's import in `core.py`.
-One rule remains outside the registry: under `-w`, a strategy's module may name the `sequence_weights` scalings of the foreground and the background in `WEIGHT_SCALINGS`, with `None` for unweighted, and `urn` and `phospho` do so to follow CHAIN, which weights the background only; every other strategy weights both sets with the `none` scaling (`DEFAULT_WEIGHT_SCALINGS` in `core.py`).
+Two rules remain outside the registry.
+Under `-w`, a strategy's module may name the `sequence_weights` scalings of the foreground and the background in `WEIGHT_SCALINGS`, with `None` for unweighted, and `urn` and `phospho` do so to follow CHAIN, which weights the background only; every other strategy weights both sets with the `none` scaling (`DEFAULT_WEIGHT_SCALINGS` in `core.py`).
+A module whose value is a score rather than a p-value sets `VALUE_LABEL = "score"`, as `jsd` does; `core.value_label` reads it, with `"prob"` for every other strategy, and `process_pair`, `process_one`, `write_values` and `process_output` act on that label alone (next section).
 `process_one` gives a single alignment the foreground's scaling, and every size is the sum of the weights.
 A module without `compare_one` compares two alignments only, as hypg does: `process_one` raises `InputError` for it, before any output is written.
 `compare_cols` and `compare_one` return the residue that names the site together with the value: gtest and jsd, which compare whole compositions, return the foreground consensus they are given; urn and hypg return the residue type of the foreground column with the smallest tail, and as the value that tail multiplied by the number of types in the column, at most 1 (`most_significant_type` in `cladecompare/shared.py`), because the type is chosen from the column it is tested on; phospho returns the most frequent of Ser, Thr and Tyr.
@@ -43,10 +45,11 @@ Each entry of `hits` is therefore (foreground consensus, background consensus, v
 
 ## `.out` values are raw; Benjamini–Hochberg only selects the pattern
 
-The `.out` file holds each column's unadjusted value of the statistic: a p-value for gtest, urn, phospho and hypg, and a score that is not a p-value for jsd, which nonetheless receives asterisks and passes through the same selection of sites.
-`write_pvalues` in `cladecompare/core.py` writes the value as the statistic returned it, and its asterisks compare that raw value with `-a/--alpha`, one asterisk per order of magnitude.
-`cladereport` and the cladeweb result page color each column from the same raw value (`p2class` in `cladecompare/report.py`), at fixed cut points that do not depend on alpha.
-`report.parse_out` reads a `.out` file for both, and raises `InputError` for a file without lines, a line that `write_pvalues` would not write, or a value that is not finite; a finite value outside [0, 1], of which `write_pvalues` warns, is colored as the nearest bound.
+The `.out` file holds each column's unadjusted value of the statistic: a p-value for gtest, urn, phospho and hypg, labeled `prob=`, and for jsd the Jensen–Shannon divergence in bits, a score labeled `score=`, which is larger for more divergent columns.
+`write_values` in `cladecompare/core.py` writes the value as the statistic returned it, with the label that `value_label` gives; the asterisks of a p-value compare that raw value with `-a/--alpha`, one asterisk per order of magnitude, and a score has none.
+`cladereport` and the cladeweb result page color each column from the same raw value, at fixed cut points that do not depend on alpha: `p2class` in `cladecompare/report.py` for a p-value, `score2class` for a score, chosen by the label of each line (`VALUE_SCALES`), so `cladereport` never needs to know the strategy, and one page can show a row of each kind.
+The score's cut points rest on random divisions of the example pair's sequences, which `tests/data/README.md`, "jsd as a score", records.
+`report.parse_out` reads a `.out` file for both, and raises `InputError` for a file without lines, a line that `write_values` would not write, or a value that is not finite; a finite value outside [0, 1], of which `write_values` warns, is colored as the nearest bound.
 A statistic that returns `nan` writes it to the `.out` file on purpose (`most_significant_type` in `cladecompare/shared.py`), so that a numerical failure is not hidden; `cladereport` then names the file and line instead of drawing a report with that column colored as if it had a value.
 A pattern file marks the columns that carry its sites' numbers, and a site that is not among the `.out` file's columns raises `InputError`.
 
@@ -58,7 +61,10 @@ Site N is entry N - 1 of that list because, under a profile, column N is match s
 Such a column has a gap consensus and p = 1 and changes no other column's value, but it counts in m, so a profile much wider than the sequences can select fewer sites than it would without those columns.
 `process_output` raises `InputError` before writing anything when a structure is aligned to a different number of match states than the compared alignment has columns, as with HMMER 3.0 without `--allcol`.
 A `.cma` file read directly, without `--mapgaps`, is not marked as profile-aligned, so its all-gap columns are still dropped: the example pair has 7 such columns of 249, and its paired `.out` files have 242 columns.
-The step-up search runs over all m ranks, and the 50 most significant of the columns it accepts become the sites, so at most 50 sites are selected and a selection of fewer than 50 means that the procedure accepted fewer; `top_hits` takes the cap as its `N` parameter, which neither the command line nor the web form exposes.
+The step-up search runs over all m ranks, and the 50 most significant of the columns it accepts become the sites, so at most 50 sites are selected and a selection of fewer than 50 means that the procedure accepted fewer; `top_hits` takes the cap, `MAX_SITES`, as its `N` parameter, which neither the command line nor the web form exposes.
+
+A score does not pass through the Benjamini–Hochberg procedure: `process_output` takes the sites of a score from `top_scores`, the 50 columns with the largest scores, leaving out those whose consensus in either set is in `NON_RESIDUES`, and logs that alpha does not apply; `untested_value` gives such a column a score of 0, the score of identical compositions, where a p-value strategy gives 1.
+So jsd selects 50 sites whenever 50 columns are tested, and its pattern is a ranking, not a claim of significance; alpha, which both front ends still accept, changes nothing in its output.
 
 The consequence for a local change: altering how many columns enter `hits`, for instance with a filter that drops columns before scoring, does not rescale any value in `.out`, but it changes m and therefore every threshold `alpha * k / m` (k being a column's rank by p-value).
 A gap-handling rule that only changes which columns receive p = 1 leaves m unchanged but changes the ranking.
@@ -160,7 +166,7 @@ The example alignments are real alignments from Talevich, Mirza & Kannan (2011),
 `uv run pytest` or `pixi run test` runs the suite under `tests/`.
 `tests/test_cli_cases.py` replays every recorded command-line case that the current command line can run with the installed `cladecompare` and `cladereport` commands, in a scratch directory holding copies of `tests/data/inputs`; the two legacy phospho cases, whose `-nw` option no longer exists, are kept as a record and not replayed.
 `tests/test_web.py` submits every recorded form to the cladeweb WSGI application.
-Each command or submission must give the recorded return code or status, each written file and successful response must equal the reference byte for byte, and every p-value written to a `.out` file must be finite and within [0, 1].
+Each command or submission must give the recorded return code or status, each written file and successful response must equal the reference byte for byte, and every value written to a `.out` file, p-value or score, must be finite and within [0, 1].
 Where the code departs from the reference by design, the test module declares the difference — a file no longer written, a return code, a different exception, an expected output regenerated into `tests/data/current/` by `tests/data/replay.py`, or a test of its own — and `tests/data/README.md` explains it.
 `tests/test_core.py`, `tests/test_strategies.py`, `tests/test_report.py` and `tests/test_pmlscript.py` test the parsing, site-selection and statistics functions on small constructed inputs, against hand computations and, for the site selection, against `scipy.stats.false_discovery_control`.
 A known defect that a test exposes is marked as a strict expected failure, so that fixing it fails the suite until the marker is removed.

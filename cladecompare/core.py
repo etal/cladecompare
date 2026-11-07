@@ -34,7 +34,7 @@ STRATEGIES = {
     "gtest": ("G-test of amino acid frequencies", gtest),
     "urn": ("ball-in-urn model of residue conservation", urn),
     "phospho": ("urn model for phosphorylatable residues (S/T/Y)", phospho),
-    "jsd": ("Jensen-Shannon divergence", jsd),
+    "jsd": ("Jensen-Shannon divergence (a score, not a p-value)", jsd),
     "hypg": ("hypergeometric model", hypg),
 }
 DEFAULT_STRATEGY = "gtest"
@@ -57,6 +57,30 @@ def sequence_weights(aln, scaling):
     if scaling is None:
         return [1 for i in range(len(aln))]
     return alnutils.sequence_weights(aln, scaling)
+
+
+# The label of a strategy's value in the '.out' file. A p-value is labeled
+# "prob" unless the strategy's module sets VALUE_LABEL. A "score" is larger for
+# more divergent columns and is meant to lie between 0 and 1, as write_values
+# checks (jsd's module docstring names the exceptions); it has no asterisks,
+# alpha does not apply to it, and its sites are the most divergent columns.
+# The report reads the label from the file, so it never needs the strategy.
+P_VALUE_LABEL = "prob"
+SCORE_LABEL = "score"
+
+# The most sites a pattern holds.
+MAX_SITES = 50
+
+
+def value_label(module):
+    """The label of a strategy's value in the '.out' file."""
+    return getattr(module, "VALUE_LABEL", P_VALUE_LABEL)
+
+
+def untested_value(module):
+    """The value of a column that is not tested: the least significant p-value,
+    or the score of identical compositions."""
+    return 0.0 if value_label(module) == SCORE_LABEL else 1.0
 
 
 def parse_alpha(text):
@@ -119,6 +143,7 @@ def process_args(args):
             aln,
             None,
             hits,
+            module,
             args.alpha,
             output,
             args.pattern,
@@ -133,6 +158,7 @@ def process_args(args):
             fg_clean,
             bg_clean,
             hits,
+            module,
             args.alpha,
             output,
             args.pattern,
@@ -178,6 +204,7 @@ def process_args(args):
                 fg_clean,
                 bg_clean,
                 hits,
+                module,
                 args.alpha,
                 outfname,
                 ptnfname,
@@ -194,10 +221,11 @@ def process_pair(fg_aln, bg_aln, module, do_weight, profile_aligned=False):
     column, occupied or not, is a match state.
 
     Return a list of tuples, one for each column position:
-        (foreground consensus aa, background consensus aa, p-value, residue)
-    where residue names the site in the pattern file: the type that urn and
-    hypg tested, the most frequent of Ser, Thr and Tyr for phospho, and the
-    foreground consensus otherwise, as for an untested column.
+        (foreground consensus aa, background consensus aa, value, residue)
+    where value is the p-value or score that value_label names, and residue
+    names the site in the pattern file: the type that urn and hypg tested, the
+    most frequent of Ser, Thr and Tyr for phospho, and the foreground
+    consensus otherwise, as for an untested column.
     """
     fg_aln, bg_aln = clean_alignments(fg_aln, bg_aln, profile_aligned)
     fg_scaling, bg_scaling = weight_scalings(module, do_weight)
@@ -213,7 +241,7 @@ def process_pair(fg_aln, bg_aln, module, do_weight, profile_aligned=False):
     bg_cons = consensus.consensus(
         bg_aln, weights=bg_weights, trim_ends=False, gap_threshold=GAP_THRESH
     )
-
+    untested = untested_value(module)
     hits = []
     for faa, baa, fg_col, bg_col in zip(
         fg_cons,
@@ -225,9 +253,9 @@ def process_pair(fg_aln, bg_aln, module, do_weight, profile_aligned=False):
         if faa in NON_RESIDUES or baa in NON_RESIDUES:
             # Ignore indel columns -- there are better ways to look at these --
             # and columns of unknown residues, which no count includes
-            residue, pvalue = faa, 1.0
+            residue, value = faa, untested
         else:
-            residue, pvalue = module.compare_cols(
+            residue, value = module.compare_cols(
                 fg_col,
                 faa,
                 fg_size,
@@ -239,7 +267,7 @@ def process_pair(fg_aln, bg_aln, module, do_weight, profile_aligned=False):
                 aa_freqs,
                 PSEUDO_SIZE,
             )
-        hits.append((faa, baa, pvalue, residue))
+        hits.append((faa, baa, value, residue))
 
     return fg_aln, bg_aln, hits
 
@@ -267,23 +295,24 @@ def process_one(aln, module, do_weight):
     cons = consensus.consensus(
         aln, weights=weights, trim_ends=False, gap_threshold=GAP_THRESH
     )
+    untested = untested_value(module)
     hits = []
     for cons_aa, col in zip(cons, zip(*aln, strict=True), strict=True):
         if cons_aa in NON_RESIDUES:
             # Ignore indel columns and columns of unknown residues, as above
-            residue, pvalue = cons_aa, 1.0
+            residue, value = cons_aa, untested
         else:
-            residue, pvalue = module.compare_one(
+            residue, value = module.compare_one(
                 col, cons_aa, aln_size, weights, aa_freqs, PSEUDO_SIZE
             )
-        hits.append((cons_aa, "_", pvalue, residue))
+        hits.append((cons_aa, "_", value, residue))
     return aln, hits
 
 
 def process_output(
-    fg_aln, bg_aln, hits, alpha, output, pattern, pdb_data, pml_output=None
+    fg_aln, bg_aln, hits, module, alpha, output, pattern, pdb_data, pml_output=None
 ):
-    """Generate the output files from the processed data."""
+    """Generate the output files from the processed data of a strategy."""
     # A structure's residues are listed per match state of the profile, and
     # sites number the columns, so the two must count the same positions.
     for pdb_fname, _rec, pdb_resnums, _inserts in pdb_data:
@@ -293,9 +322,18 @@ def process_output(
                 "compared alignment has %d columns"
                 % (pdb_fname, len(pdb_resnums), len(hits))
             )
+    label = value_label(module)
     with as_handle(output, "w+") as outfile:
-        write_pvalues(hits, outfile, alpha)
-    tophits = top_hits(hits, alpha)
+        write_values(hits, outfile, label, alpha)
+    if label == SCORE_LABEL:
+        logger.info(
+            "The values are scores, not p-values: alpha does not apply, and "
+            "the sites are the %d highest-scoring columns",
+            MAX_SITES,
+        )
+        tophits = top_scores(hits)
+    else:
+        tophits = top_hits(hits, alpha)
     if pattern:
         with open(pattern, "w+") as ptnfile:
             write_mcbpps(tophits, ptnfile)
@@ -342,25 +380,31 @@ def process_output(
 # --- Output ---
 
 
-def write_pvalues(hits, outfile, alpha):
-    """Write p-values & "contrast" stars for each site. (It's noisy.)
+def write_values(hits, outfile, label, alpha):
+    """Write each column's value, labeled with label, and "contrast" stars.
 
     Each line names the column's consensus residues, whichever residue names
     the site in the pattern file, because cladereport draws the first field as
-    the consensus sequence.
+    the consensus sequence. A p-value below alpha receives one asterisk per
+    order of magnitude; a score receives none.
     """
-    for idx, (fg_char, bg_char, pvalue, _residue) in enumerate(hits):
-        if not (0.0 <= pvalue <= 1.0):
-            logger.warning("Out-of-domain p-value at site %s: %s", idx, pvalue)
-        stars = "*" * int(-log10(pvalue)) if 0 < pvalue < alpha else ""
+    for idx, (fg_char, bg_char, value, _residue) in enumerate(hits):
+        if not (0.0 <= value <= 1.0):
+            logger.warning("Out-of-domain value at site %s: %s", idx + 1, value)
+        if label == P_VALUE_LABEL and 0 < value < alpha:
+            stars = "*" * int(-log10(value))
+        else:
+            stars = ""
         outfile.write(
-            "%s (%s) %d : prob=%g\t%s\n" % (fg_char, bg_char, idx + 1, pvalue, stars)
+            "%s (%s) %d : %s=%g\t%s\n"
+            % (fg_char, bg_char, idx + 1, label, value, stars)
         )
 
 
 def write_mcbpps(tophits, ptnfile):
     """Write a .pttrn file in the style of mcBPPS, naming each site by the
-    residue that top_hits pairs with its position."""
+    residue that the site selection, top_hits or top_scores, pairs with its
+    position."""
     ptnfile.write(
         "1:" + ",".join([("%s%d" % (residue, posn)) for posn, residue in tophits])
     )
@@ -765,7 +809,7 @@ def clean_alignments(fg_aln, bg_aln, profile_aligned=False):
     return fg_aln, bg_aln
 
 
-def top_hits(hits, alpha, N=50):
+def top_hits(hits, alpha, N=MAX_SITES):
     """Take the sites that the Benjamini-Hochberg procedure accepts, at most N.
 
     The step-up procedure runs at false discovery rate alpha over every column
@@ -785,6 +829,25 @@ def top_hits(hits, alpha, N=50):
         if ranked[k - 1][0] <= alpha * k / m:
             return [(posn, residue) for _pval, posn, residue in ranked[: min(k, N)]]
     return []
+
+
+def top_scores(hits, N=MAX_SITES):
+    """Take the N columns with the largest scores as the sites.
+
+    A score is not a p-value, so no procedure decides how many columns are
+    significant: the sites are a ranking. A column whose foreground or
+    background consensus is a gap or X is not tested, and is never a site.
+    Ties go to the earlier column.
+
+    Return a list of pairs, as top_hits does, sorted by score, largest first.
+    """
+    ranked = [
+        (-score, i + 1, residue)
+        for i, (faa, baa, score, residue) in enumerate(hits)
+        if faa not in NON_RESIDUES and baa not in NON_RESIDUES
+    ]
+    ranked.sort(key=lambda row: row[0])
+    return [(posn, residue) for _score, posn, residue in ranked[:N]]
 
 
 # --- PDB alignment magic ---

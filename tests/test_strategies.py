@@ -294,16 +294,15 @@ def test_jsd_single_compares_with_uniform_frequencies():
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="the two entropies of a uniform column differ by a rounding error, "
-    "which gives a JSD of -8.9e-16",
-)
-def test_jsd_of_a_uniform_column_is_not_negative():
+def test_jsd_of_a_uniform_column_is_zero():
     # Equal weights of 1.0 cancel exactly; 0.3 leaves the two entropies
-    # differing by a rounding error.
-    assert jsd.compare_one(AMINO, "A", 6.0, [0.3] * 20, FREQS, PSEUDO)[1] >= 0.0
+    # differing by a rounding error, -8.9e-16.
+    assert jsd.compare_one(AMINO, "A", 6.0, [0.3] * 20, FREQS, PSEUDO)[1] == 0.0
+
+
+def test_jsd_rounding_clamp_keeps_a_nan():
+    # A numerical failure must reach the .out file rather than read as 0.
+    assert math.isnan(jsd.nonnegative(math.nan))
 
 
 @pytest.mark.xfail(

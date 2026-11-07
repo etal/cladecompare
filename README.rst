@@ -759,15 +759,14 @@ mode in every column of a pair that holds one, whose pseudocounts carry it
 into each background column. The counts include that letter but the mixture
 ``M`` omits it, so the value is not a divergence there: it can fall below 0,
 exceed 1, or lie between them and still be wrong. When it leaves [0, 1],
-``cladecompare`` warns that it is out of its domain; it warns in the same
-way for a column of the 20 amino acids in equal proportions, whose score a
-rounding error can place below 0. It is not a p-value, and it does not
-account for the number of sequences, so a small foreground set appears
-divergent partly through sampling variation. With the example pair's 47
-sequences divided at random into sets of 11 and 36, as the pair is, 97% of
-the columns scored below 0.4, and none of 14,520 columns reached 0.7; with 3
-sequences in the foreground against 36, about 11 columns per division
-reached 0.7.
+``cladecompare`` warns that it is out of its domain. A value that rounding
+places less than 1e-12 below 0, as for nearly equal compositions, is
+reported as 0. The score is not a p-value, and it does not account for the
+number of sequences, so a small foreground set appears divergent partly
+through sampling variation. With the example pair's 47 sequences divided at
+random into sets of 11 and 36, as the pair is, 97% of the columns scored
+below 0.4, and none of 14,520 columns reached 0.7; with 3 sequences in the
+foreground against 36, about 11 columns per division reached 0.7.
 
 Capra & Singh (2007) found JSD between a column and a background
 distribution the most accurate of the conservation scores they compared for

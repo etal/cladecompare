@@ -13,7 +13,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from scipy.stats import false_discovery_control
 
-from cladecompare import InputError, core
+from cladecompare import InputError, ToolError, core
 
 INPUTS = Path(__file__).resolve().parent / "data" / "inputs"
 
@@ -878,9 +878,44 @@ def test_process_output_selects_a_score_by_rank_not_by_alpha(tmp_path):
 # --- External programs ---
 
 
-def test_call_quiet_names_a_missing_program():
-    with pytest.raises(RuntimeError, match="Is no-such-program-x9 installed"):
-        core.call_quiet("no-such-program-x9", "--help")
+@pytest.mark.parametrize(
+    "script, mode, reason",
+    [
+        pytest.param(
+            None, None, "it is not installed or not on the PATH", id="missing"
+        ),
+        pytest.param("#!/bin/sh\n", 0o644, "Permission denied", id="not-executable"),
+        # exec reports the missing interpreter as a missing file, but the
+        # program itself is on the PATH.
+        pytest.param(
+            "#!/no-such-dir/sh\n",
+            0o755,
+            "No such file or directory",
+            id="missing-interpreter",
+        ),
+    ],
+)
+def test_call_quiet_names_a_program_it_cannot_start(script, mode, reason, bin_path):
+    if script is not None:
+        program = bin_path / "program-x9"
+        program.write_text(script)
+        program.chmod(mode)
+    with pytest.raises(ToolError, match=f"^Cannot run program-x9: {reason}$"):
+        core.call_quiet("program-x9", "--help")
+
+
+def test_combine_alignments_refuses_muscle_4_or_later(monkeypatch):
+    """MUSCLE 5, which has no -profile mode, stops the run before it aligns."""
+    calls = []
+
+    def run(*args):
+        calls.append(args)
+        return "muscle 5.3.osxarm64 []\n"
+
+    monkeypatch.setattr(core, "call_quiet", run)
+    with pytest.raises(ToolError, match="requires MUSCLE 3, .* is version 5.3,"):
+        core.combine_alignments(aln(("a", "AC")), aln(("x", "ACD")))
+    assert calls == [("muscle", "-version")]
 
 
 def test_call_quiet_reports_the_output_of_a_failed_command():

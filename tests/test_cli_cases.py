@@ -385,6 +385,24 @@ def test_input_error_prints_a_message_without_traceback(argv, message, tmp_path)
     assert written == set()
 
 
+@pytest.mark.parametrize(
+    "case, program", [("hmm.pair.gtest", "hmmalign"), ("unequal.gtest", "muscle")]
+)
+def test_missing_program_prints_a_message_without_traceback(
+    case, program, tmp_path, bin_path
+):
+    """A run that needs a program not on the PATH names it and stops."""
+    argv = load(case)["commands"][0]["argv"]
+    _workdir, written, [result], _tmpdir = run_commands([argv], tmp_path)
+    assert result.returncode == 1
+    assert result.stderr.endswith(
+        f"cladecompare: error: Cannot run {program}: it is not installed or not "
+        "on the PATH\n"
+    )
+    assert "Traceback" not in result.stderr
+    assert written == set()
+
+
 FIN_CASE, FIN_SOURCE = "pdb.1FIN-AB-CA.gtest", "1FIN-AB-CA.pdb"
 
 

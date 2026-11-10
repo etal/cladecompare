@@ -4,6 +4,7 @@ import contextlib
 import logging
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -20,7 +21,18 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from biofrills import alnutils, consensus
 
-from . import InputError, gtest, hypg, jsd, pairlogo, phospho, pmlscript, reading, urn
+from . import (
+    InputError,
+    ToolError,
+    gtest,
+    hypg,
+    jsd,
+    pairlogo,
+    phospho,
+    pmlscript,
+    reading,
+    urn,
+)
 from .shared import NON_RESIDUES, combined_frequencies
 
 logger = logging.getLogger(__name__)
@@ -414,22 +426,25 @@ def write_mcbpps(tophits, ptnfile):
 
 
 def call_quiet(*args):
-    """Safely run a command and get stdout; print stderr if there's an error.
+    """Safely run a command and get stdout; report stderr if there's an error.
 
     Like subprocess.check_output, but silent in the normal case where the
     command logs unimportant stuff to stderr. If there is an error, then the
-    full error message(s) is shown in the exception message. If the program
-    is not found, a RuntimeError naming it is raised as well.
+    full error message(s) is shown in the exception message. A program that
+    cannot be started, because it is not on the PATH or for any other
+    reason the operating system gives, raises ToolError naming it.
     """
     try:
         proc = subprocess.run(
             args, capture_output=True, encoding="utf-8", errors="replace"
         )
-    except FileNotFoundError as exc:
-        raise RuntimeError(
-            "Subprocess command failed:\n$ %s\n\n%s\n"
-            "Is %s installed and on the PATH?" % (" ".join(args), exc, args[0])
-        ) from None
+    except OSError as exc:
+        # exec also reports a missing script interpreter as a missing file.
+        if isinstance(exc, FileNotFoundError) and shutil.which(args[0]) is None:
+            reason = "it is not installed or not on the PATH"
+        else:
+            reason = exc.strerror or str(exc)
+        raise ToolError(f"Cannot run {args[0]}: {reason}") from None
     if proc.returncode != 0:
         raise RuntimeError(
             "Subprocess command failed:\n$ %s\n\n%s"
@@ -687,7 +702,7 @@ def combine_alignments(fg_aln, bg_aln):
     """Align FG and BG to each other so column numbers match.
 
     Uses MUSCLE 3 for profile-profile alignment, which MUSCLE 5 no longer
-    offers; a MUSCLE of version 4 or later raises RuntimeError. If the
+    offers; a MUSCLE of version 4 or later raises ToolError. If the
     version cannot be read, a warning is logged and MUSCLE is run anyway.
     """
     match = MUSCLE_VERSION_LINE.search(call_quiet("muscle", "-version"))
@@ -697,7 +712,7 @@ def combine_alignments(fg_aln, bg_aln):
             "trying profile-profile alignment anyway"
         )
     elif int(match.group(1)) >= 4:
-        raise RuntimeError(
+        raise ToolError(
             "Aligning alignments of different widths to each "
             "other requires MUSCLE 3, but the muscle on the "
             "PATH is version %s.%s, which has no "

@@ -95,8 +95,10 @@ What it gives
     the Benjamini-Hochberg selection, or, for a score, the value 0, and is
     never selected. Input that CladeCompare recognizes as unusable stops
     the run with an error message, which names the file where one is at
-    fault, rather than a traceback; a missing external program, or one that
-    fails on its input, still ends with a traceback.
+    fault, rather than a traceback. An external program that cannot be
+    started, or a MUSCLE too new to align profiles, likewise stops the run
+    with an error message; an external program that fails on its input
+    still ends with a traceback.
 
 What it does not do
     It does not define clades, infer a phylogeny or align sequences other

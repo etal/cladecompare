@@ -14,6 +14,14 @@ class InputError(ValueError):
     """
 
 
+class ToolError(RuntimeError):
+    """An external program that CladeCompare cannot run.
+
+    As for InputError, the cladecompare command prints the message without a
+    traceback, and cladeweb returns it as the response.
+    """
+
+
 @contextlib.contextmanager
 def reading(fname, form=None):
     """Report a failure to read an input file as InputError naming the file.

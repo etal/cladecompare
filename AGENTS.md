@@ -93,6 +93,7 @@ HMMER 3.0 without the option drops all-gap match columns, which leaves alignment
 Replacing MUSCLE 3 with another profile-profile aligner would change the output of every unequal-width run.
 No missing program is checked for at the start of a run.
 `call_quiet` names a program that is not on the PATH when it is first run: for `hmmalign` and `muscle` that is the probe preceding each alignment, and for MAPGAPS it is the `run_gaps` call itself.
+`ToolError` (Conventions, below) is raised for a program that cannot be started, whether it is missing or the operating system gives another reason, and for MUSCLE 4 or later, so the run ends with a message rather than a traceback.
 
 ## Letter case: uppercase is aligned, lowercase is inserted
 
@@ -185,7 +186,9 @@ The cases that run hmmalign or MUSCLE, and a `--mapgaps` case that replaces MAPG
   Each reader of an input file opens it inside `reading`, defined beside `InputError`, which turns an `OSError`, bytes that are not UTF-8 text and, given the form the file should have, a parser's `ValueError` into `InputError`; `core.check_readable` only opens a file that an external program will read, so that a missing or unreadable file is reported before the program runs, while a file the program cannot parse still ends with the program's `RuntimeError`.
   The `main` functions of `cladecompare/cladecompare.py` and `cladecompare/cladereport.py` catch it, printing `<command>: error: <message>` and exiting with status 1; the `-a` parser of the `cladecompare` command turns the `InputError` of `core.parse_alpha` into an argparse usage error.
   `cladeweb` catches it around the whole submission and returns `Error: <message>` with status 200, naming each upload by its file name, as bottle normalizes it, rather than by its temporary path.
-  A missing program or MUSCLE 4 or later still raises `RuntimeError`, which, like any other exception, ends a command with a traceback and gives status 500 in `cladeweb`.
+  An external program that cannot be run raises `ToolError`, a subclass of `RuntimeError` defined beside `InputError`: a program that `call_quiet` cannot start, for instance one not on the PATH, or, from `combine_alignments`, MUSCLE 4 or later.
+  It is not an `InputError`, because the fault is a program that cannot be run rather than a file or option, but `cladecompare` and `cladeweb` catch it beside `InputError` and report it the same way; `cladeweb` logs it as an error rather than as a rejected submission.
+  A program that runs but fails, which `call_quiet` reports with the program's own output, still raises a plain `RuntimeError`, which, like any other exception, ends a command with a traceback and gives status 500 in `cladeweb`.
 - Every module that logs uses `logger = logging.getLogger(__name__)`, and the three commands configure logging through `configure_logging` in `cladecompare/__init__.py`.
 - The files under `tests/data/py27/` are generated but committed deliberately, as the reference; regenerate them with `tests/data/capture_py27.py`, for instance through `pixi run -e py27-oracle capture`, rather than editing them.
 - The files under `tests/data/current/` are generated from the current code and committed as the expected output of the cases that depart from `tests/data/py27/` by design; regenerate them with `tests/data/replay.py`, review the change against `tests/data/README.md`, and never edit them by hand.

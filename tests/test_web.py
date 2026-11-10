@@ -343,6 +343,28 @@ def test_a_rejected_submission_leaves_no_temporary_files(
     assert os.listdir(tmpdir) == []
 
 
+def test_missing_program_is_reported_as_an_error_message(
+    tmp_path, monkeypatch, bin_path, caplog
+):
+    """A profile submission without hmmalign on the PATH names the program,
+    and logs it as an error of the server rather than of the submission."""
+    caplog.set_level(logging.WARNING, logger="cladecompare.cladeweb")
+    message = "Cannot run hmmalign: it is not installed or not on the PATH"
+    _workdir, tmpdir, status, response, errors = submit(
+        load("web.hmm.pair.gtest"), tmp_path, monkeypatch
+    )
+    assert status == "200 OK", errors
+    assert response == b"Error: " + message.encode()
+    logged = [
+        (r.levelname, r.getMessage())
+        for r in caplog.records
+        if r.name == "cladecompare.cladeweb"
+    ]
+    assert logged == [("ERROR", "Could not complete the submission: " + message)]
+    # Only bottle's spooled upload of CDK.hmm remains, as in SPOOLED.
+    assert [name for name in os.listdir(tmpdir) if name.startswith("cladeweb-")] == []
+
+
 def test_browser_opens_once_the_server_listens(monkeypatch):
     """The browser opens the form's address only when it can connect."""
     opened = []

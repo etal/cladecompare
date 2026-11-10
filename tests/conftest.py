@@ -24,3 +24,15 @@ def require():
             pytest.skip(reason)
 
     return require
+
+
+@pytest.fixture
+def bin_path(tmp_path, monkeypatch):
+    """Return an empty directory that is the whole PATH.
+
+    No external program is found unless the test puts one there.
+    """
+    path = tmp_path / "bin"
+    path.mkdir()
+    monkeypatch.setenv("PATH", str(path))
+    return path

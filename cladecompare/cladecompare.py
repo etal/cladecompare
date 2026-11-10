@@ -2,7 +2,7 @@
 
 import argparse
 
-from cladecompare import InputError, configure_logging
+from cladecompare import InputError, ToolError, configure_logging
 from cladecompare.core import (
     DEFAULT_STRATEGY,
     STRATEGIES,
@@ -124,7 +124,7 @@ See README or https://github.com/etal/cladecompare for full documentation.
     configure_logging(args.quiet)
     try:
         process_args(args)
-    except InputError as exc:
+    except (InputError, ToolError) as exc:
         AP.exit(1, f"{AP.prog}: error: {exc}\n")
 
 

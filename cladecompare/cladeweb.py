@@ -21,7 +21,7 @@ from wsgiref.simple_server import WSGIServer
 
 import bottle
 
-from cladecompare import InputError, configure_logging, core, report
+from cladecompare import InputError, ToolError, configure_logging, core, report
 
 logger = logging.getLogger(__name__)
 
@@ -138,14 +138,17 @@ def form_submit():
         uploads = {}
         try:
             return compare_submission(tmpdir, uploads)
-        except InputError as exc:
+        except (InputError, ToolError) as exc:
             # Name each upload by its file name and every other file in
             # tmpdir by its own name, not by a temporary path.
             message = str(exc)
             for fname, upload_name in uploads.items():
                 message = message.replace(fname, upload_name)
             message = message.replace(tmpdir + os.sep, "")
-            logger.warning("Rejected the submission: %s", message)
+            if isinstance(exc, ToolError):
+                logger.error("Could not complete the submission: %s", message)
+            else:
+                logger.warning("Rejected the submission: %s", message)
             return "Error: " + html.escape(message, quote=False)
 
 
@@ -154,7 +157,7 @@ def compare_submission(tmpdir, uploads):
 
     Each upload is saved in tmpdir, and uploads maps the name it is saved
     under to its file name, as bottle normalizes it. Unusable input raises
-    InputError.
+    InputError, and an external program that cannot be run, ToolError.
     """
     # ENH: pick a unique, informative name -- e.g. date or hostname
     name = bottle.request.forms.name

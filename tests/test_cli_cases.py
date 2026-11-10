@@ -198,6 +198,15 @@ def run_commands(commands, tmp_path, path_prefix=None):
     return workdir, written, results, tmpdir
 
 
+def assert_stopped_with(result, written, message):
+    """The command exited with status 1, its standard error ending in the
+    message without a traceback, and wrote no file."""
+    assert result.returncode == 1, result.stderr
+    assert result.stderr.endswith(message + "\n")
+    assert "Traceback" not in result.stderr
+    assert written == set()
+
+
 def assert_valid_values(path):
     """Every p-value or score in a .out file is finite and within [0, 1]."""
     values = [value for *_site, value in report.parse_out(path)]
@@ -379,10 +388,7 @@ def test_more_than_two_alignments_ignore_output_options(tmp_path):
 )
 def test_input_error_prints_a_message_without_traceback(argv, message, tmp_path):
     _workdir, written, [result], _tmpdir = run_commands([argv], tmp_path)
-    assert result.returncode == 1
-    assert result.stderr.endswith(message + "\n")
-    assert "Traceback" not in result.stderr
-    assert written == set()
+    assert_stopped_with(result, written, message)
 
 
 @pytest.mark.parametrize(
@@ -394,13 +400,12 @@ def test_missing_program_prints_a_message_without_traceback(
     """A run that needs a program not on the PATH names it and stops."""
     argv = load(case)["commands"][0]["argv"]
     _workdir, written, [result], _tmpdir = run_commands([argv], tmp_path)
-    assert result.returncode == 1
-    assert result.stderr.endswith(
+    assert_stopped_with(
+        result,
+        written,
         f"cladecompare: error: Cannot run {program}: it is not installed or not "
-        "on the PATH\n"
+        "on the PATH",
     )
-    assert "Traceback" not in result.stderr
-    assert written == set()
 
 
 FIN_CASE, FIN_SOURCE = "pdb.1FIN-AB-CA.gtest", "1FIN-AB-CA.pdb"
@@ -428,10 +433,7 @@ def test_chain_option_stops_on_a_chain_it_cannot_draw(
     _workdir, written, [result], _tmpdir = run_commands(
         [argv + ["--chain", chain]], tmp_path
     )
-    assert result.returncode == 1
-    assert result.stderr.endswith("cladecompare: error: " + message + "\n")
-    assert "Traceback" not in result.stderr
-    assert written == set()
+    assert_stopped_with(result, written, "cladecompare: error: " + message)
 
 
 def run_on_structure(tmp_path, case, source, edit, options=()):
@@ -555,13 +557,12 @@ def test_single_alignment_hypg_is_rejected(case, tmp_path):
     """hypg needs a foreground and a background, and writes nothing without."""
     argv = load(case)["commands"][0]["argv"]
     _workdir, written, [result], _tmpdir = run_commands([argv], tmp_path)
-    assert result.returncode == 1
-    assert result.stderr.endswith(
+    assert_stopped_with(
+        result,
+        written,
         "cladecompare: error: hypg compares two alignments; give a foreground "
-        "and a background\n"
+        "and a background",
     )
-    assert "Traceback" not in result.stderr
-    assert written == set()
 
 
 @pytest.mark.parametrize(
